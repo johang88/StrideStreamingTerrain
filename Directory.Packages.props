@@ -1,0 +1,23 @@
+<Project>
+	<PropertyGroup>
+		<ManagePackageVersionsCentrally>true</ManagePackageVersionsCentrally>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<PackageVersion Include="System.CommandLine" Version="2.0.0-beta4.22272.1" />
+		<PackageVersion Include="Hexa.NET.ImGui" Version="2.0.1" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<PackageVersion Include="Stride.Engine" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.Video" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.Physics" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.Navigation" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.Particles" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.UI" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.Graphics" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.TextureConverter" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.Core" Version="4.2.0.1" />
+		<PackageVersion Include="Stride.Core.Assets.CompilerApp" Version="4.2.0.1" />
+	</ItemGroup>
+</Project>

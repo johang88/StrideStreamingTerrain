@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StrideTerrain.Importer", "StrideTerrain.Importer\StrideTerrain.Importer.csproj", "{68514BB6-E6D7-46FD-A2F4-282E05CDE91D}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StrideTerrain.Common", "StrideTerrain.Common\StrideTerrain.Common.csproj", "{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{68514BB6-E6D7-46FD-A2F4-282E05CDE91D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{68514BB6-E6D7-46FD-A2F4-282E05CDE91D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{68514BB6-E6D7-46FD-A2F4-282E05CDE91D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{68514BB6-E6D7-46FD-A2F4-282E05CDE91D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {067ABAE9-F43F-4AEB-9FBF-CA9115F47800}
+	EndGlobalSection
+EndGlobal

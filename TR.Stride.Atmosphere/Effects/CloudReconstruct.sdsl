@@ -1,0 +1,108 @@
+﻿namespace TR.Stride.Atmosphere
+{
+    shader CloudReconstruct
+        : ComputeShaderBase 
+    {
+        stage RWTexture2D<float4>  CloudReconstructionTexture;
+
+        stage Texture2D<float4> CloudReconstructionHistoryTexture;
+        stage Texture2D<float4> CloudColorTexture;
+        stage Texture2D<float> CloudDepthTexture;
+        stage Texture2D<float> CloudDepthHistoryTexture;
+
+        stage uint FrameIndex;
+        stage StructuredBuffer<uint> scramblingTile;
+        stage int CloudResolutionDivider;
+
+        stage float4x4 InvViewProjectionMatrix;
+        stage float4x4 ViewProjectionMatrixPrevious; 
+
+        static const uint BayerMatrix16[16] =
+        {
+             0,  8,  2, 10, 
+            12,  4, 14,  6, 
+             3, 11,  1,  9, 
+            15,  7, 13,  5
+        };
+
+        stage SamplerState samplerLinearClamp
+		{
+			Filter = MIN_MAG_MIP_LINEAR;
+			AddressU = Clamp;
+			AddressV = Clamp;
+			AddressW = Clamp;
+		};
+
+        stage SamplerState samplerLinearPoint
+		{
+			Filter = MIN_MAG_MIP_POINT;
+			AddressU = Clamp;
+			AddressV = Clamp;
+			AddressW = Clamp;
+		};
+
+        int ComputeCheckerBoardIndex(int2 renderCoord, int subPixelIndex)
+        {
+	        const int localOffset = (renderCoord.x & 1 + renderCoord.y & 1) & 1;
+	        const int checkerBoardLocation = (subPixelIndex + localOffset) & 0x3;
+	        return checkerBoardLocation;
+        }
+        
+        override void Compute()
+        {
+            uint2 dimensions;
+            CloudReconstructionTexture.GetDimensions(dimensions.x, dimensions.y);
+
+            if(streams.DispatchThreadId.x >= dimensions.x || streams.DispatchThreadId.y >= dimensions.y)
+            {
+                return;
+            }
+
+            const float2 uv = (float2(streams.DispatchThreadId.xy) + float2(0.5, 0.5)) / float2(dimensions);
+
+            float cloudDepth = CloudDepthTexture[streams.DispatchThreadId.xy / 4].x > 0 ? 1 : 0;
+            float3 clipSpace =  float3(uv * float2(2.0, -2.0) - float2(1.0, -1.0), cloudDepth);
+            float4 worldPos = mul(float4(clipSpace, 1.0), InvViewProjectionMatrix);
+            worldPos.xyz = worldPos.xyz / worldPos.w;
+
+            float4 projPosPrev = mul(float4(worldPos.xyz, 1), ViewProjectionMatrixPrevious);
+            float3 projPosPrevH = projPosPrev.xyz / projPosPrev.w;
+            
+            float2 uvPrev = projPosPrevH.xy * float2(0.5, -0.5) + 0.5;
+
+            float4 color;
+            bool isPreviousUvValid = uvPrev.x >= 0.0 && uvPrev.x <= 1.0 && uvPrev.y >= 0.0 && uvPrev.y <= 1.0;
+
+            if (isPreviousUvValid)
+            {
+                isPreviousUvValid = CloudDepthHistoryTexture.SampleLevel(samplerLinearPoint, uvPrev, 0).x > 0.0;
+            }
+
+            if (isPreviousUvValid)
+            {
+                uint bayerIndex = FrameIndex % uint(16);
+                int2 bayerOffset = int2(BayerMatrix16[bayerIndex] % uint(4), BayerMatrix16[bayerIndex] / uint(4));
+                int2 workDeltaPos = int2(streams.DispatchThreadId.xy) % uint(4);
+
+	            bool shouldUpdatePixel = (workDeltaPos.x == bayerOffset.x) && (workDeltaPos.y == bayerOffset.y);          
+
+                if (shouldUpdatePixel)
+                {
+                    color = CloudColorTexture[uint2(streams.DispatchThreadId.xy / 4)];
+                }
+                else
+                {
+                    color = CloudReconstructionHistoryTexture.SampleLevel(samplerLinearClamp, uvPrev, 0);
+                    //color = CloudReconstructionHistoryTexture.SampleLevel(samplerLinearClamp, uv, 0);
+                    //color = CloudReconstructionHistoryTexture[streams.DispatchThreadId.xy];
+                }
+            }
+            else
+            {
+                color = CloudColorTexture.SampleLevel(samplerLinearClamp, uv, 0);
+            }
+
+            CloudReconstructionTexture[streams.DispatchThreadId.xy] = color;
+        }
+    };
+}

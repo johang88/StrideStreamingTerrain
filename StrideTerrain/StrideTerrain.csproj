@@ -1,0 +1,67 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net8.0-windows</TargetFrameworks>
+	<Nullable>enable</Nullable>
+	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Stride.Engine" />
+
+    <PackageReference Include="Stride.Video" />
+    <PackageReference Include="Stride.Physics" />
+    <PackageReference Include="Stride.Navigation" />
+    <PackageReference Include="Stride.Particles" />
+    <PackageReference Include="Stride.UI" />
+
+    <PackageReference Include="Stride.Core.Assets.CompilerApp" IncludeAssets="build;buildTransitive" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\StrideCommunity.ImGuiDebug\StrideCommunity.ImGuiDebug.csproj" />
+    <ProjectReference Include="..\StrideTerrain.Common\StrideTerrain.Common.csproj" />
+    <ProjectReference Include="..\TR.Stride.Atmosphere\TR.Stride.Atmosphere.csproj" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl.cs">
+      <DesignTime>True</DesignTime>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>MaterialTerrainDisplacement.sdsl</DependentUpon>
+    </Compile>
+    <Compile Update="TerrainSystem\Effects\TerrainCommon.sdsl.cs">
+      <DesignTime>True</DesignTime>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+    </Compile>
+    <Compile Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl.cs">
+      <DesignTime>True</DesignTime>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>TerrainBlendComputeColor.sdsl</DependentUpon>
+    </Compile>
+    <Compile Update="TerrainSystem\Effects\TerrainNormalMapComputeColor.sdsl.cs">
+      <DesignTime>True</DesignTime>
+      <DesignTimeSharedInput>True</DesignTimeSharedInput>
+      <AutoGen>True</AutoGen>
+      <DependentUpon>TerrainNormalMapComputeColor.sdsl</DependentUpon>
+    </Compile>
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl">
+      <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
+    </None>
+    <None Update="TerrainSystem\Effects\TerrainCommon.sdsl">
+      <LastGenOutput>TerrainCommon.sdsl.cs</LastGenOutput>
+    </None>
+    <None Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl">
+      <LastGenOutput>TerrainBlendComputeColor.sdsl.cs</LastGenOutput>
+    </None>
+    <None Update="TerrainSystem\Effects\TerrainNormalMapComputeColor.sdsl">
+      <LastGenOutput>TerrainNormalMapComputeColor.sdsl.cs</LastGenOutput>
+    </None>
+  </ItemGroup>
+</Project>

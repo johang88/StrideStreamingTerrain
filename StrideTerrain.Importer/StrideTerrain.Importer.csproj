@@ -1,0 +1,21 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+	<PropertyGroup>
+		<OutputType>Exe</OutputType>
+		<TargetFramework>net8.0</TargetFramework>
+		<ImplicitUsings>enable</ImplicitUsings>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+	</PropertyGroup>
+
+	<ItemGroup>
+		<PackageReference Include="System.CommandLine" />
+		<PackageReference Include="Stride.Graphics" />
+		<PackageReference Include="Stride.TextureConverter" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\StrideTerrain.Common\StrideTerrain.Common.csproj" />
+	</ItemGroup>
+
+</Project>

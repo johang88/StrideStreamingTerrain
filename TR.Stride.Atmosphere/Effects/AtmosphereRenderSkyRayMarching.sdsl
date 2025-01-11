@@ -1,0 +1,114 @@
+﻿namespace TR.Stride.Atmosphere
+{
+	shader AtmosphereRenderSkyRayMarching<bool RenderSunDisk, MemberName AtmosphereGroup>
+	: ShaderBase, AtmosphereFullscreenTriangle, Math, DepthBase, AtmosphereRenderSkyCommon<AtmosphereGroup>, AtmosphereGetSunLuminence<RenderSunDisk, AtmosphereGroup>
+	{
+		struct RayMarchPixelOutputStruct
+		{
+			float4 Luminance;
+		};
+
+		cbuffer AtmosphereGroup
+		{
+			bool RenderClouds;
+			float2 CloudsTextureSize;
+		};
+
+		RayMarchPixelOutputStruct _PSMain()
+		{
+			RayMarchPixelOutputStruct output = (RayMarchPixelOutputStruct)0;
+
+			float2 pixPos = streams.ShadingPosition.xy;
+			AtmosphereParameters Atmosphere = GetAtmosphereParameters();
+
+			float3 ClipSpace = float3((pixPos / float2(Resolution))*float2(2.0, -2.0) - float2(1.0, -1.0), 0.0);
+			float4 HPos = mul(float4(ClipSpace, 1.0), InvViewProjectionMatrix);
+
+			float3 WorldDir = normalize((HPos.xyz / HPos.w) - CameraPositionWS);
+			float3 WorldPos = (CameraPositionWS * ScaleToSkyUnit + float3(0, Atmosphere.BottomRadius, 0));
+
+			const float InvScaleToSkyUnit = 1.0 / ScaleToSkyUnit;
+
+			float DepthBufferValue = -1.0;
+
+			float viewHeight = length(WorldPos);
+			float3 L = 0;
+			DepthBufferValue = DepthStencil[pixPos].r;
+
+			if ((viewHeight < Atmosphere.TopRadius && DepthBufferValue == 0.0f ) || RenderStage == 1)
+			{
+				float2 uv;
+				float3 UpVector = normalize(WorldPos);
+				float viewZenithCosAngle = dot(WorldDir, UpVector);
+
+				float3 sideVector = normalize(cross(UpVector, WorldDir));		// assumes non parallel vectors
+				float3 forwardVector = normalize(cross(sideVector, UpVector));	// aligns toward the sun light but perpendicular to up vector
+				float2 lightOnPlane = float2(dot(SunDirection, forwardVector), dot(SunDirection, sideVector));
+				lightOnPlane = normalize(lightOnPlane);
+				float lightViewCosAngle = lightOnPlane.x;
+
+				bool IntersectGround = RaySphereIntersectNearest(WorldPos, WorldDir, float3(0, 0, 0), Atmosphere.BottomRadius) >= 0.0f;
+
+				SkyViewLutParamsToUv(Atmosphere, IntersectGround, viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
+
+				output.Luminance = float4(SkyViewLutTexture.SampleLevel(samplerLinearClamp, uv, 0).rgb, 1.0);
+
+				// Don't render sun in cube map as we dont want double specular reflections
+				if (RenderStage == 0)
+				{
+					LutTransmittanceParamsToUv(Atmosphere, viewHeight, viewZenithCosAngle, uv);
+					const float3 Transmittance = TransmittanceLutTexture.SampleLevel(samplerLinearClamp, uv, 0).rgb;
+
+					output.Luminance.xyz += GetSunLuminance(WorldPos, WorldDir, Atmosphere.BottomRadius, Transmittance);
+				}
+
+				if (IntersectGround && RenderStage == 1)
+				{
+					output.Luminance = float4(GroundAlbedo, 1);
+				}
+
+				if (RenderClouds)
+				{
+					//const float2 cloudsUv = pixPos / float2(Resolution);
+					const float2 cloudsUv = (pixPos + float2(0.5, 0.5)) / float2(Resolution);
+					//float4 clouds = TextureHelper.SampleTextureCatmullRom(CloudsTexture, samplerLinearClamp, cloudsUv, CloudsTextureSize);
+					float4 clouds = CloudsTexture.SampleLevel(samplerLinearClamp, cloudsUv, 0);
+					output.Luminance.xyz = lerp(output.Luminance.xyz, clouds.xyz, 1.0 - clouds.w);
+					//output.Luminance.xyz = clouds.xyz;
+				}
+
+				return output;
+			}
+
+			ClipSpace = float3((pixPos / float2(Resolution)) * float2(2.0, -2.0) - float2(1.0, -1.0), DepthBufferValue);
+			float4 DepthBufferWorldPos = mul(float4(ClipSpace, 1.0), InvViewProjectionMatrix);
+			DepthBufferWorldPos /= DepthBufferWorldPos.w;
+
+			DepthBufferWorldPos *= ScaleToSkyUnit;
+
+			float tDepth = length(DepthBufferWorldPos.xyz - (WorldPos + float3(0.0, -Atmosphere.BottomRadius, 0.0)));
+			float Slice = AerialPerspectiveDepthToSlice(tDepth);
+			float Weight = 1.0;
+			if (Slice < 0.5)
+			{
+				// We multiply by weight to fade to 0 at depth 0. That works for luminance and opacity.
+				Weight = saturate(Slice * 2.0);
+				Slice = 0.5;
+			}
+			float w = sqrt(Slice * AerialPerspectiveSlicesAndDistancePerSlice.z);	// squared distribution
+
+			const float4 AP = Weight * AtmosphereCameraScatteringVolume.SampleLevel(samplerLinearClamp, float3(pixPos / float2(Resolution), w), 0);
+			L.rgb += AP.rgb;
+			float Opacity = AP.a;
+
+			output.Luminance = float4(L, Opacity);
+
+			return output;
+		}
+
+		stage override void PSMain()
+		{   
+			streams.ColorTarget = _PSMain().Luminance;
+		}
+	};
+}

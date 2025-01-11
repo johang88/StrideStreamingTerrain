@@ -1,0 +1,25 @@
+﻿namespace StrideTerrain.TerrainSystem.Effects
+{
+    shader TerrainNormalMapComputeColor : ComputeColor, NormalUpdate, Transformation, Texturing, TerrainCommon
+    {
+        compose ComputeColor NormalMap;
+
+        override float4 Compute()
+        {
+            return NormalMap.Compute();
+        }
+
+        stage override void UpdateNormalFromTangentSpace(float3 normalInTangentSpace)
+        {
+            //streams.meshNormal = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord1, 0).xyz * 2.0 - 1.0;
+            float3 tangent = streams.meshTangent.xyz;
+            float3 bitangent = cross(streams.meshNormal, streams.meshTangent.xyz);
+
+            float3x3 tangentMatrix = float3x3(tangent, bitangent, streams.meshNormal);
+
+            streams.tangentToWorld = mul(tangentMatrix, WorldInverseTranspose);
+
+            streams.normalWS = normalize(mul(normalInTangentSpace, streams.tangentToWorld));
+        }
+    };
+}

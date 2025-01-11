@@ -1,0 +1,60 @@
+﻿namespace StrideTerrain.TerrainSystem.Effects
+{
+    shader TerrainBlendComputeColor : ComputeColor, TerrainCommon, NormalStream, PositionStream4, Texturing
+    {
+        compose ComputeColor Sand;
+        compose ComputeColor Rock;
+        compose ComputeColor Grass;
+        compose ComputeColor Snow;
+
+        float InvLerp(float from, float to, float value){
+            return (value - from) / (to - from);
+        }
+
+        float BlendHeight(float h, float b) {
+            if (streams.TerrainHeight < (h - b)) return 0.0f;
+            else if (streams.TerrainHeight > (h + b)) return 1.0f;
+            return InvLerp(h - b, h + b, streams.TerrainHeight);
+        }
+
+        float BlendSlope(float s, float b) {
+            float slope = abs(streams.meshNormal.z);
+            if (slope < s - b) return 0.0f;
+            else if (slope > s + b) return 1.0f;
+            else return InvLerp(s - b, s + b, slope);
+        }
+
+        float3 SampleTerrain(float2 uv)
+        {
+            streams.TexCoord2 = uv;
+
+            float3 sand = Sand.Compute();
+            float3 grass = Grass.Compute();
+            float3 snow = Snow.Compute();
+
+            streams.TexCoord2 = uv * 0.1f;
+            float3 rock = Rock.Compute();
+
+            float3 output = lerp(sand, grass, BlendHeight(79.0f, 2.0f));
+            output = lerp(output, snow, BlendHeight(200, 30));
+            output = lerp(output, rock, BlendSlope(0.45f, 0.1f));
+
+            return output;
+        }
+
+        override float4 Compute()
+        {
+            float uvScale = 0.25f;
+            float3 outputX = SampleTerrain(streams.PositionWS.zy * uvScale);
+            float3 outputY = SampleTerrain(streams.PositionWS.xz * uvScale);
+            float3 outputZ = SampleTerrain(streams.PositionWS.xy * uvScale);
+
+            float3 triW = abs(streams.meshNormal);
+	        triW = triW / (triW.x + triW.y + triW.z);
+
+            float3 output = outputX * triW.x + outputY * triW.y + outputZ * triW.z;
+
+            return float4(output, 1);
+        }
+    };
+}

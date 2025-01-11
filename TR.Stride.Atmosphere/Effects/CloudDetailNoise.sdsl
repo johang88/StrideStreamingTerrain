@@ -1,0 +1,29 @@
+﻿namespace TR.Stride.Atmosphere
+{
+	shader CloudDetailNoise
+		: ComputeShaderBase, Noise
+	{
+		#define DETAIL_NOISE_FREQUENCY 8
+
+		stage RWTexture3D<float4>  OutputTexture;
+
+		override void Compute()
+		{
+            uint3 dimensions;
+            OutputTexture.GetDimensions(dimensions.x, dimensions.y, dimensions.z);
+
+            if(streams.DispatchThreadId.x >= dimensions.x || streams.DispatchThreadId.y >= dimensions.y || streams.DispatchThreadId.z >= dimensions.z)
+            {
+                return;
+            }
+
+            const float3 uvw = (float3(streams.DispatchThreadId.xyz) + float3(0.5, 0.5, 0.5)) / float3(dimensions);
+
+            float output = WorleyFbm(uvw, DETAIL_NOISE_FREQUENCY * 1.0) * 0.625
+    	        + WorleyFbm(uvw, DETAIL_NOISE_FREQUENCY * 2.0) * 0.250 +
+    	        + WorleyFbm(uvw, DETAIL_NOISE_FREQUENCY * 4.0) * 0.125;
+
+            OutputTexture[streams.DispatchThreadId.xyz] = float4(output.xxxx);
+		}
+	};
+}

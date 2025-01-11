@@ -1,0 +1,17 @@
+*.user
+*.lock
+*.lock.json
+*\.vs/
+_ReSharper*
+*.suo
+*.VC.db
+*.vshost.exe
+*.manifest
+*.sdf
+*\obj/
+*\imgui.ini
+*\.idea/
+*\bin/
+*\Bin/
+*\bin_*/
+*\Bin_*/

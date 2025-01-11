@@ -1,0 +1,59 @@
+﻿namespace TR.Stride.Atmosphere
+{
+    params AtmosphereParameters
+    {
+        bool RenderSunDisk = true;
+        string AtmosphereGroup = "PerDraw.Atmosphere";
+    }
+
+    effect AtmosphereRenderSkyRayMarchingEffect
+    {
+        using params AtmosphereParameters;
+
+        mixin AtmosphereRenderSkyRayMarching<AtmosphereParameters.RenderSunDisk, AtmosphereParameters.AtmosphereGroup>;
+    };
+
+    effect AtmosphereRenderTransmittanceLutEffect
+    {
+        using params AtmosphereParameters; 
+
+        mixin AtmosphereRenderTransmittanceLut<AtmosphereParameters.AtmosphereGroup>;
+    };
+
+    effect AtmosphereMultipleScatteringTextureEffect
+    {
+        using params AtmosphereParameters;
+
+        mixin AtmosphereMultipleScatteringTextureEffectCS<AtmosphereParameters.AtmosphereGroup>;
+    };
+
+    effect AtmosphereRenderSkyViewLutEffect
+    {
+        using params AtmosphereParameters;
+
+        mixin AtmosphereRenderSkyViewLut<AtmosphereParameters.AtmosphereGroup>;
+    }
+
+    effect AtmosphereRenderScatteringCameraVolumeEffect
+    {
+        using params AtmosphereParameters;
+
+        mixin AtmosphereRenderScatteringCameraVolume<AtmosphereParameters.AtmosphereGroup>;
+    }
+
+    effect CloudRayMarchingEffect
+    {
+        using params AtmosphereParameters;
+        mixin CloudRayMarching<AtmosphereParameters.AtmosphereGroup>;
+    }
+
+    effect CloudBasicNoiseEffect
+    {
+        mixin CloudBasicNoise;
+    }
+
+    effect CloudDetailNoiseEffect
+    {
+        mixin CloudDetailNoise;
+    }
+}

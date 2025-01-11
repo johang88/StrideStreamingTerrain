@@ -1,0 +1,568 @@
+﻿namespace TR.Stride.Atmosphere
+{
+	shader CloudRayMarching<MemberName AtmosphereGroup>
+		: ComputeShaderBase, Math, DepthBase, AtmosphereRenderSkyCommon<AtmosphereGroup>, Noise, BlueNoise
+	{
+		#define MS_COUNT 2
+		
+		cbuffer AtmosphereGroup
+		{
+			stage float CloudStartHeight = 6361.0f;
+			stage float CloudThickness = 10.0f;
+			stage float CloudMaxMarchingDistance = 50.0f;
+			stage float CloudTracingMaxStartDistance = 350.0f;
+			stage uint CloudStepCount = 128;
+			stage float CloudPhaseForward = 0.5f;
+			stage float CloudPhaseBackward = -0.5f;
+			stage float CloudPhaseMixFactor = 0.5f;
+			stage float CloudMultiScatterExtinction = 0.175f;
+			stage float CloudMultiScatterScatter = 1.0f; 
+			stage bool CloudEnableGroundContribution = true;
+			stage float CloudPowderPow = 1;
+			stage float CloudPowderScale = 1;
+			stage float CloudNoiseScale = 0.01f;
+			stage float CloudFogFade = 1.0f;
+			stage float Time;
+			stage uint FrameIndex;
+
+			stage float CloudCoverage = 0.3f;
+			stage float CloudDensity = 1.0f;
+			stage float CloudSpeed = 0.05f;
+			stage float3 WindDirection = float3(1, 0, 0);
+			stage float2 CloudWeatherUvScale = float2(0.02f, 0.02f);
+			stage float CloudBasicNoiseScale = 0.3f;
+			stage float CloudDetailNoiseScale = 0.6f;
+			stage bool ApplyRandomOffset = true;
+
+			stage float4x4 ViewProjectionMatrix;
+            stage bool WriteDepth = false;
+		};
+
+        stage RWTexture2D<float4> CloudColorTexture;
+        stage RWTexture2D<float> CloudDepthTexture;
+        stage Texture2D CloudCurlNoiseTexture;
+        stage Texture3D BasicNoiseTexture;
+        stage Texture3D DetailNoiseTexture;
+        stage Texture2D WeatherTexture;
+        stage Texture2D BlueNoiseTexture;
+
+		stage SamplerState SamplerLinearRepeat
+        {
+            Filter = MIN_MAG_MIP_LINEAR;
+            AddressU = Wrap;
+            AddressV = Wrap;
+		    AddressW = Wrap;
+        };
+
+		struct ParticipatingMediaPhase
+		{
+			float Phase[MS_COUNT];
+		};
+
+		struct ParticipatingMedia
+		{
+			float ExtinctionCoefficients[MS_COUNT];
+			float TransmittanceToLight[MS_COUNT];
+			float ExtinctionAcc[MS_COUNT];
+		};
+
+		static const uint BayerMatrix16[16] =
+        {
+             0,  8,  2, 10, 
+            12,  4, 14,  6, 
+             3, 11,  1,  9, 
+            15,  7, 13,  5
+        };
+
+		override void Compute()
+		{   
+			uint2 dimensions;
+            CloudColorTexture.GetDimensions(dimensions.x, dimensions.y);
+
+            if(streams.DispatchThreadId.x >= dimensions.x || streams.DispatchThreadId.y >= dimensions.y)
+            {
+                return;
+            }
+
+            AtmosphereParameters atmosphere = GetAtmosphereParameters();
+
+			int bayerIndex = FrameIndex % uint(16);
+			int2 bayerOffset = int2(BayerMatrix16[bayerIndex] % uint(4), BayerMatrix16[bayerIndex] / uint(4));
+
+            float2 pixPos = streams.DispatchThreadId.xy * 4 + bayerOffset;
+			float3 clipSpace = float3(((pixPos + float2(0.5, 0.5)) / float2(Resolution * 4)) * float2(2.0, -2.0) - float2(1.0, -1.0), 1.0);
+			float4 hPos = mul(float4(clipSpace, 1.0), InvViewProjectionMatrix);
+
+			float3 worldDir = normalize((hPos.xyz / hPos.w) - CameraPositionWS);
+			float3 worldPos = (CameraPositionWS * ScaleToSkyUnit + float3(0, atmosphere.BottomRadius, 0));
+
+			float3 upVector = normalize(worldPos);
+			float viewZenithCosAngle = dot(worldDir, upVector);
+			float viewHeight = length(worldPos);
+
+			bool intersectGround = RaySphereIntersectNearest(worldPos, worldDir, float3(0, 0, 0), atmosphere.BottomRadius) >= 0.0f;
+
+			const float invScaleToSkyUnit = 1.0 / ScaleToSkyUnit;
+
+			float offset;
+			if (ApplyRandomOffset)
+			{
+				uint2 offsetId =  uint2(streams.DispatchThreadId.xy) + uint2(float2(0.754877669, 0.569840296) * (FrameIndex) * uint2(Resolution));
+				offsetId.x = offsetId.x % Resolution.x;
+				offsetId.y = offsetId.y % Resolution.y;
+
+				offset = samplerBlueNoiseErrorDistribution_128x128_OptimizedFor_2d2d2d2d(offsetId.x, offsetId.y, 0, 0);
+			}
+			else
+			{
+				offset = 0.5;
+			}
+
+			float4 output = float4(0, 0, 0, 1);
+			if (!intersectGround)
+			{
+				float radiusCloudStart = CloudStartHeight;
+				float radiusCloudEnd = radiusCloudStart + CloudThickness;
+
+				float tMin = max(RaySphereIntersectNearest(worldPos, worldDir, float3(0, 0, 0), radiusCloudStart), 0.0);
+				float tMax = max(RaySphereIntersectNearest(worldPos, worldDir, float3(0, 0, 0), radiusCloudEnd), 0.0);
+
+				bool cloudEarlyOut = tMax <= tMin || tMin > CloudTracingMaxStartDistance;
+
+				const float marchingDistance = min(CloudMaxMarchingDistance, tMax - tMin);
+				tMax = tMin + marchingDistance;
+		
+				//const uint stepCountUint = CloudStepCount;
+				const uint stepCountUint =  uint(max(2, CloudStepCount * saturate((tMax - tMin) * (1.0 / 16.0))));
+				const float stepCount = float(stepCountUint);
+				const float stepT = (tMax - tMin) / stepCount;
+
+				float sampleT = tMin + stepT * offset;
+
+				const float VoL = dot(worldDir, SunDirection);
+
+				float3 skyBackgroundColor;
+				{
+					float2 uv;
+					float viewZenithCosAngle = dot(worldDir, upVector);
+
+					float3 sideVector = normalize(cross(upVector, worldDir));		// assumes non parallel vectors
+					float3 forwardVector = normalize(cross(sideVector, upVector));	// aligns toward the sun light but perpendicular to up vector
+					float2 lightOnPlane = float2(dot(SunDirection, forwardVector), dot(SunDirection, sideVector));
+					lightOnPlane = normalize(lightOnPlane);
+					float lightViewCosAngle = lightOnPlane.x;
+
+					bool IntersectGround = RaySphereIntersectNearest(worldPos, worldDir, float3(0, 0, 0), atmosphere.BottomRadius) >= 0.0f;
+
+					SkyViewLutParamsToUv(atmosphere, IntersectGround, viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
+					skyBackgroundColor = SkyViewLutTexture.SampleLevel(samplerLinearClamp, uv, 0).rgb;
+				}
+
+				float transmittance = 1.0;
+				float3 scatteredLight = float3(0, 0, 0);
+
+				// vec3 groundToCloudTransfertIsoScatter =  texture(samplerCube(inSkyIrradiance, linearClampEdgeSampler), vec3(0, 1, 0)).rgb;
+				const float3 groundToCloudTransfertIsoScatter = float3(1, 1, 1); // TODO
+				const float3 sunColor = float3(1, 1, 1);
+
+				if (!cloudEarlyOut)
+				{
+					float phase = dualLobPhase(CloudPhaseForward, CloudPhaseBackward, CloudPhaseMixFactor, -VoL);
+
+					ParticipatingMediaPhase participatingMediaPhase = GetParticipatingMediaPhase(phase, CloudPhaseMixFactor);
+
+					float3 rayHitPos = float3(0, 0, 0);
+					float rayHitPosWeight = 0.0;
+
+					float3 atmosphereTransmittance0;
+					{
+						float3 samplePos = sampleT * worldDir + worldPos;
+						float sampleHeight = length(samplePos);
+
+						upVector = samplePos / sampleHeight;
+						viewZenithCosAngle = dot(SunDirection, upVector);
+
+						float2 uv;
+						LutTransmittanceParamsToUv(atmosphere, viewHeight, viewZenithCosAngle, uv);
+						atmosphereTransmittance0 = TransmittanceLutTexture.SampleLevel(samplerLinearClamp, uv, 0).rgb;
+					}
+
+					float3 atmosphereTransmittance1;
+					{
+						float3 samplePos = tMax * worldDir + worldPos;
+						float sampleHeight = length(samplePos);
+
+						upVector = samplePos / sampleHeight;
+						viewZenithCosAngle = dot(SunDirection, upVector);
+
+						float2 uv;
+						LutTransmittanceParamsToUv(atmosphere, viewHeight, viewZenithCosAngle, uv);
+						atmosphereTransmittance1 = TransmittanceLutTexture.SampleLevel(samplerLinearClamp, uv, 0).rgb;
+					}
+
+					const float3 upScaleColor = float3(1, 1, 1); // TODO
+					//const vec3 upScaleColor = texture(samplerCube(inSkyIrradiance, linearClampEdgeSampler), vec3(0, 1, 0)).rgb;
+
+					for (uint i = 0; i < stepCountUint; i++)
+					{
+						float3 samplePos = sampleT * worldDir + worldPos;
+
+						float sampleHeight = length(samplePos);
+
+						float3 atmosphereTransmittance = lerp(atmosphereTransmittance0, atmosphereTransmittance1, saturate(sampleT / marchingDistance));
+
+						float normalizedHeight = (sampleHeight - CloudStartHeight)  / CloudThickness;
+
+						float3 samplePosMeter = samplePos * invScaleToSkyUnit;
+						float stepCloudDensity = CloudMap(samplePosMeter, normalizedHeight);
+
+						rayHitPos += samplePos * transmittance;
+						rayHitPosWeight += transmittance;
+
+						if (stepCloudDensity > 0.0)
+						{
+							float opticalDepth = stepCloudDensity * stepT * invScaleToSkyUnit;
+
+							float stepTransmittance = max(exp(-opticalDepth), exp(-opticalDepth * 0.25) * 0.7); 
+
+							ParticipatingMedia participatingMedia = VolumetricShadow(samplePos, SunDirection.xyz, CloudStartHeight, CloudThickness, -1, CloudMultiScatterExtinction);
+							
+							ParticipatingMedia participatingMediaAmbient;
+							if (CloudEnableGroundContribution)
+							{
+								participatingMediaAmbient = VolumetricShadow(samplePos, float3(0, 1, 0), CloudStartHeight, CloudThickness, -1, CloudMultiScatterExtinction);
+							}
+
+							float powderEffect = 1.0;
+							{
+								float depthProbability = pow(clamp(stepCloudDensity * 8.0 * CloudPowderPow, 0.0, CloudPowderScale), Remap(normalizedHeight, 0.3, 0.85, 0.5, 2.0));
+								depthProbability += 0.05;
+								float verticalProbability = pow(Remap(normalizedHeight, 0.07, 0.22, 0.1, 1.0), 0.8);
+								powderEffect =  PowderEffect(depthProbability, verticalProbability, VoL);
+							}
+
+							const float cloudShadingSunLightScale = 20;
+							float3 sunlightTerm = atmosphereTransmittance * cloudShadingSunLightScale * sunColor;
+
+							float3 groundLit = lerp(skyBackgroundColor, groundToCloudTransfertIsoScatter, saturate(CloudNoiseScale - normalizedHeight)) * saturate(1.0 - 0.5 + normalizedHeight) * CloudFogFade;
+
+							float3 ambientLit = upScaleColor * powderEffect * (1.0 - SunDirection.y) * atmosphereTransmittance;
+
+							float sigmaS = stepCloudDensity;
+							float sigmaE = max(sigmaS, 1e-8f);
+
+							float3 scatteringCoefficients[2];
+							float extinctionCoefficients[2];
+
+							float3 albedo = float3(1, 1, 1);
+
+							scatteringCoefficients[0] = sigmaS * albedo;
+							extinctionCoefficients[0] = sigmaE;
+	
+							float MsExtinctionFactor = CloudMultiScatterExtinction;
+							float MsScatterFactor    = CloudMultiScatterScatter;
+							int ms;
+							for (ms = 1; ms < MS_COUNT; ms++)
+							{
+								extinctionCoefficients[ms] = extinctionCoefficients[ms - 1] * MsExtinctionFactor;
+								scatteringCoefficients[ms] = scatteringCoefficients[ms - 1] * MsScatterFactor;
+                    
+								MsExtinctionFactor *= MsExtinctionFactor;
+								MsScatterFactor    *= MsScatterFactor;
+							}
+
+							for (ms = MS_COUNT - 1; ms >= 0; ms--) // Should terminate at 0
+							{
+								float sunVisibilityTerm = participatingMedia.TransmittanceToLight[ms];
+								float3 sunSkyLuminance = sunVisibilityTerm * sunlightTerm * participatingMediaPhase.Phase[ms] * powderEffect;
+
+								if (CloudEnableGroundContribution)
+								{
+									float skyVisibilityTerm = participatingMediaAmbient.TransmittanceToLight[ms];
+									sunSkyLuminance += skyVisibilityTerm * ambientLit;
+								}
+
+								if(ms == 0)
+								{
+									sunSkyLuminance += groundLit;
+								}
+
+								float3 sactterLitStep = sunSkyLuminance * scatteringCoefficients[ms];
+
+								// See slide 28 at http://www.frostbite.com/2015/08/physically-based-unified-volumetric-rendering-in-frostbite/
+								float3 stepScatter = transmittance * (sactterLitStep - sactterLitStep * stepTransmittance) / max(1e-4f, extinctionCoefficients[ms]);
+								scatteredLight += stepScatter;
+
+								if(ms == 0)
+								{
+									// Beer's law.
+									transmittance *= stepTransmittance;
+								}
+							}
+						}
+
+						if (transmittance <= 0.001)
+						{
+							break;
+						}
+
+						sampleT += stepT;
+					}
+
+					if (rayHitPosWeight > 0.0)
+					{
+						rayHitPos /= rayHitPosWeight;
+
+						float3 rayHitInRender = (rayHitPos - float3(0.0, atmosphere.BottomRadius, 0.0)) * invScaleToSkyUnit;
+                        float4 rayInH = mul(float4(rayHitInRender, 1.0), ViewProjectionMatrix);
+                        float cloudZ = rayInH.z / rayInH.w;
+
+                        if (WriteDepth)
+                        {
+                            CloudDepthTexture[streams.DispatchThreadId.xy] = cloudZ;
+                        }
+
+						float tDepth = length(rayHitPos.xyz - (worldPos + float3(0.0, -atmosphere.BottomRadius, 0.0)));
+						float slice = AerialPerspectiveDepthToSlice(tDepth);
+						float weight = 1.0;
+						if (slice < 0.5)
+						{
+							// We multiply by weight to fade to 0 at depth 0. That works for luminance and opacity.
+							weight = saturate(slice * 2.0);
+							slice = 0.5;
+						}
+						
+						float w = sqrt(slice * AerialPerspectiveSlicesAndDistancePerSlice.z);	// squared distribution
+						float4 ap = weight * AtmosphereCameraScatteringVolume.SampleLevel(samplerLinearClamp, float3(pixPos / float2(Resolution * 4), w), 0);
+						
+						scatteredLight = scatteredLight * (1.0 - ap.a) + ap.rgb * (1.0 - transmittance);
+					}
+				}
+
+				output = float4(scatteredLight, transmittance);
+			}
+
+			CloudColorTexture[streams.DispatchThreadId.xy] = output;
+		}
+
+		float CloudSDF(float3 position, float height)
+		{
+			float3 inPosition = position;
+
+			// Transform + Repeat
+			float s = 6500;
+			position = float3(position.x - s * round(position.x / s), position.y - (6361 + 4) * 1000, position.z - s * round(position.z / s));
+
+			// SDF
+			float3 r = float3(4000, 500, 3000);
+			float k0 = length(position / r);
+			float k1 = length(position/(r*r));
+
+			float cloudDistance = k0 * (k0 - 1.0) / k1;
+
+			if (cloudDistance <= 0)
+			{
+				float n = Perlin(inPosition * 0.0025, 1, false);
+
+				cloudDistance = -cloudDistance;
+
+				return saturate(cloudDistance * 0.000005) * n;
+			}
+			else
+			{
+				return 0;
+			}
+		}
+
+		float CloudMapSDF(float3 position, float height)
+		{
+			float clouds = CloudSDF(position, height);
+
+			float heightAttenuation = Remap(height, 0.0, 0.2, 0.0, 1.0) * Remap(height, 0.8, 1.0, 1.0, 0.0);
+
+			const float coverage = 0.3;
+			const float density = 1.0;
+
+			clouds = clouds * heightAttenuation * coverage;
+
+			return saturate(clouds) * density;
+		}
+
+		float CloudMapFBM(float3 position, float height)
+		{
+			const float coverage = 0.3;
+			const float density = 1.0;
+			const float cloudSpeed = 0.05;
+
+			float wind = Time * cloudSpeed *  -0.006125;
+			float3  windOffset = float3(wind, 0.0, wind);
+
+			float3 cloudPos = position * 0.00045;
+			float clouds = CalculateCloudFBM(cloudPos, windOffset, 5);
+    
+			float localCoverage = CloudCurlNoiseTexture.SampleLevel(SamplerLinearRepeat, (Time * cloudSpeed * 50.0 + position.xz) * 0.000001 + 0.5, 0).x;
+			localCoverage = saturate(localCoverage * 3.0 - 0.75) * 0.5 + 0.5;
+
+			float heightAttenuation = Remap(height, 0.0, 0.2, 0.0, 1.0) * Remap(height, 0.8, 1.0, 1.0, 0.0);
+
+			clouds = clouds * heightAttenuation * localCoverage * coverage * 4.0 - (0.9 * heightAttenuation + height * 0.5 + 0.1);
+			clouds = saturate(clouds);
+
+			return clouds * density;
+		}
+
+		float CloudMapWeatherTexture(float3 position, float height)
+		{
+			position += WindDirection * height * 500.0;
+			float3 positionSkyUnit = position * ScaleToSkyUnit;
+
+			float3 windOffset = (WindDirection + float3(0, 0.1, 0)) * Time * CloudSpeed;
+
+			float2 sampleUv = positionSkyUnit.xz * CloudWeatherUvScale;
+			float4 weatherValue = WeatherTexture.SampleLevel(SamplerLinearRepeat, sampleUv, 0);
+
+			float localCoverage = CloudCurlNoiseTexture.SampleLevel(SamplerLinearRepeat, (Time * CloudSpeed * 50.0 + position.xz) * 0.000001 + 0.5, 0).x;
+			localCoverage = saturate(localCoverage * 3.0 - 0.75) * 0.2;
+
+			float coverage = saturate(CloudCoverage * (localCoverage + weatherValue.x));
+			float gradienShape = Remap(height, 0.00, 0.10, 0.1, 1.0) * Remap(height, 0.10, 0.80, 1.0, 0.2);
+
+			float basicNoise = BasicNoiseTexture.SampleLevel(SamplerLinearRepeat, (positionSkyUnit + windOffset) * CloudBasicNoiseScale, 0).x;
+			float basicCloudNoise = gradienShape * basicNoise;
+
+			float basicCloudWithCoverage = coverage * Remap(basicCloudNoise, 1.0 - coverage, 1, 0, 1);
+
+			float3 sampleDetailNoise = positionSkyUnit - windOffset * 0.15;
+			float detailNoiseComposite = DetailNoiseTexture.SampleLevel(SamplerLinearRepeat, sampleDetailNoise * CloudDetailNoiseScale, 0).x;
+			float detailNoiseMixByHeight = 0.2 * lerp(detailNoiseComposite, 1 - detailNoiseComposite, saturate(height * 10.0));
+    
+			float densityShape = saturate(0.01 + height * 1.15) * CloudDensity *
+				Remap(height, 0.0, 0.1, 0.0, 1.0) * 
+				Remap(height, 0.8, 1.0, 1.0, 0.0);
+
+			float cloudDensity = Remap(basicCloudWithCoverage, detailNoiseMixByHeight, 1.0, 0.0, 1.0);
+			return cloudDensity * densityShape;
+		}
+
+		float CloudMap(float3 position, float height)
+		{
+			return CloudMapWeatherTexture(position, height);
+		}
+
+		float3 CubeSmooth(float3 x)
+		{
+			return x * x * (3.0 - 2.0 * x);
+		}
+
+		float Calculate3DNoise(float3 position)
+		{
+			float3 p = floor(position);
+			float3 b = CubeSmooth(frac(position));
+			float2 uv = 17.0 * p.z + p.xy + b.xy;
+
+			float2 rg = CloudCurlNoiseTexture.SampleLevel(SamplerLinearRepeat, (uv + 0.5) / 64.0, 0).xy;
+
+			return lerp(rg.x, rg.y, b.z);
+		}
+
+		float CalculateCloudFBM(float3 position, float3 windDirection, const int octaves)
+		{
+			const float octAlpha = 0.5; // The ratio of visibility between successive octaves
+			const float octScale = 3.0; // The downscaling factor between successive octaves
+			const float octShift = (octAlpha / octScale) / octaves; // Shift the FBM brightness based on how many octaves are active
+
+			float accum = 0.0;
+			float alpha = 0.5;
+			float3  shift = windDirection;
+			position += windDirection;
+			for (int i = 0; i < octaves; ++i) 
+			{
+				accum += alpha * Calculate3DNoise(position);
+				position = (position + shift) * octScale;
+				alpha *= octAlpha;
+			}
+			return accum + octShift;
+		}
+
+		ParticipatingMediaPhase GetParticipatingMediaPhase(float basePhase, float baseMsPhaseFactor)
+		{
+			ParticipatingMediaPhase participatingMediaPhase;
+			participatingMediaPhase.Phase[0] = basePhase;
+
+			float MsPhaseFactor = baseMsPhaseFactor;
+	
+			for (int ms = 1; ms < MS_COUNT; ms++)
+			{
+				participatingMediaPhase.Phase[ms] = lerp(uniformPhase(), participatingMediaPhase.Phase[0], MsPhaseFactor);
+				MsPhaseFactor *= MsPhaseFactor;
+			}
+
+			return participatingMediaPhase;
+		}
+
+		float PowderEffect(float depth, float height, float VoL)
+		{
+			float r = VoL * 0.5 + 0.5;
+			r = r * r;
+			height = height * (1.0 - r) + r;
+			return depth * height;
+		}
+
+		ParticipatingMedia VolumetricShadow(float3 posKm, float3 sunDirection, float cloudStartHeight, float cloudThickness, int fixNum, float msExtinctionFactor)
+		{
+			ParticipatingMedia participatingMedia;
+
+			int ms = 0;
+
+			float extinctionAccumulation[MS_COUNT];
+			float extinctionCoefficients[MS_COUNT];
+
+			for (ms = 0; ms < MS_COUNT; ms++)
+			{
+				extinctionAccumulation[ms] = 0.0;
+				extinctionCoefficients[ms] = 0.0;
+			}
+
+			const float kStepLMul = 1.5;
+			const uint kStepLight = fixNum > 0 ? fixNum : 12;
+			float stepL = 0.025;
+
+			float d = stepL * 0.5;
+
+			for(uint j = 0; j < kStepLight; j++)
+			{
+				float3 samplePosKm = posKm + sunDirection * d; // km
+
+				float sampleHeightKm = length(samplePosKm);
+				float sampleDt = sampleHeightKm - cloudStartHeight;
+
+				float normalizeHeight = sampleDt / cloudThickness;
+				float3 samplePosMeter = samplePosKm * 1000.0f;
+
+				extinctionCoefficients[0] = CloudMap(samplePosMeter, normalizeHeight);
+				extinctionAccumulation[0] += extinctionCoefficients[0] * stepL;
+
+				float MsExtinctionFactor = msExtinctionFactor;
+				for (ms = 1; ms < 2; ms++)
+				{
+					extinctionCoefficients[ms] = extinctionCoefficients[ms - 1] * MsExtinctionFactor;
+					MsExtinctionFactor *= MsExtinctionFactor;
+					extinctionAccumulation[ms] += extinctionCoefficients[ms] * stepL;
+				}
+
+				d += stepL;
+				stepL *= kStepLMul;
+			}
+
+			for (ms = 0; ms < MS_COUNT; ms++)
+			{
+				participatingMedia.TransmittanceToLight[ms] = exp(-extinctionAccumulation[ms] * 1000.0);
+				participatingMedia.ExtinctionAcc[ms] = extinctionAccumulation[ms] * 1000.0;
+			}
+
+			return participatingMedia;
+		}
+
+
+	};
+}

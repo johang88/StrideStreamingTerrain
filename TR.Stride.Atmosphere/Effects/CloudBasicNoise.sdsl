@@ -1,0 +1,46 @@
+﻿namespace TR.Stride.Atmosphere
+{
+	shader CloudBasicNoise
+		: ComputeShaderBase, Noise
+	{
+		#define BASIC_NOISE_FREQUENCY 4
+		#define BASIC_NOISE_MIX_FACTOR 0.5
+
+		stage RWTexture3D<float4>  OutputTexture;
+
+		override void Compute()
+		{
+            uint3 dimensions;
+            OutputTexture.GetDimensions(dimensions.x, dimensions.y, dimensions.z);
+
+            if(streams.DispatchThreadId.x >= dimensions.x || streams.DispatchThreadId.y >= dimensions.y || streams.DispatchThreadId.z >= dimensions.z)
+            {
+                return;
+            }
+
+            const float3 uvw = (float3(streams.DispatchThreadId.xyz) + float3(0.5, 0.5, 0.5)) / float3(dimensions);
+
+            // billowy perlin noise
+            float pfbm = lerp(1.0, PerlinFbm(uvw, BASIC_NOISE_FREQUENCY, 7), BASIC_NOISE_MIX_FACTOR);
+            pfbm = abs(pfbm * 2.0 - 1.0);
+    
+            // perlin-worley
+            float4 output = float4(0, 0, 0, 0);
+            output.g += WorleyFbm(uvw, BASIC_NOISE_FREQUENCY * 1.0);
+            output.b += WorleyFbm(uvw, BASIC_NOISE_FREQUENCY * 2.0);
+            output.a += WorleyFbm(uvw, BASIC_NOISE_FREQUENCY * 4.0);
+
+            output.r += Remap(pfbm, 0.0, 1., output.g, 1.0); 
+
+            OutputTexture[streams.DispatchThreadId.xyz] = float4(BasicNoiseComposite(output).xxxx);
+		}
+
+        float BasicNoiseComposite(float4 v)
+        {
+            float wfbm = v.y * 0.625 + v.z * 0.25 + v.w * 0.125; 
+    
+            // cloud shape modeled after the GPU Pro 7 chapter
+            return Remap(v.x, wfbm - 1.0, 1.0, 0.0, 1.0);
+        }
+	};
+}
