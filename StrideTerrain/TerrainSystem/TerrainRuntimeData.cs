@@ -13,6 +13,7 @@ public class TerrainRuntimeData
     public const int RuntimeTextureSize = 2048;
     public const float InvRuntimeTextureSize = 1.0f / RuntimeTextureSize;
 
+    // Minimum viable mesh, no buffers bound as all triangles are generated in the shader.
     public Mesh Mesh = new()
     {
         Draw = new MeshDraw

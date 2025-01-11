@@ -292,6 +292,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                     if (!data.PhysicsEntityPool.TryDequeue(out var physicsEntity))
                     {
+                        // It would be nice of someone updated stride to not require the use of the obsolote members ...
+                        // TODO: decouple physics streaming from rendering and maybe add custom data format for it.
 #pragma warning disable CS0618 // Type or member is obsolete
                         var unmanagedArray = new UnmanagedArray<float>(data.TerrainData.Header.ChunkTextureSize * data.TerrainData.Header.ChunkTextureSize);
 #pragma warning restore CS0618 // Type or member is obsolete
