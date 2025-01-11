@@ -28,6 +28,8 @@
 
             uint triangleVertex = streams.VertexId % (uint)6;
                 
+            // Please dont look at this (●'◡'●)
+            // Set triangle positions and merge triangle if adjacent to lower lod
             if (triangleVertex == 0) vertexPosition.xz = float2(1 - (ldN > 0 && offsetZ == 0 && (offsetX % 2 == 0) ? 1.0f : 0.0f), 0 + (ldE > 0 && offsetX == (ChunkSize - 1) && (offsetZ % 2 == 1) ? 1.0f : 0.0f));  // 1, 0
             else if (triangleVertex == 1) vertexPosition.xz = float2(1 + (ldS > 0 && offsetZ == (ChunkSize - 1) && (offsetX % 2 == 0) ? 1.0f : 0.0f), 1 + (ldE > 0 && offsetX == (ChunkSize - 1) && (offsetZ % 2 == 0) ? 1.0f : 0.0f)); // 1, 1
             else if (triangleVertex == 2) vertexPosition.xz = float2(0 + (ldS > 0 && offsetZ == (ChunkSize - 1) && (offsetX % 2 == 1) ? 1.0f : 0.0f), 1 - (ldW > 0 && offsetX == 0 && (offsetZ % 2 == 0) ? 1.0f : 0.0f)); // 0, 0
@@ -41,10 +43,10 @@
             vertexPosition.x += (float)offsetX;
             vertexPosition.z += (float)offsetZ;
 
+            // Setup some uv's
             uv = uv + int2(vertexPosition.xz);
             streams.TexCoord1 = uv * InvTerrainTextureSize;
             streams.TexCoord3 = vertexPosition.xz / (streams.LodLevel + 1);
-            streams.TexCoord2 = (vertexPosition.xz / (float)ChunkSize) / (streams.LodLevel + 1);
             streams.TexCoord2 = uv * InvTerrainTextureSize * 100;
 
             streams.meshNormal = float3(0, 1, 0);
@@ -69,6 +71,7 @@
             streams.PositionWS = mul(streams.PositionWS, TerrainWorld);
         }
 
+        // Uncomment to visualize lod levels
         //stage override void PSMain()
         //{
         //    base.PSMain();
