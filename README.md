@@ -8,7 +8,7 @@ If you insist ...
 * Get a big heightmap (something like 8k+ it's got to be really big or it would make no sense to stream it now would it). It currently must be power of 2 (or power of 2 + 1), square and be 16bit single channel png (other formats might work but not tested).
 * Fix stride versions in 
 * Compile `StrideTerrain.Importer.sln`
-* From root folder of the project run something like this `--input \"StrideTerrain.Importer\bin\debug\net8.0\StrideTerrain.Importer.exe "<PathToHeightMap>" --output "StrideTerrain.Sample\Resources" --name "<MapName>" --chunk-size 128 --max-height <MaxHeight>`
+* From root folder of the project run something like this `"StrideTerrain.Importer\bin\debug\net8.0\StrideTerrain.Importer.exe --input "<PathToHeightMap>" --output "StrideTerrain.Sample\Resources" --name "<MapName>" --chunk-size 128 --max-height <MaxHeight>`
 * You will now have some files in the resoruces folder `MapName`, `MapName_StreamingData`
 * Open the sample project (or add referneces as needed to your own project)
 * Import `MapName`, `MapName_StreamingData` as raw assets. Compression **must** be disabled or you will get corrupt data
