@@ -3,8 +3,11 @@ using Stride.Engine;
 using Stride.Graphics;
 using Stride.Rendering;
 using StrideTerrain.Common;
+using System;
 using System.Collections.Generic;
 using System.IO;
+using System.Threading.Tasks;
+using Buffer = Stride.Graphics.Buffer;
 
 namespace StrideTerrain.TerrainSystem;
 
@@ -76,4 +79,22 @@ public class TerrainRuntimeData
     public Dictionary<int, Entity> PhysicsEntities = [];
 
     public Queue<Entity> PhysicsEntityPool = [];
+
+    public BoundingBoxExt BoundingBox;
+
+    public void ReadChunk(ChunkType chunkType, int chunkIndex, Span<byte> buffer)
+    {
+        if (TerrainStream == null) throw new InvalidOperationException("Stream not available.");
+
+        var offset = chunkType == ChunkType.Heightmap ? TerrainData.Chunks[chunkIndex].HeightmapOffset : TerrainData.Chunks[chunkIndex].NormalMapOffset;
+
+        TerrainStream.Seek(BaseOffset + offset, SeekOrigin.Begin);
+        TerrainStream.ReadAtLeast(buffer, TerrainData.Header.HeightmapSize);
+    }
+}
+
+public enum ChunkType
+{
+    Heightmap,
+    NormalMap
 }

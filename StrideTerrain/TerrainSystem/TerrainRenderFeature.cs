@@ -1,10 +1,13 @@
 ﻿using Stride.Core;
+using Stride.Core.Diagnostics;
 using Stride.Rendering;
 using System.Collections.Generic;
 namespace StrideTerrain.TerrainSystem;
 
 public class TerrainRenderFeature : SubRenderFeature
 {
+    private static readonly ProfilingKey ProfilingKey = new("Terrain.Draw");
+
     [DataMemberIgnore]
     public static readonly PropertyKey<Dictionary<RenderModel, TerrainRuntimeData>> ModelToTerrainMap = new("TerrainRenderFeature.ModelToTerrainMap", typeof(TerrainRenderFeature));
 
@@ -35,8 +38,9 @@ public class TerrainRenderFeature : SubRenderFeature
             }
 
             renderMesh.Enabled = true;
-
             renderMesh.InstanceCount = terrainRenderData.InstanceCount;
+            renderMesh.ProfilingKey = ProfilingKey;
+            renderMesh.BoundingBox = terrainRenderData.BoundingBox;
         }
     }
 }

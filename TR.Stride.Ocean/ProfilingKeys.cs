@@ -12,5 +12,6 @@ namespace TR.Stride.Ocean
         public static readonly ProfilingKey Ocean = new ProfilingKey("Ocean");
         public static readonly ProfilingKey CalculateInitials = new ProfilingKey("CalculateInitials");
         public static readonly ProfilingKey CalculateWavesAtTime = new ProfilingKey("CalculateWavesAtTime");
+        public static readonly ProfilingKey GenearteMipMaps = new ProfilingKey("GenearteMipMaps");
     }
 }

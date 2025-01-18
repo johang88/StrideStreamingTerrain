@@ -33,7 +33,7 @@ public struct TerrainDataHeader
         Version = reader.ReadInt32();
 
         if (Version != VERSION)
-            throw new InvalidDataException("Invalid version");
+            throw new InvalidDataException($"Invalid version, expected {VERSION}, got {Version}");
 
         ChunkSize = reader.ReadInt32();
         ChunkTextureSize = reader.ReadInt32();

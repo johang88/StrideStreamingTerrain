@@ -345,8 +345,6 @@ namespace TR.Stride.Atmosphere
                 lightCosAngleChange = MathUtil.Clamp(lightCosAngleChange, -1.0f, 1.0f);
             }
 
-            renderObject.PreviousLightDiretion = lightDirection;
-
             // Transmittance LUT
             using (context.PushRenderTargetsAndRestore())
             {
@@ -405,6 +403,8 @@ namespace TR.Stride.Atmosphere
             // Render cube map for ambient
             if (renderObject.Component.Sky != null && renderObject.Component.Sky.Type is LightSkybox lightSkybox && lightSkybox.Skybox != null && lightCosAngleChange < 0.9f)
             {
+                renderObject.PreviousLightDiretion = lightDirection;
+
                 using (context.QueryManager.BeginProfile(Color4.Black, ProfilingKeys.CubeMap))
                 {
                     RenderCubeMap(context, renderView, commandList, renderEffect, drawAtmosphere, renderObject, renderNode, renderNodeReference);
@@ -451,62 +451,62 @@ namespace TR.Stride.Atmosphere
             }
 
             // Cloud basic noise texture
-            using (context.QueryManager.BeginProfile(Color4.Black, ProfilingKeys.CloudBasicNoise))
-            {
-                commandList.ResourceBarrierTransition(_cloudBasicNoise, GraphicsResourceState.UnorderedAccess);
+            //using (context.QueryManager.BeginProfile(Color4.Black, ProfilingKeys.CloudBasicNoise))
+            //{
+            //    commandList.ResourceBarrierTransition(_cloudBasicNoise, GraphicsResourceState.UnorderedAccess);
 
-                _cloudBasicNoiseEffect.Parameters.Set(CloudBasicNoiseKeys.OutputTexture, _cloudBasicNoise);
+            //    _cloudBasicNoiseEffect.Parameters.Set(CloudBasicNoiseKeys.OutputTexture, _cloudBasicNoise);
 
-                _cloudBasicNoiseEffect.ThreadGroupCounts = new Int3(GetGroupCount(_cloudBasicNoise.Width, 8), GetGroupCount(_cloudBasicNoise.Height, 8), _cloudBasicNoise.Depth);
-                _cloudBasicNoiseEffect.ThreadNumbers = new Int3(8, 8, 1);
+            //    _cloudBasicNoiseEffect.ThreadGroupCounts = new Int3(GetGroupCount(_cloudBasicNoise.Width, 8), GetGroupCount(_cloudBasicNoise.Height, 8), _cloudBasicNoise.Depth);
+            //    _cloudBasicNoiseEffect.ThreadNumbers = new Int3(8, 8, 1);
 
-                _cloudBasicNoiseEffect.Draw(context);
+            //    _cloudBasicNoiseEffect.Draw(context);
 
-                commandList.ResourceBarrierTransition(_cloudBasicNoise, GraphicsResourceState.PixelShaderResource);
-            }
+            //    commandList.ResourceBarrierTransition(_cloudBasicNoise, GraphicsResourceState.PixelShaderResource);
+            //}
 
             // Cloud detail noise texture
-            using (context.QueryManager.BeginProfile(Color4.Black, ProfilingKeys.CloudDetailNoise))
-            {
-                commandList.ResourceBarrierTransition(_cloudDetailNoise, GraphicsResourceState.UnorderedAccess);
+            //using (context.QueryManager.BeginProfile(Color4.Black, ProfilingKeys.CloudDetailNoise))
+            //{
+            //    commandList.ResourceBarrierTransition(_cloudDetailNoise, GraphicsResourceState.UnorderedAccess);
 
-                _cloudDetailNoiseEffect.Parameters.Set(CloudDetailNoiseKeys.OutputTexture, _cloudDetailNoise);
+            //    _cloudDetailNoiseEffect.Parameters.Set(CloudDetailNoiseKeys.OutputTexture, _cloudDetailNoise);
 
-                _cloudDetailNoiseEffect.ThreadGroupCounts = new Int3(GetGroupCount(_cloudDetailNoise.Width, 8), GetGroupCount(_cloudDetailNoise.Height, 8), _cloudDetailNoise.Depth);
-                _cloudDetailNoiseEffect.ThreadNumbers = new Int3(8, 8, 1);
+            //    _cloudDetailNoiseEffect.ThreadGroupCounts = new Int3(GetGroupCount(_cloudDetailNoise.Width, 8), GetGroupCount(_cloudDetailNoise.Height, 8), _cloudDetailNoise.Depth);
+            //    _cloudDetailNoiseEffect.ThreadNumbers = new Int3(8, 8, 1);
 
-                _cloudDetailNoiseEffect.Draw(context);
+            //    _cloudDetailNoiseEffect.Draw(context);
 
-                commandList.ResourceBarrierTransition(_cloudDetailNoise, GraphicsResourceState.PixelShaderResource);
-            }
+            //    commandList.ResourceBarrierTransition(_cloudDetailNoise, GraphicsResourceState.PixelShaderResource);
+            //}
 
             // Render clouds
             var invViewProjectionMatrix = Matrix.Invert(renderView.ViewProjection);
-            var (cloudsRenderTarget, cloudDepthRenderTarget) = RenderClouds(context, renderView, (int)renderView.ViewSize.X, (int)renderView.ViewSize.Y, commandList, renderObject, applyRandomOffset: Atmosphere.CloudsDither, invViewProjectionMatrix: invViewProjectionMatrix, renderDepth: true);
+            //var (cloudsRenderTarget, cloudDepthRenderTarget) = RenderClouds(context, renderView, (int)renderView.ViewSize.X, (int)renderView.ViewSize.Y, commandList, renderObject, applyRandomOffset: Atmosphere.CloudsDither, invViewProjectionMatrix: invViewProjectionMatrix, renderDepth: true);
             
-            if (cloudsRenderTarget != null)
-            {
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudReconstructionTexture, _cloudColorReconstructTexture);
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudReconstructionHistoryTexture, _cloudColorReconstructHistoryTexture);
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudDepthTexture, cloudDepthRenderTarget);
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudDepthHistoryTexture, _cloudDepthHistoryTexture ?? cloudDepthRenderTarget);
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudColorTexture, cloudsRenderTarget);
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.FrameIndex, (uint)_frameIndex);
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudResolutionDivider, Atmosphere.CloudsResolutionDivider);
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.InvViewProjectionMatrix, invViewProjectionMatrix);
-                _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.ViewProjectionMatrixPrevious, _previousViewProjectionMatrix ?? renderView.ViewProjection);
+            //if (cloudsRenderTarget != null)
+            //{
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudReconstructionTexture, _cloudColorReconstructTexture);
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudReconstructionHistoryTexture, _cloudColorReconstructHistoryTexture);
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudDepthTexture, cloudDepthRenderTarget);
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudDepthHistoryTexture, _cloudDepthHistoryTexture ?? cloudDepthRenderTarget);
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudColorTexture, cloudsRenderTarget);
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.FrameIndex, (uint)_frameIndex);
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.CloudResolutionDivider, Atmosphere.CloudsResolutionDivider);
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.InvViewProjectionMatrix, invViewProjectionMatrix);
+            //    _cloudReconstrutEffect.Parameters.Set(CloudReconstructKeys.ViewProjectionMatrixPrevious, _previousViewProjectionMatrix ?? renderView.ViewProjection);
 
-                _previousViewProjectionMatrix = renderView.ViewProjection;
+            //    _previousViewProjectionMatrix = renderView.ViewProjection;
 
-                _cloudReconstrutEffect.ThreadGroupCounts = new Int3(GetGroupCount(_cloudColorReconstructTexture.Width, 8), GetGroupCount(_cloudColorReconstructTexture.Height, 8), 1);
-                _cloudReconstrutEffect.ThreadNumbers = new Int3(8, 8, 1);
+            //    _cloudReconstrutEffect.ThreadGroupCounts = new Int3(GetGroupCount(_cloudColorReconstructTexture.Width, 8), GetGroupCount(_cloudColorReconstructTexture.Height, 8), 1);
+            //    _cloudReconstrutEffect.ThreadNumbers = new Int3(8, 8, 1);
 
-                _cloudReconstrutEffect.Draw(context, "Atmosphere.CloudsReconstruct");
+            //    _cloudReconstrutEffect.Draw(context, "Atmosphere.CloudsReconstruct");
 
-                var tmp = _cloudColorReconstructTexture;
-                _cloudColorReconstructTexture = _cloudColorReconstructHistoryTexture;
-                _cloudColorReconstructHistoryTexture = tmp;
-            }
+            //    var tmp = _cloudColorReconstructTexture;
+            //    _cloudColorReconstructTexture = _cloudColorReconstructHistoryTexture;
+            //    _cloudColorReconstructHistoryTexture = tmp;
+            //}
 
             // Ray march atmosphere render
             using (context.QueryManager.BeginProfile(Color4.Black, ProfilingKeys.RayMarching))
@@ -515,7 +515,7 @@ namespace TR.Stride.Atmosphere
                 _atmosphereParameters.Set(AtmosphereRenderSkyRayMarchingKeys.RenderClouds, Atmosphere.EnableClouds);
                 _atmosphereParameters.Set(AtmosphereRenderSkyRayMarchingKeys.CloudsTextureSize, new Vector2(_cloudColorReconstructHistoryTexture?.Width ?? 0, _cloudColorReconstructHistoryTexture?.Height ?? 0));
 
-                UpdateCBuffers(commandList, renderNodeReference, renderNode, renderEffect, ref drawAtmosphere, cloudsRenderTarget != null ? _cloudColorReconstructHistoryTexture : null);
+                UpdateCBuffers(commandList, renderNodeReference, renderNode, renderEffect, ref drawAtmosphere, null);
 
                 RenderAtmosphere(commandList, renderEffect);
             }
@@ -536,20 +536,20 @@ namespace TR.Stride.Atmosphere
                 _spriteBatch.End();
             }
 
-            if (cloudsRenderTarget != null)
-            {
-                context.RenderContext.Allocator.ReleaseReference(cloudsRenderTarget);
-            }
+            //if (cloudsRenderTarget != null)
+            //{
+            //    context.RenderContext.Allocator.ReleaseReference(cloudsRenderTarget);
+            //}
 
-            if (cloudDepthRenderTarget != null)
-            {
-                if (_cloudDepthHistoryTexture!= null)
-                {
-                    context.RenderContext.Allocator.ReleaseReference(_cloudDepthHistoryTexture);
-                }
+            //if (cloudDepthRenderTarget != null)
+            //{
+            //    if (_cloudDepthHistoryTexture!= null)
+            //    {
+            //        context.RenderContext.Allocator.ReleaseReference(_cloudDepthHistoryTexture);
+            //    }
 
-                _cloudDepthHistoryTexture = cloudDepthRenderTarget;
-            }
+            //    _cloudDepthHistoryTexture = cloudDepthRenderTarget;
+            //}
         }
 
         private (Texture cloudsColor, Texture cloudsDepth) RenderClouds(RenderDrawContext context, RenderView renderView, int width, int height, CommandList commandList, AtmosphereRenderObject renderObject, int? sampleCount = null, int? resolutionDivider = null, bool applyRandomOffset = true, Matrix? invViewProjectionMatrix = null, bool renderDepth = false)

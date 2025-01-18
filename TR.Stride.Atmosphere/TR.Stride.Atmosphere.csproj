@@ -2,10 +2,11 @@
 	<PropertyGroup>
 		<TargetFrameworks>net8.0-windows</TargetFrameworks>
 		<ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+		<Configurations>Debug;Release;DebugExGameEditor</Configurations>
 	</PropertyGroup>
 	<ItemGroup>
-		<PackageReference Include="Stride.Core"  PrivateAssets="contentfiles;analyzers" />
-		<PackageReference Include="Stride.Engine"  PrivateAssets="contentfiles;analyzers" />
+		<PackageReference Include="Stride.Core" PrivateAssets="contentfiles;analyzers" />
+		<PackageReference Include="Stride.Engine" PrivateAssets="contentfiles;analyzers" />
 		<PackageReference Include="Stride.Core.Assets.CompilerApp" rivateAssets="contentfiles; analyzers" IncludeAssets="build; buildtransitive" />
 	</ItemGroup>
 	<ItemGroup>

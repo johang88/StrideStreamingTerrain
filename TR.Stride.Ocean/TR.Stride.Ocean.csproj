@@ -3,6 +3,7 @@
   <PropertyGroup>
     <TargetFrameworks>net8.0-windows</TargetFrameworks>
 	  <ProduceReferenceAssembly>false</ProduceReferenceAssembly>
+	  <Configurations>Debug;Release;DebugExGameEditor</Configurations>
   </PropertyGroup>
 
   <ItemGroup>

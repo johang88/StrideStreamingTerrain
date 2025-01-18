@@ -1,6 +1,6 @@
 ﻿namespace StrideTerrain.TerrainSystem.Effects
 {
-    shader TerrainCommon
+    shader TerrainCommon : Texturing
     {
         stage stream int LodLevel;
         stage stream float TerrainHeight;
@@ -40,6 +40,55 @@
             stage float MaxHeight;
             stage float4x4 TerrainWorld;
             stage uint ChunksPerRow;
+            stage float InvUnitsPerTexel;
+        }
+
+        float GetTerrainHeightAt(float wx, float wz)
+        {
+            wx = wx * InvUnitsPerTexel;
+            wz = wz * InvUnitsPerTexel;
+
+            uint sectorX = min(ChunksPerRow, (uint)floor(wx / ChunkSize));
+            uint sectorZ = min(ChunksPerRow, (uint)floor(wz / ChunkSize));
+            uint sectorIndex = sectorZ * ChunksPerRow + sectorX;
+            uint chunkIndex = max(0, SectorToChunkInstanceMapBuffer[sectorIndex]);
+
+            float positionInChunkX = ((float)wx) % ChunkSize;
+            float positionInChunkZ = ((float)wz) % ChunkSize;
+
+            float2 uv = ChunkInstanceDataBuffer[chunkIndex].Uv;
+
+            uv.x += positionInChunkX + 0.5f;
+            uv.y += positionInChunkZ + 0.5f;
+
+            uv *= InvTerrainTextureSize;
+
+            float height = Heightmap.SampleLevel(LinearSampler, uv, 0).x;
+
+            return height * MaxHeight;
+        }
+
+        float3 GetTerrainNormalAt(float wx, float wz)
+        {
+            wx = wx * InvUnitsPerTexel;
+            wz = wz * InvUnitsPerTexel;
+
+            uint sectorX = min(ChunksPerRow, (uint)floor(wx / ChunkSize));
+            uint sectorZ = min(ChunksPerRow, (uint)floor(wz / ChunkSize));
+            uint sectorIndex = sectorZ * ChunksPerRow + sectorX;
+            uint chunkIndex = max(0, SectorToChunkInstanceMapBuffer[sectorIndex]);
+
+            float positionInChunkX = ((float)wx) % ChunkSize;
+            float positionInChunkZ = ((float)wz) % ChunkSize;
+
+            float2 uv = ChunkInstanceDataBuffer[chunkIndex].Uv;
+
+            uv.x += positionInChunkX + 0.5f;
+            uv.y += positionInChunkZ + 0.5f;
+            
+            uv *= InvTerrainTextureSize;
+
+            return TerrainNormalMap.SampleLevel(LinearSampler, uv, 0).xyz;
         }
     };
 }

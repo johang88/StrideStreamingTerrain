@@ -1,67 +1,77 @@
-<Project Sdk="Microsoft.NET.Sdk">
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="..\Common.props" />
+	
+	<PropertyGroup>
+		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<Nullable>enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+		<Configurations>Debug;Release;DebugExGameEditor</Configurations>
+	</PropertyGroup>
+	
+	<ItemGroup>
+		<PackageReference Include="Stride.Engine" />
 
-  <PropertyGroup>
-    <TargetFrameworks>net8.0-windows</TargetFrameworks>
-	<Nullable>enable</Nullable>
-	<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-  </PropertyGroup>
+		<PackageReference Include="Stride.Video" />
+		<PackageReference Include="Stride.Physics" />
+		<PackageReference Include="Stride.Navigation" />
+		<PackageReference Include="Stride.Particles" />
+		<PackageReference Include="Stride.UI" />
 
-  <ItemGroup>
-    <PackageReference Include="Stride.Engine" />
+		<PackageReference Include="Stride.Core.Assets.CompilerApp" IncludeAssets="build;buildTransitive" />
+	</ItemGroup>
 
-    <PackageReference Include="Stride.Video" />
-    <PackageReference Include="Stride.Physics" />
-    <PackageReference Include="Stride.Navigation" />
-    <PackageReference Include="Stride.Particles" />
-    <PackageReference Include="Stride.UI" />
+	<ItemGroup>
+		<ProjectReference Include="..\StrideCommunity.ImGuiDebug\StrideCommunity.ImGuiDebug.csproj" />
+		<ProjectReference Include="..\StrideTerrain.Common\StrideTerrain.Common.csproj" />
+		<ProjectReference Include="..\TR.Stride.Atmosphere\TR.Stride.Atmosphere.csproj" />
+	</ItemGroup>
 
-    <PackageReference Include="Stride.Core.Assets.CompilerApp" IncludeAssets="build;buildTransitive" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <ProjectReference Include="..\StrideCommunity.ImGuiDebug\StrideCommunity.ImGuiDebug.csproj" />
-    <ProjectReference Include="..\StrideTerrain.Common\StrideTerrain.Common.csproj" />
-    <ProjectReference Include="..\TR.Stride.Atmosphere\TR.Stride.Atmosphere.csproj" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl.cs">
-      <DesignTime>True</DesignTime>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>MaterialTerrainDisplacement.sdsl</DependentUpon>
-    </Compile>
-    <Compile Update="TerrainSystem\Effects\TerrainCommon.sdsl.cs">
-      <DesignTime>True</DesignTime>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <AutoGen>True</AutoGen>
-    </Compile>
-    <Compile Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl.cs">
-      <DesignTime>True</DesignTime>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>TerrainBlendComputeColor.sdsl</DependentUpon>
-    </Compile>
-    <Compile Update="TerrainSystem\Effects\TerrainNormalMapComputeColor.sdsl.cs">
-      <DesignTime>True</DesignTime>
-      <DesignTimeSharedInput>True</DesignTimeSharedInput>
-      <AutoGen>True</AutoGen>
-      <DependentUpon>TerrainNormalMapComputeColor.sdsl</DependentUpon>
-    </Compile>
-  </ItemGroup>
-
-  <ItemGroup>
-    <None Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl">
-      <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
-    </None>
-    <None Update="TerrainSystem\Effects\TerrainCommon.sdsl">
-      <LastGenOutput>TerrainCommon.sdsl.cs</LastGenOutput>
-    </None>
-    <None Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl">
-      <LastGenOutput>TerrainBlendComputeColor.sdsl.cs</LastGenOutput>
-    </None>
-    <None Update="TerrainSystem\Effects\TerrainNormalMapComputeColor.sdsl">
-      <LastGenOutput>TerrainNormalMapComputeColor.sdsl.cs</LastGenOutput>
-    </None>
-  </ItemGroup>
+	<!-- Editor only references -->
+	<ItemGroup Condition="$([System.Text.RegularExpressions.Regex]::IsMatch($(DefineConstants), '^(.*;)*GAME_EDITOR(;.*)*$'))">
+	</ItemGroup>
+	
+	<ItemGroup>
+	  <Compile Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\TerrainCommon.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\TerrainNormalMapComputeColor.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	</ItemGroup>
+	<ItemGroup>
+	  <None Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl">
+	    <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl">
+	    <LastGenOutput>TerrainBlendComputeColor.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\TerrainCommon.sdsl">
+	    <LastGenOutput>TerrainCommon.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\TerrainNormalMapComputeColor.sdsl">
+	    <LastGenOutput>TerrainNormalMapComputeColor.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl">
+	    <LastGenOutput>MaterialGrassDisplacementFeature.sdsl.cs</LastGenOutput>
+	  </None>
+	</ItemGroup>
 </Project>

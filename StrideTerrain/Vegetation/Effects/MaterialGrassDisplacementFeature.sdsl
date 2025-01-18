@@ -1,0 +1,48 @@
+﻿namespace StrideTerrain.Vegetation.Effects
+{
+    shader MaterialGrassDisplacementFeature 
+        : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, TerrainCommon, Math, TransformationInstancing, Global, NormalUpdate
+    {
+        float3x3 RotateY(float theta) {
+            float c = cos(theta);
+            float s = sin(theta);
+            return float3x3(
+                float3(c, 0, s),
+                float3(0, 1, 0),
+                float3(-s, 0, c)
+            );
+        }
+
+        override void Compute()
+        {
+            float3x3 rot = RotateY(FastRandom(streams.InstanceID * PI * 2.0f));
+            streams.Position.xyz = mul(streams.Position.xyz, rot);
+            streams.Position.xyz *= 0.8f + max(1.0f, FastRandom(streams.InstanceID)) * 0.5f;
+        }
+
+        stage override void TransformPosition()
+        {
+            float4x4 instanceWorld = GetInstanceWorld(streams.InstanceID);
+
+            float2 grassPosition = float2(World._m30 + instanceWorld._m30, World._m32 + instanceWorld._m32);
+            streams.PositionWS.xz += float2(World._m30, World._m32);
+
+            uint ox = streams.InstanceID + (uint)grassPosition.x;
+            uint oy = streams.InstanceID + (uint)grassPosition.y;
+
+            streams.PositionWS.xz += float2(FastRandom(ox), FastRandom(oy));
+
+            float fadeOutDistance = 128.0f;
+            float distanceToCamera = saturate(length(Eye.xyz - streams.PositionWS) - fadeOutDistance);
+            //streams.PositionWS.xyz *= 1.0f - distanceToCamera;
+
+            float terrainHeight = GetTerrainHeightAt(streams.PositionWS.x, streams.PositionWS.z);
+            float3 terrainNormal = GetTerrainNormalAt(streams.PositionWS.x, streams.PositionWS.z);
+
+            streams.PositionWS.y += terrainHeight;
+
+            if (terrainHeight < 80 || abs(terrainNormal.y) < 0.9f)
+                streams.PositionWS.y /= 0;
+        }
+    };
+}

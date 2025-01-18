@@ -13,6 +13,7 @@ using System;
 using System.Buffers;
 using System.Collections.Generic;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using Buffer = Stride.Graphics.Buffer;
 
@@ -112,7 +113,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 modelComponent.Model ??= [data.Mesh];
                 modelComponent.Model.BoundingSphere = new(Vector3.Zero, 10000);
                 modelComponent.Model.BoundingBox = BoundingBox.FromSphere(modelComponent.BoundingSphere);
-                modelComponent.IsShadowCaster = false;
+                modelComponent.IsShadowCaster = true;
                 modelComponent.Materials[0] = component.Material;
                 modelComponent.Enabled = false; // Stays disabled until everything is ready.
             }
@@ -145,7 +146,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.NormalMapStagingTexture?.Dispose();
                 data.NormalMapStagingTexture = null;
 
-                var fileProvider = contentManager.FileProvider;
+#if !GAME_EDITOR
+                DatabaseFileProvider fileProvider = contentManager.FileProvider;
+
                 if (!fileProvider.ContentIndexMap.TryGetValue(component.TerrainStreamingData.Url, out var objectId))
                 {
                     return;
@@ -155,16 +158,29 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 {
                     return;
                 }
+                data.BaseOffset = startPosition;
+#else
+                data.BaseOffset = 0; 
+#endif
 
                 data.TerrainDataUrl = component.TerrainData.Url;
                 data.TerrainStreamDataUrl = component.TerrainStreamingData.Url;
-                data.BaseOffset = startPosition;
 
+#if GAME_EDITOR
+                // TODO: not like this :D 
+                using var terrainDataStream = File.OpenRead($"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Skellige");
+#else
                 using var terrainDataStream = contentManager.OpenAsStream(data.TerrainDataUrl, StreamFlags.None);
+#endif
                 using var terrainDataReader = new BinaryReader(terrainDataStream);
                 data.TerrainData.Read(terrainDataReader);
 
+#if GAME_EDITOR
+                // TODO: not like this :D 
+                data.TerrainStream = File.OpenRead($"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Skellige_StreamingData");
+#else
                 data.TerrainStream = File.OpenRead(url);
+#endif
 
                 data.ChunkToTextureIndex = new int[data.TerrainData.Chunks.Length];
                 for (var i = 0; i < data.ChunkToTextureIndex.Length; i++)
@@ -253,17 +269,17 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 var tx = (textureIndex % texturesPerRow) * data.TerrainData.Header.ChunkTextureSize;
                 var ty = (textureIndex / texturesPerRow) * data.TerrainData.Header.ChunkTextureSize;
 
-                var tempData = ArrayPool<byte>.Shared.Rent(Math.Max(data.TerrainData.Header.HeightmapSize, data.TerrainData.Header.NormalMapSize));
+                var buffer = ArrayPool<byte>.Shared.Rent(Math.Max(data.TerrainData.Header.HeightmapSize, data.TerrainData.Header.NormalMapSize));
 
-                data.TerrainStream.Seek(data.BaseOffset + data.TerrainData.Chunks[chunkIndex].HeightmapOffset, SeekOrigin.Begin);
-                data.TerrainStream.ReadAtLeast(tempData, data.TerrainData.Header.HeightmapSize);
+                data.ReadChunk(ChunkType.Heightmap, chunkIndex, buffer);
 
                 var targetRegion = new ResourceRegion(tx, ty, 0, data.TerrainData.Header.ChunkTextureSize, data.TerrainData.Header.ChunkTextureSize, 1);
 
-                data.HeightmapStagingTexture.SetData(graphicsContext.CommandList, tempData.AsSpan(0, data.TerrainData.Header.HeightmapSize), 0, 0);
+                data.HeightmapStagingTexture.SetData(graphicsContext.CommandList, buffer.AsSpan(0, data.TerrainData.Header.HeightmapSize), 0, 0);
                 graphicsContext.CommandList.CopyRegion(data.HeightmapStagingTexture, 0, null, data.HeightmapTexture, 0, tx, ty);
 
                 // Allocate in memory data for hightest lod (used for physics).
+#if !GAME_EDITOR
                 if (chunkIndex >= data.TerrainData.LodChunkOffsets[0])
                 {
                     static float ConvertToFloatHeight(float minValue, float maxValue, float value) => MathUtil.InverseLerp(minValue, maxValue, MathUtil.Clamp(value, minValue, maxValue));
@@ -285,7 +301,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                         for (var x = 0; x < data.TerrainData.Header.ChunkTextureSize; x++)
                         {
                             var index = y * data.TerrainData.Header.ChunkTextureSize + x;
-                            var height = BitConverter.ToUInt16(tempData, index * 2);
+                            var height = BitConverter.ToUInt16(buffer, index * 2);
                             heightmap[index] = ConvertToFloatHeight(0, ushort.MaxValue, height) * data.TerrainData.Header.MaxHeight;
                         }
                     }
@@ -332,16 +348,16 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                     data.PhysicsEntities.Add(chunkIndex, physicsEntity);
                 }
+#endif
 
-                data.TerrainStream.Seek(data.BaseOffset + data.TerrainData.Chunks[chunkIndex].NormalMapOffset, SeekOrigin.Begin);
-                data.TerrainStream.ReadAtLeast(tempData, data.TerrainData.Header.NormalMapSize);
+                data.ReadChunk(ChunkType.NormalMap, chunkIndex, buffer);
 
-                data.NormalMapStagingTexture.SetData(graphicsContext.CommandList, tempData.AsSpan(0, data.TerrainData.Header.NormalMapSize), 0, 0);
+                data.NormalMapStagingTexture.SetData(graphicsContext.CommandList, buffer.AsSpan(0, data.TerrainData.Header.NormalMapSize), 0, 0);
                 graphicsContext.CommandList.CopyRegion(data.NormalMapStagingTexture, 0, null, data.NormalMapTexture, 0, tx, ty);
 
                 data.ChunkToTextureIndex[chunkIndex] = textureIndex;
 
-                ArrayPool<byte>.Shared.Return(tempData);
+                ArrayPool<byte>.Shared.Return(buffer);
                 return true;
             }
 
@@ -444,6 +460,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             }
 
             // Process all pending chunks
+            var terrainBounds = BoundingBoxExt.Empty;
             while (chunkCount > 0)
             {
                 for (var i = 0; i < chunkCount; i++)
@@ -464,11 +481,18 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                     var lodDistance = lod0Distance * (1 << lod);
 
                     var extent = scale * unitsPerTexel * chunkSize * 0.5f;
+                    var minHeight = data.TerrainData.Chunks[chunkIndex].MinHeight;
+                    var maxHeight = data.TerrainData.Chunks[chunkIndex].MaxHeight;
+                    var heightRange = maxHeight;
+                    var halfHeightRange = heightRange * 0.5f;
+
                     var bounds = new BoundingBoxExt
                     {
-                        Center = chunkWorldPosition,
-                        Extent = new(extent, 1000, extent) // TODO: This sohuld use max height per chunk ...
+                        Center = chunkWorldPosition + new Vector3(0, halfHeightRange, 0),
+                        Extent = new(extent, halfHeightRange, extent)
                     };
+
+                    BoundingBoxExt.Merge(ref terrainBounds, ref bounds, out terrainBounds);
 
                     var rect = new RectangleF(chunkWorldPosition.X - extent, chunkWorldPosition.Z - extent, extent * 2.0f, extent * 2.0f);
                     var cameraRect = new RectangleF(data.CameraPosition.X - lodDistance, data.CameraPosition.Z - lodDistance, lodDistance * 2.0f, lodDistance * 2.0f);
@@ -551,6 +575,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 chunkTempCount = 0;
             }
 
+            data.BoundingBox = terrainBounds;
+
             ArrayPool<int>.Shared.Return(chunksToProcess);
             ArrayPool<int>.Shared.Return(chunksTemp);
 
@@ -604,7 +630,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 modelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.TerrainWorld, Matrix.Translation(worldPosition));
                 modelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.ChunkInstanceDataBuffer, data.ChunkInstanceDataBuffer);
                 modelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.SectorToChunkInstanceMapBuffer, data.SectorToChunkInstanceMapBuffer);
+                modelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)chunksPerRowLod0);
                 modelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.TerrainNormalMap, data.NormalMapTexture);
+                modelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / component.UnitsPerTexel);
             }
 
             var maxLoadedChunks = (TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize) * TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize;
@@ -616,6 +644,42 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             debugTextSystem.Print($"Physics chunks: {data.PhysicsEntities.Count}, Pool: {data.PhysicsEntityPool.Count}", new(10, 340), new Color4(1, 0, 0, 1));
             debugTextSystem.Print($"Camera: {data.CameraPosition.X:0.0f} {data.CameraPosition.Y:0.0f} {data.CameraPosition.Z:0.0f}", new(10, 360), new Color4(1, 0, 0, 1));
         }
+    }
+
+    public bool SetMaterialParameters(ParameterCollection parameters)
+    {
+        if (ComponentDatas.Count == 0)
+            return false;
+
+        var pair = ComponentDatas.First();
+        var data = pair.Value;
+        var component = pair.Key;
+
+        if (data.HeightmapTexture == null)
+            return false;
+
+        if (data.ChunkInstanceDataBuffer == null)
+            return false;
+
+        if (data.SectorToChunkInstanceMapBuffer == null)
+            return false;
+
+        var unitsPerTexel = component.UnitsPerTexel;
+        var invTerrainSize = 1.0f / (data.TerrainData.Header.Size * unitsPerTexel);
+        var chunksPerRowLod0 = data.TerrainData.Header.Size / data.TerrainData.Header.ChunkSize;
+
+        parameters.Set(TerrainCommonKeys.ChunkSize, (uint)data.TerrainData.Header.ChunkSize);
+        parameters.Set(TerrainCommonKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
+        parameters.Set(TerrainCommonKeys.InvTerrainSize, invTerrainSize);
+        parameters.Set(TerrainCommonKeys.Heightmap, data.HeightmapTexture);
+        parameters.Set(TerrainCommonKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
+        parameters.Set(TerrainCommonKeys.ChunkInstanceDataBuffer, data.ChunkInstanceDataBuffer);
+        parameters.Set(TerrainCommonKeys.SectorToChunkInstanceMapBuffer, data.SectorToChunkInstanceMapBuffer);
+        parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)chunksPerRowLod0);
+        parameters.Set(TerrainCommonKeys.TerrainNormalMap, data.NormalMapTexture);
+        parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / component.UnitsPerTexel);
+
+        return true;
     }
 
     protected override void OnSystemAdd()

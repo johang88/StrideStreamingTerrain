@@ -28,5 +28,6 @@ namespace StrideTerrain.TerrainSystem.Effects
         public static readonly ValueParameterKey<float> MaxHeight = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<Matrix> TerrainWorld = ParameterKeys.NewValue<Matrix>();
         public static readonly ValueParameterKey<uint> ChunksPerRow = ParameterKeys.NewValue<uint>();
+        public static readonly ValueParameterKey<float> InvUnitsPerTexel = ParameterKeys.NewValue<float>();
     }
 }

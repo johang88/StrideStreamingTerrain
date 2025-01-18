@@ -153,9 +153,12 @@ namespace TR.Stride.Ocean
 
             // Generate mip maps
             ResetState();
-            
-            GenerateMipsMaps(_derivatives);
-            GenerateMipsMaps(_turbulence);
+
+            using (context.QueryManager.BeginProfile(Color4.White, ProfilingKeys.GenearteMipMaps))
+            {
+                GenerateMipMaps(_derivatives);
+                GenerateMipMaps(_turbulence);
+            }
 
             ResetState();
 
@@ -163,7 +166,7 @@ namespace TR.Stride.Ocean
             commandList.ResourceBarrierTransition(Derivatives, GraphicsResourceState.PixelShaderResource);
             commandList.ResourceBarrierTransition(Turbulence, GraphicsResourceState.PixelShaderResource);
 
-            void GenerateMipsMaps(TextureAndMips texture)
+            void GenerateMipMaps(TextureAndMips texture)
             {
                 var mipLevels = texture.Texture.MipLevels;
                 for (var topMip = 0; topMip < mipLevels - 1;)

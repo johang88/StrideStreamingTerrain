@@ -16,7 +16,7 @@ public class SampleGame : Game
         _ = new ImGuiSystem(Services, GraphicsDeviceManager);
 
         //new PerfMonitor(Services);
-        //new HierarchyView(Services);
+        new HierarchyView(Services);
         Inspector.FindFreeInspector(Services).Target = SceneSystem.SceneInstance.RootScene.Entities.FirstOrDefault(x => x.Name == "Terrain")?.Get<TerrainComponent>();
     }
 
