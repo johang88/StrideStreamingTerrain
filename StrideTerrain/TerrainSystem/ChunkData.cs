@@ -4,7 +4,7 @@ using System.Runtime.InteropServices;
 namespace StrideTerrain.TerrainSystem;
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
-public struct ChunkInstanceData
+public struct ChunkData
 {
     public byte LodLevel;
     public byte North;
@@ -21,6 +21,8 @@ public struct ChunkInstanceData
 
     public int UvX;
     public int UvY;
+
+    public BoundingBoxExt Bounds;
 
     public override readonly string ToString()
         => $"n:{North}, s:{South}, w:{West}, e:{East}";

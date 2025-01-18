@@ -93,7 +93,6 @@ RenderFeatures:
                     cf0c6bd4198b4cc4aaaab5b54870bdfd: !Stride.Rendering.Lights.LightSpotGroupRenderer,Stride.Rendering {}
                     451af18f3f5c4187cf3fe5f33feb46b1: !Stride.Rendering.LightProbes.LightProbeRenderer,Stride.Rendering {}
                 ShadowMapRenderer: !Stride.Rendering.Shadows.ShadowMapRenderer,Stride.Rendering
-                    DepthClearValue: 0.0
                     Renderers:
                         7c3d3d4c86834c3551bacde2527b3836*: !StrideTerrain.Rendering.LightDirectionalShadowMapRendererReverseZ,StrideTerrain
                             ShadowCasterRenderStage*: ref!! 244215b8-2f84-470e-bfd3-1f9f8db74fa6
@@ -106,6 +105,7 @@ RenderFeatures:
             42be209952db58294c9f06c58809b8ca: !Stride.Rendering.InstancingRenderFeature,Stride.Rendering {}
             9c99c0be553e2f63cd69b8507bbf6a5f*: !StrideTerrain.TerrainSystem.TerrainRenderFeature,StrideTerrain {}
             b0e1ca363300be39a469cdb542181fa4*: !TR.Stride.Atmosphere.AtmosphereTransparentRenderFeature,TR.Stride.Atmosphere {}
+            6700e307d6a0f7a85b7f51dc6cdc2c66*: !StrideTerrain.Rendering.ProfilingKeyRenderFeature,StrideTerrain {}
     28e9bf54a5adbe063f59fb17acb2723e: !Stride.Rendering.Sprites.SpriteRenderFeature,Stride.Rendering
         RenderStageSelectors:
             d74665cff080638a2439c4422e542d85: !Stride.Rendering.Sprites.SpriteTransparentRenderStageSelector,Stride.Rendering
@@ -159,7 +159,6 @@ RenderFeatures:
 SharedRenderers:
     60459475d3a3adaf2d1ba5d99913ca75: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine
         Id: cc9387fc-ac31-40f8-bcfc-92e3167836d9
-        DepthBufferFormat*: D32_Float_S8X24_UInt
         Clear:
             Id: 4bc4b2ca-027e-4e4a-94cb-2912709bef5f
             Color*: {R: 0.40392157, G: 0.4117647, B: 0.43529412, A: 1.0}
@@ -186,7 +185,6 @@ SharedRenderers:
         BindOpaqueAsResourceDuringTransparentRendering*: true
     d5b2e71c088247e21556decdce138d96: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine
         Id: 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
-        DepthBufferFormat: D24_UNorm_S8_UInt
         Clear:
             Id: 66a42307-1985-4316-871a-768449238c11
             Color: {R: 0.40491876, G: 0.41189542, B: 0.43775, A: 1.0}

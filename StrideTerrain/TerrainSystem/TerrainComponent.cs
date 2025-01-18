@@ -1,5 +1,4 @@
 ﻿using Stride.Core;
-using Stride.Core.Mathematics;
 using Stride.Core.Serialization;
 using Stride.Engine;
 using Stride.Engine.Design;

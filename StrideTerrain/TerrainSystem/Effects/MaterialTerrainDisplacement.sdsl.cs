@@ -6,4 +6,18 @@
 // and re-save the associated .sdfx.
 // </auto-generated>
 
-// Nothing to generate
+using System;
+using Stride.Core;
+using Stride.Rendering;
+using Stride.Graphics;
+using Stride.Shaders;
+using Stride.Core.Mathematics;
+using Buffer = Stride.Graphics.Buffer;
+
+namespace StrideTerrain.TerrainSystem.Effects
+{
+    public static partial class MaterialTerrainDisplacementKeys
+    {
+        public static readonly ObjectParameterKey<Buffer> ChunkInstanceData = ParameterKeys.NewObject<Buffer>();
+    }
+}

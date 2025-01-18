@@ -1,6 +1,8 @@
-﻿using Stride.Core.Mathematics;
+﻿using Stride.Core.Diagnostics;
+using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
+using StrideTerrain.Rendering;
 using StrideTerrain.TerrainSystem;
 using System;
 using System.Collections.Generic;
@@ -10,6 +12,8 @@ namespace StrideTerrain.Vegetation;
 
 public class GrassComponent : SyncScript
 {
+    private static readonly ProfilingKey ProfilingKeyDraw = new("Grass.Draw");
+
     const int ChunkCount = 6;
     const int ChunkSize = 32;
     const int InstancesPerRow = 32;
@@ -81,6 +85,10 @@ public class GrassComponent : SyncScript
                             InstanceCount = worldMatrices.Length,
                             BoundingBox = new BoundingBox(new(-8000, -400, -8000), new(8000, 400, 8000)) // TODO I guess
                         }
+                    },
+                    new ProfilingKeyComponent
+                    {
+                        ProfilingKey = ProfilingKeyDraw
                     }
                 };
 

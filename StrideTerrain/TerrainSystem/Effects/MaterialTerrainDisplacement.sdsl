@@ -4,15 +4,22 @@
     {
         stage stream uint VertexId : SV_VERTEXID;
 
+        rgroup PerMaterial
+        {
+            stage StructuredBuffer<int> ChunkInstanceData;
+        }
+
         override void Compute()
         {
             float3 vertexPosition;
 
-            int data0 = ChunkInstanceDataBuffer[streams.InstanceID].Data0;
-            int data1 = ChunkInstanceDataBuffer[streams.InstanceID].Data1;
-            float scale = ChunkInstanceDataBuffer[streams.InstanceID].Scale;
-            float3 worldPosition = ChunkInstanceDataBuffer[streams.InstanceID].Position;
-            int2 uv = ChunkInstanceDataBuffer[streams.InstanceID].Uv;
+            int chunkIndex = ChunkInstanceData[streams.InstanceID];
+
+            int data0 = ChunkBuffer[chunkIndex].Data0;
+            int data1 = ChunkBuffer[chunkIndex].Data1;
+            float scale = ChunkBuffer[chunkIndex].Scale;
+            float3 worldPosition = ChunkBuffer[chunkIndex].Position;
+            int2 uv = ChunkBuffer[chunkIndex].Uv;
 
             streams.LodLevel = data0 & 0xFF;
 
@@ -27,7 +34,7 @@
             uint offsetZ = (quadIndex / ChunkSize);
 
             uint triangleVertex = streams.VertexId % (uint)6;
-                
+   
             // Please dont look at this (●'◡'●)
             // Set triangle positions and merge triangle if adjacent to lower lod
             if (triangleVertex == 0) vertexPosition.xz = float2(1 - (ldN > 0 && offsetZ == 0 && (offsetX % 2 == 0) ? 1.0f : 0.0f), 0 + (ldE > 0 && offsetX == (ChunkSize - 1) && (offsetZ % 2 == 1) ? 1.0f : 0.0f));  // 1, 0
@@ -65,34 +72,5 @@
 
             streams.meshNormal = TerrainNormalMap.Load(int3(uv.xy, 0), 0).xyz * 2.0 - 1.0;
         }
-
-        stage override void TransformPosition()
-        {
-            streams.PositionWS = mul(streams.PositionWS, TerrainWorld);
-        }
-
-        // Uncomment to visualize lod levels
-        //stage override void PSMain()
-        //{
-        //    base.PSMain();
-
-        //    float3 lodColors[10] = {
-        //        float3(0, 1, 0),
-        //        float3(1, 0, 0),
-        //        float3(0, 0, 1),
-        //        float3(1, 1, 0),
-        //        float3(1, 0, 1),
-        //        float3(0, 1, 1),
-        //        float3(0, 0.5f, 1),
-        //        float3(0, 1, 0.5f),
-        //        float3(0.5f, 1, 0.5f),
-        //        float3(1, 0.5f, 0.5f)
-        //    };
-
-        //    float3 lodColor = lodColors[streams.LodLevel];
-
-        //    float a = 0.5f;
-        //    streams.ColorTarget = float4(streams.ColorTarget.xyz * (1.0f - a)+ lodColor.xyz * a, streams.ColorTarget.w);
-        //}
     };
 }

@@ -1,5 +1,6 @@
 ﻿using Stride.Core;
 using Stride.Core.Annotations;
+using Stride.Core.Diagnostics;
 using Stride.Core.IO;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization.Contents;
@@ -22,6 +23,9 @@ namespace StrideTerrain.TerrainSystem;
 
 public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntimeData>, IEntityComponentRenderProcessor
 {
+    private static readonly ProfilingKey ProfilingKeyUpdate = new("Terrain.Update");
+    private static readonly ProfilingKey ProfilingKeyChunk = new("Terrain.Chunk");
+
     private readonly Dictionary<RenderModel, TerrainRuntimeData> _modelToTerrainMap = [];
 
     public VisibilityGroup VisibilityGroup { get; set; } = null!;
@@ -48,11 +52,14 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         }
         data.PhysicsEntityPool.Clear();
 
-        data.ChunkInstanceDataBuffer?.Dispose();
-        data.ChunkInstanceDataBuffer = null;
+        data.ChunkBuffer?.Dispose();
+        data.ChunkBuffer = null;
 
-        data.SectorToChunkInstanceMapBuffer?.Dispose();
-        data.SectorToChunkInstanceMapBuffer = null;
+        data.ChunkInstanceData?.Dispose();
+        data.ChunkInstanceData = null;
+
+        data.SectorToChunkMapBuffer?.Dispose();
+        data.SectorToChunkMapBuffer = null;
 
         data.TerrainStream?.Dispose();
         data.TerrainStream = null;
@@ -79,6 +86,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         var graphicsDevice = Services.GetService<IGraphicsDeviceService>().GraphicsDevice;
         var graphicsContext = Services.GetService<GraphicsContext>();
         var contentManager = Services.GetService<ContentManager>();
+
+        using var profilingScope = Profiler.Begin(ProfilingKeyUpdate);
 
         foreach (var pair in ComponentDatas)
         {
@@ -259,7 +268,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                 var targetRegion = new ResourceRegion(tx, ty, 0, data.TerrainData.Header.ChunkTextureSize, data.TerrainData.Header.ChunkTextureSize, 1);
 
-                data.HeightmapStagingTexture.SetData(graphicsContext.CommandList, buffer.AsSpan(0, data.TerrainData.Header.HeightmapSize), 0, 0);
+                data.HeightmapStagingTexture!.SetData(graphicsContext.CommandList, buffer.AsSpan(0, data.TerrainData.Header.HeightmapSize), 0, 0);
                 graphicsContext.CommandList.CopyRegion(data.HeightmapStagingTexture, 0, null, data.HeightmapTexture, 0, tx, ty);
 
                 // Allocate in memory data for hightest lod (used for physics).
@@ -290,7 +299,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                         }
                     }
 
-                    if (!data.PhysicsEntityPool.TryDequeue(out var physicsEntity))
+                    if (!data.PhysicsEntityPool.TryDequeue(out var physicsEntity) && !data.PhysicsEntities.TryGetValue(chunkIndex, out physicsEntity))
                     {
                         // It would be nice of someone updated stride to not require the use of the obsolote members ...
                         // TODO: decouple physics streaming from rendering and maybe add custom data format for it.
@@ -330,7 +339,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                     ArrayPool<float>.Shared.Return(heightmap);
 
-                    data.PhysicsEntities.Add(chunkIndex, physicsEntity);
+                    data.PhysicsEntities.TryAdd(chunkIndex, physicsEntity);
                 }
 #endif
 
@@ -379,6 +388,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         var graphicsContext = Services.GetService<GraphicsContext>();
         var contentManager = Services.GetService<ContentManager>();
 
+        using var profilingScope = Profiler.Begin(ProfilingKeyChunk);
+
         foreach (var pair in ComponentDatas)
         {
             var component = pair.Key;
@@ -392,12 +403,6 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
             if (!data.IsInitialized)
                 continue;
-
-            if (!component.FreezeCamera)
-                data.CameraPosition = camera.GetWorldPosition();
-
-            if (!component.FreezeFrustum)
-                data.CameraFrustum = camera.Frustum;
 
             var modelRenderProcessor = EntityManager.GetProcessor<ModelRenderProcessor>();
             if (modelRenderProcessor == null)
@@ -420,51 +425,50 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
             data.ModelComponent.Enabled = true;
 
-            // Setup chunks, each chunk will be rendered as instance of the base mesh
-            // as all chunks have the same amount of vertices, the only difference is in their size (and position).
-
+            // Sync component settings
+            data.UnitsPerTexel = component.UnitsPerTexel;
+            data.Lod0Distance = component.Lod0Distance;
+            data.MaximumLod = component.MaximumLod;
+            data.MinimumLod = component.MinimumLod;
+            
+            // Setup basic draw settings, it's global per terrain so makes sense to do it here and not in the render feature
             var terrainSize = data.TerrainData.Header.Size;
-            var unitsPerTexel = component.UnitsPerTexel;
             var chunkSize = data.TerrainData.Header.ChunkSize;
             var lod0Distance = component.Lod0Distance;
-            var invTerrainSize = 1.0f / (terrainSize * unitsPerTexel);
-            var texturesPerRow = data.HeightmapTexture!.Width / data.TerrainData.Header.ChunkTextureSize;
-
-            var worldPosition = component.Entity.Transform.Position;
 
             var chunksPerRowLod0 = terrainSize / chunkSize;
             var maxChunks = chunksPerRowLod0 * chunksPerRowLod0;
 
             data.Mesh.Draw.DrawCount = chunkSize * chunkSize * 6;
 
-            if (data.ChunkInstanceData.Length != maxChunks)
+            // TODO: These sizes are very conservative ...
+            if (data.ChunkData.Length != maxChunks)
             {
-                data.ChunkInstanceData = new ChunkInstanceData[maxChunks];
-                data.ChunkInstanceDataBuffer?.Dispose();
-                data.ChunkInstanceDataBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, Marshal.SizeOf<ChunkInstanceData>(), true);
+                data.ChunkData = new ChunkData[maxChunks];
+                data.ChunkBuffer?.Dispose();
+                data.ChunkBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, Marshal.SizeOf<ChunkData>(), true);
+
+                data.ChunkInstanceData?.Dispose();
+                data.ChunkInstanceData = Buffer.Structured.New(graphicsDevice, maxChunks, Marshal.SizeOf<int>(), true);
             }
 
-            if (data.SectorToChunkInstanceMap.Length != maxChunks)
+            if (data.SectorToChunkMap.Length != maxChunks)
             {
-                data.SectorToChunkInstanceMap = new int[maxChunks];
-                data.SectorToChunkInstanceMapBuffer?.Dispose();
-                data.SectorToChunkInstanceMapBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, sizeof(int), true);
+                data.SectorToChunkMap = new int[maxChunks];
+                data.SectorToChunkMapBuffer?.Dispose();
+                data.SectorToChunkMapBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, sizeof(int), true);
             }
 
-            for (var i = 0; i < data.SectorToChunkInstanceMap.Length; i++)
-            {
-                data.SectorToChunkInstanceMap[i] = -1;
-            }
+            data.CameraPosition = camera.GetWorldPosition();
 
-            data.InstanceCount = 0;
-
-            // Iterate over lod levels
+            // Setup chunk lod, these are always based on the main camera position, frustum culling of the chunks are done in the render feature
             var maxLod = data.TerrainData.Header.MaxLod; // Max lod = single chunk
             var maxLodSetting = maxLod;
-            if (component.MaximumLod >= 0)
-                maxLodSetting = Math.Min(component.MaximumLod, maxLodSetting);
+            if (data.MaximumLod >= 0)
+                maxLodSetting = Math.Min(data.MaximumLod, maxLodSetting);
 
-            var minLod = Math.Max(0, component.MinimumLod);
+            var minLod = Math.Max(0, data.MinimumLod);
+            var texturesPerRow = data.HeightmapTexture!.Width / data.TerrainData.Header.ChunkTextureSize;
 
             var chunksToProcess = ArrayPool<int>.Shared.Rent(maxChunks);
             var chunksTemp = ArrayPool<int>.Shared.Rent(maxChunks);
@@ -484,8 +488,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 }
             }
 
+            data.ChunkCount = 0;
+
             // Process all pending chunks
-            var terrainBounds = BoundingBoxExt.Empty;
             while (chunkCount > 0)
             {
                 for (var i = 0; i < chunkCount; i++)
@@ -500,24 +505,21 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                     var chunkIndex = data.TerrainData.GetChunkIndex(lod, positionX, positionZ, chunksPerRowCurrentLod);
 
-                    var chunkWorldPosition = new Vector3(positionX * chunkOffset + (chunkOffset * 0.5f), 0, positionZ * chunkOffset + (chunkOffset * 0.5f)) * unitsPerTexel + worldPosition;
+                    var chunkWorldPosition = new Vector3(positionX * chunkOffset + (chunkOffset * 0.5f), 0, positionZ * chunkOffset + (chunkOffset * 0.5f)) * data.UnitsPerTexel;
 
                     // Check lod distance
                     var lodDistance = lod0Distance * (1 << lod);
 
-                    var extent = scale * unitsPerTexel * chunkSize * 0.5f;
-                    var minHeight = data.TerrainData.Chunks[chunkIndex].MinHeight;
-                    var maxHeight = data.TerrainData.Chunks[chunkIndex].MaxHeight;
+                    var extent = scale * data.UnitsPerTexel * chunkSize * 0.5f;
+                    var maxHeight = data.TerrainData.Header.MaxHeight; // TODO: Should use max height for chunk but there is some issue with it ...
                     var heightRange = maxHeight;
                     var halfHeightRange = heightRange * 0.5f;
 
                     var bounds = new BoundingBoxExt
                     {
                         Center = chunkWorldPosition + new Vector3(0, halfHeightRange, 0),
-                        Extent = new(extent, halfHeightRange, extent)
+                        Extent = new(extent, heightRange, extent)
                     };
-
-                    BoundingBoxExt.Merge(ref terrainBounds, ref bounds, out terrainBounds);
 
                     var rect = new RectangleF(chunkWorldPosition.X - extent, chunkWorldPosition.Z - extent, extent * 2.0f, extent * 2.0f);
                     var cameraRect = new RectangleF(data.CameraPosition.X - lodDistance, data.CameraPosition.Z - lodDistance, lodDistance * 2.0f, lodDistance * 2.0f);
@@ -537,10 +539,6 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                     }
 
                     data.ActiveChunks.Add(data.TerrainData.GetChunkIndex(lod, positionX, positionZ, chunksPerRowCurrentLod));
-
-                    // Frustum cull after streaming request have been made to keep them resident.
-                    if (component.FrustumCull && !data.CameraFrustum.Contains(ref bounds))
-                        continue;
 
                     if (shouldSplit && lod > minLod)
                     {
@@ -564,7 +562,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                                     continue;
 
                                 var index = z * chunksPerRowLod0 + x;
-                                data.SectorToChunkInstanceMap[index] = data.InstanceCount;
+                                data.SectorToChunkMap[index] = data.ChunkCount;
                             }
                         }
 
@@ -573,15 +571,16 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                         var tx = (textureIndex % texturesPerRow) * data.TerrainData.Header.ChunkTextureSize;
                         var ty = (textureIndex / texturesPerRow) * data.TerrainData.Header.ChunkTextureSize;
 
-                        data.ChunkInstanceData[data.InstanceCount].UvX = tx;
-                        data.ChunkInstanceData[data.InstanceCount].UvY = ty;
+                        data.ChunkData[data.ChunkCount].UvX = tx;
+                        data.ChunkData[data.ChunkCount].UvY = ty;
 
-                        data.ChunkInstanceData[data.InstanceCount].LodLevel = (byte)lod;
-                        data.ChunkInstanceData[data.InstanceCount].ChunkX = (byte)positionX;
-                        data.ChunkInstanceData[data.InstanceCount].ChunkZ = (byte)positionZ;
-                        data.ChunkInstanceData[data.InstanceCount].Scale = scale * unitsPerTexel;
-                        data.ChunkInstanceData[data.InstanceCount].Position = new(positionX * chunkOffset * unitsPerTexel, 0, positionZ * chunkOffset * unitsPerTexel);
-                        data.InstanceCount++;
+                        data.ChunkData[data.ChunkCount].LodLevel = (byte)lod;
+                        data.ChunkData[data.ChunkCount].ChunkX = (byte)positionX;
+                        data.ChunkData[data.ChunkCount].ChunkZ = (byte)positionZ;
+                        data.ChunkData[data.ChunkCount].Scale = scale * data.UnitsPerTexel;
+                        data.ChunkData[data.ChunkCount].Position = new(positionX * chunkOffset * data.UnitsPerTexel, 0, positionZ * chunkOffset * data.UnitsPerTexel);
+                        data.ChunkData[data.ChunkCount].Bounds = bounds;
+                        data.ChunkCount++;
                     }
                 }
 
@@ -600,12 +599,10 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 chunkTempCount = 0;
             }
 
-            data.BoundingBox = terrainBounds;
-
             ArrayPool<int>.Shared.Return(chunksToProcess);
             ArrayPool<int>.Shared.Return(chunksTemp);
 
-            static byte GetLodDifference(ChunkInstanceData[] chunks, int[] sectorToChunkMap, int x, int z, int chunksPerRow, int ratioToLod0, int lod)
+            static byte GetLodDifference(ChunkData[] chunks, int[] sectorToChunkMap, int x, int z, int chunksPerRow, int ratioToLod0, int lod)
             {
                 x = x * ratioToLod0;
                 z = z * ratioToLod0;
@@ -624,9 +621,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             }
 
             // Calculate lod differences between chunks
-            for (var i = 0; i < data.InstanceCount; i++)
+            for (var i = 0; i < data.ChunkCount; i++)
             {
-                ref var chunk = ref data.ChunkInstanceData[i];
+                ref var chunk = ref data.ChunkData[i];
                 scale = 1 << chunk.LodLevel;
                 var chunksPerRow = terrainSize / (scale * chunkSize);
 
@@ -635,33 +632,14 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                 var ratioToLod0 = chunksPerRowLod0 / chunksPerRow;
 
-                chunk.North = GetLodDifference(data.ChunkInstanceData, data.SectorToChunkInstanceMap, x, z - 1, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
-                chunk.South = GetLodDifference(data.ChunkInstanceData, data.SectorToChunkInstanceMap, x, z + 1, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
-                chunk.East = GetLodDifference(data.ChunkInstanceData, data.SectorToChunkInstanceMap, x + 1, z, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
-                chunk.West = GetLodDifference(data.ChunkInstanceData, data.SectorToChunkInstanceMap, x - 1, z, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
-            }
-
-            // Update instancing and material data
-            data.ChunkInstanceDataBuffer!.SetData(graphicsContext.CommandList, (ReadOnlySpan<ChunkInstanceData>)data.ChunkInstanceData.AsSpan());
-            data.SectorToChunkInstanceMapBuffer!.SetData(graphicsContext.CommandList, (ReadOnlySpan<int>)data.SectorToChunkInstanceMap.AsSpan());
-
-            if (data.ModelComponent.Materials.Count > 0 && data.ModelComponent.Materials[0].Passes.Count > 0)
-            {
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.ChunkSize, (uint)chunkSize);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.InvTerrainSize, invTerrainSize);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.Heightmap, data.HeightmapTexture);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.TerrainWorld, Matrix.Translation(worldPosition));
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.ChunkInstanceDataBuffer, data.ChunkInstanceDataBuffer);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.SectorToChunkInstanceMapBuffer, data.SectorToChunkInstanceMapBuffer);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)chunksPerRowLod0);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.TerrainNormalMap, data.NormalMapTexture);
-                data.ModelComponent.Materials[0].Passes[0].Parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / component.UnitsPerTexel);
+                chunk.North = GetLodDifference(data.ChunkData, data.SectorToChunkMap, x, z - 1, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
+                chunk.South = GetLodDifference(data.ChunkData, data.SectorToChunkMap, x, z + 1, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
+                chunk.East = GetLodDifference(data.ChunkData, data.SectorToChunkMap, x + 1, z, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
+                chunk.West = GetLodDifference(data.ChunkData, data.SectorToChunkMap, x - 1, z, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
             }
 
             var maxLoadedChunks = (TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize) * TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize;
-            debugTextSystem.Print($"Terrain chunk count: {data.InstanceCount}", new(10, 240), new Color4(1, 0, 0, 1));
+            debugTextSystem.Print($"Terrain chunk count: {data.ChunkCount}", new(10, 240), new Color4(1, 0, 0, 1));
             debugTextSystem.Print($"Resident chunks: {data.ResidentChunksCount}", new(10, 260), new Color4(1, 0, 0, 1));
             debugTextSystem.Print($"Active chunks: {data.ActiveChunks.Count}", new(10, 280), new Color4(1, 0, 0, 1));
             debugTextSystem.Print($"Pending chunks: {data.PendingChunks.Count}", new(10, 300), new Color4(1, 0, 0, 1));
@@ -683,10 +661,10 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         if (data.HeightmapTexture == null)
             return false;
 
-        if (data.ChunkInstanceDataBuffer == null)
+        if (data.ChunkBuffer == null)
             return false;
 
-        if (data.SectorToChunkInstanceMapBuffer == null)
+        if (data.SectorToChunkMapBuffer == null)
             return false;
 
         var unitsPerTexel = component.UnitsPerTexel;
@@ -698,8 +676,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         parameters.Set(TerrainCommonKeys.InvTerrainSize, invTerrainSize);
         parameters.Set(TerrainCommonKeys.Heightmap, data.HeightmapTexture);
         parameters.Set(TerrainCommonKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
-        parameters.Set(TerrainCommonKeys.ChunkInstanceDataBuffer, data.ChunkInstanceDataBuffer);
-        parameters.Set(TerrainCommonKeys.SectorToChunkInstanceMapBuffer, data.SectorToChunkInstanceMapBuffer);
+        parameters.Set(TerrainCommonKeys.ChunkBuffer, data.ChunkBuffer);
+        parameters.Set(TerrainCommonKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
         parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)chunksPerRowLod0);
         parameters.Set(TerrainCommonKeys.TerrainNormalMap, data.NormalMapTexture);
         parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / component.UnitsPerTexel);

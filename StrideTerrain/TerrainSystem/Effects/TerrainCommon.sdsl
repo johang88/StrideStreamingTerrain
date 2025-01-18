@@ -6,7 +6,7 @@
         stage stream float TerrainHeight;
         stage stream float TerrainHeight01;
 
-        struct ChunkInstanceData
+        struct ChunkData
         {
             /*    
     public byte LodLevel;
@@ -22,14 +22,16 @@
             float Scale;
             float3 Position;
             int2 Uv;
+            float3 BoundsCenter;
+            float3 BoundsExtent;
         };
 
         rgroup PerMaterial
         {
             stage Texture2D Heightmap;
             stage Texture2D TerrainNormalMap;
-            stage StructuredBuffer<ChunkInstanceData> ChunkInstanceDataBuffer;
-            stage StructuredBuffer<int> SectorToChunkInstanceMapBuffer;
+            stage StructuredBuffer<ChunkData> ChunkBuffer;
+            stage StructuredBuffer<int> SectorToChunkMapBuffer;
         }
 
         cbuffer PerMaterial 
@@ -38,7 +40,6 @@
             stage float InvTerrainTextureSize;
             stage float InvTerrainSize;
             stage float MaxHeight;
-            stage float4x4 TerrainWorld;
             stage uint ChunksPerRow;
             stage float InvUnitsPerTexel;
         }
@@ -51,12 +52,12 @@
             uint sectorX = min(ChunksPerRow, (uint)floor(wx / ChunkSize));
             uint sectorZ = min(ChunksPerRow, (uint)floor(wz / ChunkSize));
             uint sectorIndex = sectorZ * ChunksPerRow + sectorX;
-            uint chunkIndex = max(0, SectorToChunkInstanceMapBuffer[sectorIndex]);
+            uint chunkIndex = max(0, SectorToChunkMapBuffer[sectorIndex]);
 
             float positionInChunkX = ((float)wx) % ChunkSize;
             float positionInChunkZ = ((float)wz) % ChunkSize;
 
-            float2 uv = ChunkInstanceDataBuffer[chunkIndex].Uv;
+            float2 uv = ChunkBuffer[chunkIndex].Uv;
 
             uv.x += positionInChunkX + 0.5f;
             uv.y += positionInChunkZ + 0.5f;
@@ -76,12 +77,12 @@
             uint sectorX = min(ChunksPerRow, (uint)floor(wx / ChunkSize));
             uint sectorZ = min(ChunksPerRow, (uint)floor(wz / ChunkSize));
             uint sectorIndex = sectorZ * ChunksPerRow + sectorX;
-            uint chunkIndex = max(0, SectorToChunkInstanceMapBuffer[sectorIndex]);
+            uint chunkIndex = max(0, SectorToChunkMapBuffer[sectorIndex]);
 
             float positionInChunkX = ((float)wx) % ChunkSize;
             float positionInChunkZ = ((float)wz) % ChunkSize;
 
-            float2 uv = ChunkInstanceDataBuffer[chunkIndex].Uv;
+            float2 uv = ChunkBuffer[chunkIndex].Uv;
 
             uv.x += positionInChunkX + 0.5f;
             uv.y += positionInChunkZ + 0.5f;

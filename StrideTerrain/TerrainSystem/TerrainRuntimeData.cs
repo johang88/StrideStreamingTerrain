@@ -1,5 +1,4 @@
-﻿using SharpFont;
-using Stride.Core.Mathematics;
+﻿using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
 using Stride.Rendering;
@@ -7,7 +6,6 @@ using StrideTerrain.Common;
 using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Threading.Tasks;
 using Buffer = Stride.Graphics.Buffer;
 
 namespace StrideTerrain.TerrainSystem;
@@ -28,25 +26,33 @@ public class TerrainRuntimeData
         BoundingBox = new BoundingBox(new Vector3(-10000, -10000, -10000), new Vector3(10000, 10000, 10000)), 
     };
 
+    public float UnitsPerTexel;
+
+    public float Lod0Distance;
+
+    public int MaximumLod;
+
+    public int MinimumLod;
+
     public bool IsInitialized;
 
     public RenderModel? RenderModel;
 
     public ModelComponent? ModelComponent;
 
-    public int InstanceCount;
-
     public Vector3 CameraPosition;
 
-    public BoundingFrustum CameraFrustum;
+    public ChunkData[] ChunkData = [];
 
-    public ChunkInstanceData[] ChunkInstanceData = [];
+    public int ChunkCount = 0;
 
-    public int[] SectorToChunkInstanceMap = [];
+    public int[] SectorToChunkMap = [];
 
-    public Buffer? ChunkInstanceDataBuffer;
+    public Buffer? ChunkBuffer;
 
-    public Buffer? SectorToChunkInstanceMapBuffer;
+    public Buffer? SectorToChunkMapBuffer;
+
+    public Buffer? ChunkInstanceData;
 
     public string? TerrainDataUrl;
 
@@ -84,8 +90,6 @@ public class TerrainRuntimeData
     public Dictionary<int, Entity> PhysicsEntities = [];
 
     public Queue<Entity> PhysicsEntityPool = [];
-
-    public BoundingBoxExt BoundingBox;
 
     public void ReadChunk(ChunkType chunkType, int chunkIndex, Span<byte> buffer)
     {

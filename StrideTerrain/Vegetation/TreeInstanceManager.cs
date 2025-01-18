@@ -10,11 +10,15 @@ using System.Text.Json;
 using System.Runtime.InteropServices;
 using System;
 using Buffer = Stride.Graphics.Buffer;
+using Stride.Core.Diagnostics;
+using StrideTerrain.Rendering;
 
 namespace StrideTerrain.Vegetation;
 
 public class TreeInstanceManager : StartupScript
 {
+    private static readonly ProfilingKey ProfilingKeyDraw = new("Trees.Draw");
+
     private static JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.General)
     {
         IncludeFields = true
@@ -51,6 +55,10 @@ public class TreeInstanceManager : StartupScript
         foreach (var model in Models)
         {
             model.Entity.Get<ModelComponent>().IsShadowCaster = false;
+            model.Entity.Add(new ProfilingKeyComponent
+            {
+                ProfilingKey = ProfilingKeyDraw
+            });
         }
 
         // Not very nice now is it ...but it will work ...

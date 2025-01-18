@@ -36,6 +36,12 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\TerrainNormalBlendComputeColor.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DependentUpon>%(Filename)</DependentUpon>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -60,6 +66,9 @@
 	<ItemGroup>
 	  <None Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl">
 	    <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\TerrainNormalBlendComputeColor.sdsl">
+	    <LastGenOutput>TerrainNormalBlendComputeColor.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl">
 	    <LastGenOutput>TerrainBlendComputeColor.sdsl.cs</LastGenOutput>
