@@ -1,4 +1,5 @@
-﻿using Stride.Core.Mathematics;
+﻿using Stride.Core;
+using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
 using Stride.Rendering;
@@ -10,10 +11,12 @@ using Buffer = Stride.Graphics.Buffer;
 
 namespace StrideTerrain.TerrainSystem;
 
+[DataContract]
 public class TerrainRuntimeData
 {
     public const int RuntimeTextureSize = 2048;
     public const float InvRuntimeTextureSize = 1.0f / RuntimeTextureSize;
+    public const int ShadowMapSize = 2048;
 
     // Minimum viable mesh, no buffers bound as all triangles are generated in the shader.
     public Mesh Mesh = new()
@@ -54,6 +57,8 @@ public class TerrainRuntimeData
 
     public Buffer? ChunkInstanceData;
 
+    public int ChunksPerRowLod0;
+
     public string? TerrainDataUrl;
 
     public TerrainData TerrainData;
@@ -72,6 +77,8 @@ public class TerrainRuntimeData
     public Texture? NormalMapStagingTexture;
 
     public Texture? NormalMapTexture;
+
+    public Texture? ShadowMap;
 
     public int NextFreeIndex = 0;
 

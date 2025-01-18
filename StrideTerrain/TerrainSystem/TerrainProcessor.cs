@@ -70,6 +70,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         data.NormalMapTexture?.Dispose();
         data.NormalMapTexture = null;
 
+        data.ShadowMap?.Dispose();
+        data.ShadowMap = null;
+
         data.HeightmapStagingTexture?.Dispose();
         data.HeightmapStagingTexture = null;
 
@@ -109,7 +112,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             // Initialize stream data textures
             data.HeightmapTexture ??= Texture.New2D(graphicsDevice, TerrainRuntimeData.RuntimeTextureSize, TerrainRuntimeData.RuntimeTextureSize, PixelFormat.R16_UNorm);
             data.NormalMapTexture ??= Texture.New2D(graphicsDevice, TerrainRuntimeData.RuntimeTextureSize, TerrainRuntimeData.RuntimeTextureSize, PixelFormat.R8G8B8A8_UNorm);
-            
+            data.ShadowMap ??= Texture.New2D(graphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R10G10B10A2_UNorm, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
+
             // Setup model
             var entity = component.Entity;
             data.ModelComponent = entity.GetOrCreate<ModelComponent>();
@@ -119,7 +123,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.ModelComponent.Model ??= [data.Mesh];
                 data.ModelComponent.Model.BoundingSphere = new(Vector3.Zero, 10000);
                 data.ModelComponent.Model.BoundingBox = BoundingBox.FromSphere(data.ModelComponent.BoundingSphere);
-                data.ModelComponent.IsShadowCaster = true;
+                data.ModelComponent.IsShadowCaster = false;
                 data.ModelComponent.Materials[0] = component.Material;
                 data.ModelComponent.Enabled = false; // Stays disabled until everything is ready.
             }
@@ -638,14 +642,14 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 chunk.West = GetLodDifference(data.ChunkData, data.SectorToChunkMap, x - 1, z, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
             }
 
-            var maxLoadedChunks = (TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize) * TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize;
-            debugTextSystem.Print($"Terrain chunk count: {data.ChunkCount}", new(10, 240), new Color4(1, 0, 0, 1));
-            debugTextSystem.Print($"Resident chunks: {data.ResidentChunksCount}", new(10, 260), new Color4(1, 0, 0, 1));
-            debugTextSystem.Print($"Active chunks: {data.ActiveChunks.Count}", new(10, 280), new Color4(1, 0, 0, 1));
-            debugTextSystem.Print($"Pending chunks: {data.PendingChunks.Count}", new(10, 300), new Color4(1, 0, 0, 1));
-            debugTextSystem.Print($"Max loaded chunks: {maxLoadedChunks}", new(10, 320), new Color4(1, 0, 0, 1));
-            debugTextSystem.Print($"Physics chunks: {data.PhysicsEntities.Count}, Pool: {data.PhysicsEntityPool.Count}", new(10, 340), new Color4(1, 0, 0, 1));
-            debugTextSystem.Print($"Camera: {data.CameraPosition.X:0.0f} {data.CameraPosition.Y:0.0f} {data.CameraPosition.Z:0.0f}", new(10, 360), new Color4(1, 0, 0, 1));
+            //var maxLoadedChunks = (TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize) * TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize;
+            //debugTextSystem.Print($"Terrain chunk count: {data.ChunkCount}", new(10, 240), new Color4(1, 0, 0, 1));
+            //debugTextSystem.Print($"Resident chunks: {data.ResidentChunksCount}", new(10, 260), new Color4(1, 0, 0, 1));
+            //debugTextSystem.Print($"Active chunks: {data.ActiveChunks.Count}", new(10, 280), new Color4(1, 0, 0, 1));
+            //debugTextSystem.Print($"Pending chunks: {data.PendingChunks.Count}", new(10, 300), new Color4(1, 0, 0, 1));
+            //debugTextSystem.Print($"Max loaded chunks: {maxLoadedChunks}", new(10, 320), new Color4(1, 0, 0, 1));
+            //debugTextSystem.Print($"Physics chunks: {data.PhysicsEntities.Count}, Pool: {data.PhysicsEntityPool.Count}", new(10, 340), new Color4(1, 0, 0, 1));
+            //debugTextSystem.Print($"Camera: {data.CameraPosition.X:0.0f} {data.CameraPosition.Y:0.0f} {data.CameraPosition.Z:0.0f}", new(10, 360), new Color4(1, 0, 0, 1));
         }
     }
 
@@ -669,7 +673,6 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
         var unitsPerTexel = component.UnitsPerTexel;
         var invTerrainSize = 1.0f / (data.TerrainData.Header.Size * unitsPerTexel);
-        var chunksPerRowLod0 = data.TerrainData.Header.Size / data.TerrainData.Header.ChunkSize;
 
         parameters.Set(TerrainCommonKeys.ChunkSize, (uint)data.TerrainData.Header.ChunkSize);
         parameters.Set(TerrainCommonKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
@@ -678,9 +681,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         parameters.Set(TerrainCommonKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
         parameters.Set(TerrainCommonKeys.ChunkBuffer, data.ChunkBuffer);
         parameters.Set(TerrainCommonKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
-        parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)chunksPerRowLod0);
+        parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)data.ChunksPerRowLod0);
         parameters.Set(TerrainCommonKeys.TerrainNormalMap, data.NormalMapTexture);
-        parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / component.UnitsPerTexel);
+        parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / data.UnitsPerTexel);
 
         return true;
     }

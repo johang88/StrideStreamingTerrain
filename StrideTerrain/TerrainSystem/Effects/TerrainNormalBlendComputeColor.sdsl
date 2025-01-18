@@ -31,6 +31,15 @@
             return normal;
         }
 
+        float3 BlendNormal(float3 from, float3 to, float3 a)
+        {
+            var middleNormal = NormalUtil.BlendRNM(from, to);
+
+            // This is not correct, but try to have a good 0.5 and linear interpol from this
+            // ideally, we should have RNM support a blending based of matBlend
+            return a < 0.5 ? lerp(from, middleNormal, a / 0.5) : lerp(middleNormal, to, (a - 0.5) * 2);
+        }
+
         float3 SampleTerrain(float2 uv)
         {
             streams.TexCoord2 = uv;
@@ -45,17 +54,17 @@
             streams.TexCoord2 = uv * 0.1f;
             float3 rock = GetNormal(Rock.Compute());
 
-            float3 output = NormalUtil.BlendPartialDerivative(sand, grass, blendGrass);
-            output = NormalUtil.BlendPartialDerivative(output, snow, blendSnow);
-            output = NormalUtil.BlendPartialDerivative(sand, rock, blendRock);
+            float3 output = BlendNormal(sand, grass, blendGrass);
+            output = BlendNormal(output, snow, blendSnow);
+            output = BlendNormal(sand, rock, blendRock);
 
             return output;
         }
 
         override float4 Compute()
         {
-            float3 triW = abs(streams.meshNormal);
-	        triW = triW / (triW.x + triW.y + triW.z);
+            float tighten = 0.4679f;
+            float3 triW = saturate(abs(streams.meshNormal) - tighten);
 
             float uvScale = 0.25f;
 
@@ -64,8 +73,8 @@
             float3 outputZ = float3(0, 0, 0);
 
             if (triW.x > 0.0f) outputX = SampleTerrain(streams.PositionWS.zy * uvScale);
-            if (triW.y  > 0.0f) outputY = SampleTerrain(streams.PositionWS.xz * uvScale);
-            if (triW.z  > 0.0f) outputZ = SampleTerrain(streams.PositionWS.xy * uvScale);
+            if (triW.y > 0.0f) outputY = SampleTerrain(streams.PositionWS.xz * uvScale);
+            if (triW.z > 0.0f) outputZ = SampleTerrain(streams.PositionWS.xy * uvScale);
 
             float3 output = outputX * triW.x + outputY * triW.y + outputZ * triW.z;
 

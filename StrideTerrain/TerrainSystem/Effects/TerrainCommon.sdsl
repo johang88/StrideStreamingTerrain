@@ -28,7 +28,7 @@
 
         rgroup PerMaterial
         {
-            stage Texture2D Heightmap;
+            stage Texture2D<float> Heightmap;
             stage Texture2D TerrainNormalMap;
             stage StructuredBuffer<ChunkData> ChunkBuffer;
             stage StructuredBuffer<int> SectorToChunkMapBuffer;
@@ -54,10 +54,12 @@
             uint sectorIndex = sectorZ * ChunksPerRow + sectorX;
             uint chunkIndex = max(0, SectorToChunkMapBuffer[sectorIndex]);
 
-            float positionInChunkX = ((float)wx) % ChunkSize;
-            float positionInChunkZ = ((float)wz) % ChunkSize;
-
+            uint lodLevel = ChunkBuffer[chunkIndex].Data0 & 0xFF;
+			uint scale = 1 << lodLevel;
             float2 uv = ChunkBuffer[chunkIndex].Uv;
+
+            float positionInChunkX = ((float)wx / scale) % ChunkSize;
+            float positionInChunkZ = ((float)wz / scale) % ChunkSize;
 
             uv.x += positionInChunkX + 0.5f;
             uv.y += positionInChunkZ + 0.5f;
@@ -79,10 +81,12 @@
             uint sectorIndex = sectorZ * ChunksPerRow + sectorX;
             uint chunkIndex = max(0, SectorToChunkMapBuffer[sectorIndex]);
 
+            uint lodLevel = ChunkBuffer[chunkIndex].Data0 & 0xFF;
+			uint scale = 1 << lodLevel;
+            float2 uv = ChunkBuffer[chunkIndex].Uv;
+
             float positionInChunkX = ((float)wx) % ChunkSize;
             float positionInChunkZ = ((float)wz) % ChunkSize;
-
-            float2 uv = ChunkBuffer[chunkIndex].Uv;
 
             uv.x += positionInChunkX + 0.5f;
             uv.y += positionInChunkZ + 0.5f;

@@ -92,9 +92,9 @@ RenderFeatures:
                     79582329a9cf466e960f8920f579de9b: !Stride.Rendering.Lights.LightPointGroupRenderer,Stride.Rendering {}
                     cf0c6bd4198b4cc4aaaab5b54870bdfd: !Stride.Rendering.Lights.LightSpotGroupRenderer,Stride.Rendering {}
                     451af18f3f5c4187cf3fe5f33feb46b1: !Stride.Rendering.LightProbes.LightProbeRenderer,Stride.Rendering {}
-                ShadowMapRenderer: !Stride.Rendering.Shadows.ShadowMapRenderer,Stride.Rendering
+                ShadowMapRenderer*: !StrideTerrain.TerrainSystem.TerrainShadowMapRenderer,StrideTerrain
                     Renderers:
-                        7c3d3d4c86834c3551bacde2527b3836*: !StrideTerrain.Rendering.LightDirectionalShadowMapRendererReverseZ,StrideTerrain
+                        7c3d3d4c86834c3551bacde2527b3836*: !StrideTerrain.TerrainSystem.TerrainDirectionalShadowMapRenderer,StrideTerrain
                             ShadowCasterRenderStage*: ref!! 244215b8-2f84-470e-bfd3-1f9f8db74fa6
                         1c204b09435636256a3fcfd6f9ddb347: !Stride.Rendering.Shadows.LightSpotShadowMapRenderer,Stride.Rendering
                             ShadowCasterRenderStage: ref!! 244215b8-2f84-470e-bfd3-1f9f8db74fa6

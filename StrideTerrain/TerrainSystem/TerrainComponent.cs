@@ -26,8 +26,6 @@ public class TerrainComponent : EntityComponent
     [DataMember(4)]
     public UrlReference? TerrainStreamingData { get; set; }
 
-    [DataMember(10), DefaultValue(64), Obsolete] public int ChunkSize { get; set; } = 64;
-
     /// <summary>
     /// UnitsPerTexel * Heightmap.Width = TerrainWorldSize
     /// </summary>
@@ -45,10 +43,4 @@ public class TerrainComponent : EntityComponent
     [DataMember(13), DefaultValue(-1)] public int MaximumLod { get; set; } = -1;
 
     [DataMember(14), DefaultValue(0)] public int MinimumLod { get; set; } = 0;
-
-    [DataMember(100), DefaultValue(false)] public bool FreezeCamera { get; set; } = false;
-
-    [DataMember(101), DefaultValue(true)] public bool FrustumCull { get; set; } = true;
-
-    [DataMember(102), DefaultValue(false)] public bool FreezeFrustum { get; set; } = false;
 }

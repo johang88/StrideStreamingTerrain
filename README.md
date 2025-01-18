@@ -3,8 +3,9 @@ NOTE: Don't use, it's not production ready, does not work in editor, performance
 
 
 ## How to use
-If you insist ...
+If you insist ... 
 
+* It wont compile without changes to the stride source code, available here https://github.com/johang88/stride if it's been kept up to date.
 * Get a big heightmap (something like 8k+ it's got to be really big or it would make no sense to stream it now would it). It currently must be power of 2 (or power of 2 + 1), square and be 16bit single channel png (other formats might work but not tested).
 * Fix stride versions in 
 * Compile `StrideTerrain.Importer.sln`

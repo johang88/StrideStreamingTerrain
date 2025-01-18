@@ -1,0 +1,39 @@
+﻿namespace StrideTerrain.TerrainSystem.Effects
+{
+    shader TerrainGenerateHeightmap : ComputeShaderBase, TerrainCommon
+    {
+        stage RWTexture2D<float> OutputTexture;
+
+        stage uint OutputSizeToTerrainSize;
+		stage uint OutputSize;
+
+		float SampleHeightmap(uint2 pos)
+		{
+			pos *= OutputSizeToTerrainSize;
+			
+			uint2 sectorPos = min(uint2(ChunksPerRow, ChunksPerRow), pos / ChunkSize);
+			uint sectorIndex = sectorPos.y * ChunksPerRow + sectorPos.x;
+			uint chunkIndex = SectorToChunkMapBuffer[sectorIndex];
+
+			uint lodLevel = ChunkBuffer[chunkIndex].Data0 & 0xFF;
+			uint scale = 1 << lodLevel;
+			pos /= scale;
+
+			int2 chunkPosition = int2(pos.x % ChunkSize, pos.y % ChunkSize);
+			int2 uv = ChunkBuffer[chunkIndex].Uv + chunkPosition;
+
+			float height = Heightmap.Load(int3(uv, 0)).x;
+			return height;
+		}
+
+		override void Compute()
+		{
+			uint2 pos = streams.DispatchThreadId.xy;
+			float height = SampleHeightmap(pos);
+			if (pos.x < OutputSize && pos.y < OutputSize)
+			{
+				OutputTexture[pos] = height;
+			}
+		}
+    };
+}

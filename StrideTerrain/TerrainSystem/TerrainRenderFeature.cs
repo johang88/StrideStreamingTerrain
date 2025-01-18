@@ -8,7 +8,7 @@ using StrideTerrain.TerrainSystem.Effects;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.Threading;
+
 namespace StrideTerrain.TerrainSystem;
 
 public class TerrainRenderFeature : SubRenderFeature
@@ -18,6 +18,7 @@ public class TerrainRenderFeature : SubRenderFeature
 
     [DataMemberIgnore]
     public static readonly PropertyKey<Dictionary<RenderModel, TerrainRuntimeData>> ModelToTerrainMap = new("TerrainRenderFeature.ModelToTerrainMap", typeof(TerrainRenderFeature));
+    public static readonly PropertyKey<List<TerrainRuntimeData>> TerrainList = new("TerrainRenderFeature.Terrains", typeof(TerrainRenderFeature));
 
     public override void Extract()
     {
@@ -51,6 +52,14 @@ public class TerrainRenderFeature : SubRenderFeature
         if ((Context.VisibilityGroup == null) || (!Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap)))
             return;
 
+        // It's a bit ugly but a convenient to get data to the shadow map renderer.
+        if (!context.Tags.TryGetValue(TerrainList, out var terrains))
+        {
+            terrains = new(1);
+            context.Tags.Add(TerrainList, terrains);
+        }
+        terrains.Clear();
+
         foreach (var objectNodeReference in RootRenderFeature.ObjectNodeReferences)
         {
             var objectNode = RootRenderFeature.GetObjectNode(objectNodeReference);
@@ -73,8 +82,10 @@ public class TerrainRenderFeature : SubRenderFeature
             }
 
             // Update global buffer data
-            data.ChunkBuffer!.SetData(context.CommandList, (ReadOnlySpan<ChunkData>)data.ChunkData.AsSpan());
+            data.ChunkBuffer!.SetData(context.CommandList, (ReadOnlySpan<ChunkData>)data.ChunkData.AsSpan(0, data.ChunkCount));
             data.SectorToChunkMapBuffer!.SetData(context.CommandList, (ReadOnlySpan<int>)data.SectorToChunkMap.AsSpan());
+
+            terrains.Add(data);
         }
     }
 
@@ -85,13 +96,13 @@ public class TerrainRenderFeature : SubRenderFeature
         if ((Context.VisibilityGroup == null) || (!Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap)))
             return;
 
-        var isShadowMap = renderView is ShadowMapRenderView;
         var frustum = new BoundingFrustum(ref renderView.ViewProjection);
 
         using var profilingScope = context.QueryManager.BeginProfile(Color4.Black, ProflingKeyCull);
 
         foreach (var objectNodeReference in RootRenderFeature.ObjectNodeReferences)
         {
+            // TODO: Check render stage index thing? It currently triggers in the debug renderer which it should not?
             var objectNode = RootRenderFeature.GetObjectNode(objectNodeReference);
             if (objectNode.RenderObject is not RenderMesh renderMesh)
                 continue;
@@ -116,8 +127,8 @@ public class TerrainRenderFeature : SubRenderFeature
             var chunkSize = data.TerrainData.Header.ChunkSize;
             var invTerrainSize = 1.0f / (terrainSize * unitsPerTexel);
 
-            var chunksPerRowLod0 = terrainSize / chunkSize;
-            var maxChunks = chunksPerRowLod0 * chunksPerRowLod0;
+            data.ChunksPerRowLod0 = terrainSize / chunkSize;
+            var maxChunks = data.ChunksPerRowLod0 * data.ChunksPerRowLod0;
 
             // Frustum cull chunks. Could use dispatcher but not seeing any difference in timings.
             renderMesh.InstanceCount = 0;
@@ -144,7 +155,7 @@ public class TerrainRenderFeature : SubRenderFeature
             renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.ChunkBuffer, data.ChunkBuffer);
             renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
             renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.ChunkInstanceData);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)chunksPerRowLod0);
+            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)data.ChunksPerRowLod0);
             renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.TerrainNormalMap, data.NormalMapTexture);
             renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / data.UnitsPerTexel);
         }

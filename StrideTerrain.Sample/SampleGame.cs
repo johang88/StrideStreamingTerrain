@@ -28,6 +28,6 @@ public class SampleGame : Game
         deviceManager.PreferredDepthStencilFormat = PixelFormat.D32_Float_S8X24_UInt;
 
         //Profiler.EnableAll();
-        //GraphicsDeviceManager.DeviceCreationFlags |= DeviceCreationFlags.Debug;
+        GraphicsDeviceManager.DeviceCreationFlags |= DeviceCreationFlags.Debug;
     }
 }

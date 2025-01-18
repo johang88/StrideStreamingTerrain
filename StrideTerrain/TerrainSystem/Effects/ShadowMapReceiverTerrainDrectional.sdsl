@@ -1,0 +1,37 @@
+﻿namespace StrideTerrain.TerrainSystem.Effects
+{   
+    shader ShadowMapReceiverTerrainDrectional<int TCascadeCount, int TLightCount, bool TBlendCascades, bool TDepthRangeAuto, bool TCascadeDebug,bool TComputeTransmittance>
+        : ShadowMapReceiverDirectional<TCascadeCount, TLightCount, TBlendCascades, TDepthRangeAuto, TCascadeDebug, TComputeTransmittance>, PositionStream4, Texturing
+    {
+        cbuffer PerView.Lighting
+        {
+            float4 TerrainWorldSize;
+            int UseTerrainShadowMap = 0;
+        }
+
+        rgroup PerView.Lighting
+        {
+            Texture2D TerrainShadowMap;
+        }
+
+        override float3 ComputeShadow(float3 position, int lightIndex)
+        {
+            float3 shadow = 1.0f;
+            if (UseTerrainShadowMap == 1)
+            {
+                float3 worldPosition = streams.PositionWS.xyz;
+                float2 uv = (worldPosition.xz) * TerrainWorldSize.xy;
+
+                float3 shadowData = TerrainShadowMap.SampleLevel(LinearSampler, uv, 0).xyz;
+
+                float heightWeight = worldPosition.y * TerrainWorldSize.z;
+                heightWeight = (heightWeight - shadowData.y) * shadowData.z * 1023;
+
+                shadow = lerp(shadowData.x, 1.0, saturate(heightWeight));
+                shadow = shadowData.x;
+            }
+
+            return shadow * base.ComputeShadow(position, lightIndex);
+        }
+    };
+}
