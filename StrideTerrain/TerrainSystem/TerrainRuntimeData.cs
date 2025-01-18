@@ -1,4 +1,5 @@
-﻿using Stride.Core.Mathematics;
+﻿using SharpFont;
+using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
 using Stride.Rendering;
@@ -27,7 +28,11 @@ public class TerrainRuntimeData
         BoundingBox = new BoundingBox(new Vector3(-10000, -10000, -10000), new Vector3(10000, 10000, 10000)), 
     };
 
+    public bool IsInitialized;
+
     public RenderModel? RenderModel;
+
+    public ModelComponent? ModelComponent;
 
     public int InstanceCount;
 
@@ -90,6 +95,19 @@ public class TerrainRuntimeData
 
         TerrainStream.Seek(BaseOffset + offset, SeekOrigin.Begin);
         TerrainStream.ReadAtLeast(buffer, TerrainData.Header.HeightmapSize);
+    }
+
+    public bool RequestChunk(int chunkIndex)
+    {
+        ActiveChunks.Add(chunkIndex);
+
+        if (ChunkToTextureIndex[chunkIndex] == -1)
+        {
+            PendingChunks.Push(chunkIndex);
+            return false;
+        }
+
+        return true;
     }
 }
 
