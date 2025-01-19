@@ -46,7 +46,7 @@
 
 			const bool ground = false;
 			const float SampleCountIni = 30;
-			const float DepthBufferValue = -1.0;
+			const float DepthBufferValue = 1.0;
 			const bool VariableSampleCount = true;
 			const bool MieRayPhase = true;
 			const float AerialPespectiveViewDistanceScale = 1.0f;

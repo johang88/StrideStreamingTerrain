@@ -6,8 +6,10 @@ using Stride.Rendering.Shadows;
 using Stride.Shaders;
 using StrideTerrain.Rendering;
 using StrideTerrain.TerrainSystem.Effects;
+using StrideTerrain.TerrainSystem.Effects.Shadows;
+using StrideTerrain.TerrainSystem.Rendering;
 
-namespace StrideTerrain.TerrainSystem;
+namespace StrideTerrain.TerrainSystem.Rendering.Shadows;
 
 /// <summary>
 /// Injects the terrain shadow map, rendering is done in `TerrainShadowMapRenderer`
@@ -62,6 +64,10 @@ public class TerrainDirectionalShadowMapRenderer : LightDirectionalShadowMapRend
                 parameters.Set(_terrainWorldSizeKey, new Vector4(invShadowMapsSize, invShadowMapsSize, 1.0f / terrain.TerrainData.Header.MaxHeight, 0.0f));
                 parameters.Set(_useTerrainShadowMapKey, 1);
                 parameters.Set(_terrainShadowMapKey, terrain.ShadowMap);
+            }
+            else
+            {
+                parameters.Set(_useTerrainShadowMapKey, 0);
             }
         }
     }

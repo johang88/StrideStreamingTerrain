@@ -14,12 +14,10 @@ using Stride.Shaders;
 using Stride.Core.Mathematics;
 using Buffer = Stride.Graphics.Buffer;
 
-namespace StrideTerrain.TerrainSystem.Effects
+namespace StrideTerrain.TerrainSystem.Effects.Material
 {
-    public static partial class TerrainGenerateHeightmapKeys
+    public static partial class MaterialTerrainDisplacementKeys
     {
-        public static readonly ObjectParameterKey<Texture> OutputTexture = ParameterKeys.NewObject<Texture>();
-        public static readonly ValueParameterKey<uint> OutputSizeToTerrainSize = ParameterKeys.NewValue<uint>();
-        public static readonly ValueParameterKey<uint> OutputSize = ParameterKeys.NewValue<uint>();
+        public static readonly ObjectParameterKey<Buffer> ChunkInstanceData = ParameterKeys.NewObject<Buffer>();
     }
 }

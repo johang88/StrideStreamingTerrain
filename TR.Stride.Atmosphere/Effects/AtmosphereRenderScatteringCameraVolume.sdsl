@@ -79,7 +79,7 @@
 
 			const bool ground = false;
 			const float SampleCountIni = max(1.0, float(streams.SliceId + 1.0f) * 2.0f);
-			const float DepthBufferValue = -1.0;
+			const float DepthBufferValue = 1.0;
 			const bool VariableSampleCount = false;
 			const bool MieRayPhase = true;
 			const float AerialPespectiveViewDistanceScale = Atmosphere.AerialPespectiveViewDistanceScale;

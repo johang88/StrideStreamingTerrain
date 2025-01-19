@@ -31,46 +31,53 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <Compile Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl.cs">
+	  <Compile Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\ShadowMapReceiverTerrainDrectional.sdsl.cs">
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainBlendComputeColor.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainGenerateHeightmap.sdsl.cs">
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainNormalBlendComputeColor.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainNormalBlendComputeColor.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DependentUpon>%(Filename)</DependentUpon>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl.cs">
+	  <Compile Update="TerrainSystem\Effects\Shadows\ShadowMapReceiverTerrainDrectional.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainCommon.sdsl.cs">
+	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainAtmosphereShadow.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainNormalMapComputeColor.sdsl.cs">
+	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainShadowGenerator.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainShadowGenerator.sdsl.cs">
+	  <Compile Update="TerrainSystem\Effects\TerrainData.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
+	    <DependentUpon>TerrainData.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\TerrainStreams.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>TerrainStreams.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\TerrainQuery.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>TerrainQuery.sdsl</DependentUpon>
 	  </Compile>
 	  <Compile Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl.cs">
 	    <DesignTime>True</DesignTime>
@@ -79,28 +86,31 @@
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
-	  <None Update="TerrainSystem\Effects\MaterialTerrainDisplacement.sdsl">
+	  <None Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl">
 	    <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
 	  </None>
-	  <None Update="TerrainSystem\Effects\ShadowMapReceiverTerrainDrectional.sdsl">
+	  <None Update="TerrainSystem\Effects\Shadows\ShadowMapReceiverTerrainDrectional.sdsl">
 	    <LastGenOutput>ShadowMapReceiverTerrainDrectional.sdsl.cs</LastGenOutput>
 	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainGenerateHeightmap.sdsl">
-	    <LastGenOutput>TerrainGenerateHeightmap.sdsl.cs</LastGenOutput>
+	  <None Update="TerrainSystem\Effects\Shadows\TerrainAtmosphereShadow.sdsl">
+	    <LastGenOutput>TerrainAtmosphereShadow.sdsl.cs</LastGenOutput>
 	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainNormalBlendComputeColor.sdsl">
+	  <None Update="TerrainSystem\Effects\TerrainData.sdsl">
+	    <LastGenOutput>TerrainData.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\TerrainStreams.sdsl">
+	    <LastGenOutput>TerrainStreams.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainNormalBlendComputeColor.sdsl">
 	    <LastGenOutput>TerrainNormalBlendComputeColor.sdsl.cs</LastGenOutput>
 	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainBlendComputeColor.sdsl">
+	  <None Update="TerrainSystem\Effects\Material\TerrainBlendComputeColor.sdsl">
 	    <LastGenOutput>TerrainBlendComputeColor.sdsl.cs</LastGenOutput>
 	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainCommon.sdsl">
-	    <LastGenOutput>TerrainCommon.sdsl.cs</LastGenOutput>
+	  <None Update="TerrainSystem\Effects\TerrainQuery.sdsl">
+	    <LastGenOutput>TerrainQuery.sdsl.cs</LastGenOutput>
 	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainNormalMapComputeColor.sdsl">
-	    <LastGenOutput>TerrainNormalMapComputeColor.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainShadowGenerator.sdsl">
+	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowGenerator.sdsl">
 	    <LastGenOutput>TerrainShadowGenerator.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl">

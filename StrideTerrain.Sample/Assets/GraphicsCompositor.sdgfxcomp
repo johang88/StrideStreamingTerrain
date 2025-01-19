@@ -92,9 +92,9 @@ RenderFeatures:
                     79582329a9cf466e960f8920f579de9b: !Stride.Rendering.Lights.LightPointGroupRenderer,Stride.Rendering {}
                     cf0c6bd4198b4cc4aaaab5b54870bdfd: !Stride.Rendering.Lights.LightSpotGroupRenderer,Stride.Rendering {}
                     451af18f3f5c4187cf3fe5f33feb46b1: !Stride.Rendering.LightProbes.LightProbeRenderer,Stride.Rendering {}
-                ShadowMapRenderer*: !StrideTerrain.TerrainSystem.TerrainShadowMapRenderer,StrideTerrain
+                ShadowMapRenderer*: !StrideTerrain.TerrainSystem.Rendering.Shadows.TerrainShadowMapRenderer,StrideTerrain
                     Renderers:
-                        7c3d3d4c86834c3551bacde2527b3836*: !StrideTerrain.TerrainSystem.TerrainDirectionalShadowMapRenderer,StrideTerrain
+                        7c3d3d4c86834c3551bacde2527b3836*: !StrideTerrain.TerrainSystem.Rendering.Shadows.TerrainDirectionalShadowMapRenderer,StrideTerrain
                             ShadowCasterRenderStage*: ref!! 244215b8-2f84-470e-bfd3-1f9f8db74fa6
                         1c204b09435636256a3fcfd6f9ddb347: !Stride.Rendering.Shadows.LightSpotShadowMapRenderer,Stride.Rendering
                             ShadowCasterRenderStage: ref!! 244215b8-2f84-470e-bfd3-1f9f8db74fa6
@@ -103,7 +103,7 @@ RenderFeatures:
                         d59ef45dd99e49d3af3887763d153aa7: !Stride.Rendering.Shadows.LightPointShadowMapRendererCubeMap,Stride.Rendering
                             ShadowCasterRenderStage: ref!! 074c3873-7517-46d8-9949-e96ba285b716
             42be209952db58294c9f06c58809b8ca: !Stride.Rendering.InstancingRenderFeature,Stride.Rendering {}
-            9c99c0be553e2f63cd69b8507bbf6a5f*: !StrideTerrain.TerrainSystem.TerrainRenderFeature,StrideTerrain {}
+            9c99c0be553e2f63cd69b8507bbf6a5f*: !StrideTerrain.TerrainSystem.Rendering.TerrainRenderFeature,StrideTerrain {}
             b0e1ca363300be39a469cdb542181fa4*: !TR.Stride.Atmosphere.AtmosphereTransparentRenderFeature,TR.Stride.Atmosphere {}
             6700e307d6a0f7a85b7f51dc6cdc2c66*: !StrideTerrain.Rendering.ProfilingKeyRenderFeature,StrideTerrain {}
     28e9bf54a5adbe063f59fb17acb2723e: !Stride.Rendering.Sprites.SpriteRenderFeature,Stride.Rendering
@@ -156,6 +156,7 @@ RenderFeatures:
         CloudCurlNoiseTexture: 1ad2816e-e961-4803-8704-d51dfd1e179f:Noise
         CloudBlueNoiseTexture: 1ba8bbc0-a2dc-4d14-ad0d-5240a66eff1d:BlueNoise
         WeatherTexture: 5398e085-e65d-43e5-b5a8-f011dbaf9d90:WeatherTexture
+        AtmosphereShadowFunction: !TR.Stride.Atmosphere.AtmosphereShadowFunctionNone,TR.Stride.Atmosphere {}
 SharedRenderers:
     60459475d3a3adaf2d1ba5d99913ca75: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine
         Id: cc9387fc-ac31-40f8-bcfc-92e3167836d9

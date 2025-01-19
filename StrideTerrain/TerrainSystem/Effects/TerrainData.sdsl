@@ -1,0 +1,34 @@
+﻿namespace StrideTerrain.TerrainSystem.Effects
+{
+    shader TerrainData
+    {
+        struct ChunkData
+        {
+            int Data0; // byte LodLevel, byte Noth, byte South, byte West
+            int Data1; // byte East, byte ChunkX, byte ChunkZ, byte Padding0
+            float Scale;
+            float3 Position;
+            int2 Uv;
+            float3 BoundsCenter;
+            float3 BoundsExtent;
+        };
+
+        rgroup PerMaterial
+        {
+            stage Texture2D<float> Heightmap;
+            stage Texture2D TerrainNormalMap;
+            stage StructuredBuffer<ChunkData> ChunkBuffer;
+            stage StructuredBuffer<int> SectorToChunkMapBuffer;
+        }
+
+        cbuffer PerMaterial
+        {
+            stage uint ChunkSize;
+            stage float InvTerrainTextureSize;
+            stage float InvTerrainSize;
+            stage float MaxHeight;
+            stage uint ChunksPerRow;
+            stage float InvUnitsPerTexel;
+        }
+    };
+}

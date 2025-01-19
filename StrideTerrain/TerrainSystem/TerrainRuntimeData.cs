@@ -4,6 +4,7 @@ using Stride.Engine;
 using Stride.Graphics;
 using Stride.Rendering;
 using StrideTerrain.Common;
+using StrideTerrain.TerrainSystem.Rendering;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -97,6 +98,9 @@ public class TerrainRuntimeData
     public Dictionary<int, Entity> PhysicsEntities = [];
 
     public Queue<Entity> PhysicsEntityPool = [];
+
+    // Can be used to check if streaming data has updated.
+    public int LastStreamingUpdate; 
 
     public void ReadChunk(ChunkType chunkType, int chunkIndex, Span<byte> buffer)
     {

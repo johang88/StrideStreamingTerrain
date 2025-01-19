@@ -9,36 +9,46 @@
     effect AtmosphereRenderSkyRayMarchingEffect
     {
         using params AtmosphereParameters;
+        //using params AtmosphereShadowKeys;
 
         mixin AtmosphereRenderSkyRayMarching<AtmosphereParameters.RenderSunDisk, AtmosphereParameters.AtmosphereGroup>;
+        //mixin compose ShadowFunction = AtmosphereShadowKeys.ShadowFunction;
     };
 
     effect AtmosphereRenderTransmittanceLutEffect
     {
         using params AtmosphereParameters; 
+        using params AtmosphereShadowKeys;
 
         mixin AtmosphereRenderTransmittanceLut<AtmosphereParameters.AtmosphereGroup>;
+        mixin compose ShadowFunction = AtmosphereShadowKeys.ShadowFunction;
     };
 
     effect AtmosphereMultipleScatteringTextureEffect
     {
         using params AtmosphereParameters;
+        using params AtmosphereShadowKeys;
 
         mixin AtmosphereMultipleScatteringTextureEffectCS<AtmosphereParameters.AtmosphereGroup>;
+        mixin compose ShadowFunction = AtmosphereShadowKeys.ShadowFunction;
     };
 
     effect AtmosphereRenderSkyViewLutEffect
     {
         using params AtmosphereParameters;
+        using params AtmosphereShadowKeys;
 
         mixin AtmosphereRenderSkyViewLut<AtmosphereParameters.AtmosphereGroup>;
+        mixin compose ShadowFunction = AtmosphereShadowKeys.ShadowFunction;
     }
 
     effect AtmosphereRenderScatteringCameraVolumeEffect
     {
         using params AtmosphereParameters;
+        using params AtmosphereShadowKeys;
 
         mixin AtmosphereRenderScatteringCameraVolume<AtmosphereParameters.AtmosphereGroup>;
+        mixin compose ShadowFunction = AtmosphereShadowKeys.ShadowFunction;
     }
 
     effect CloudRayMarchingEffect

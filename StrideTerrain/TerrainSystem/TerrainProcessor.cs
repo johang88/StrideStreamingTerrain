@@ -11,6 +11,7 @@ using Stride.Physics;
 using Stride.Profiling;
 using Stride.Rendering;
 using StrideTerrain.TerrainSystem.Effects;
+using StrideTerrain.TerrainSystem.Rendering;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
@@ -348,6 +349,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 #endif
 
                 data.ReadChunk(ChunkType.NormalMap, chunkIndex, buffer);
+                data.LastStreamingUpdate++;
 
                 data.NormalMapStagingTexture!.SetData(graphicsContext.CommandList, buffer.AsSpan(0, data.TerrainData.Header.NormalMapSize), 0, 0);
                 graphicsContext.CommandList.CopyRegion(data.NormalMapStagingTexture, 0, null, data.NormalMapTexture, 0, tx, ty);
@@ -674,16 +676,16 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         var unitsPerTexel = component.UnitsPerTexel;
         var invTerrainSize = 1.0f / (data.TerrainData.Header.Size * unitsPerTexel);
 
-        parameters.Set(TerrainCommonKeys.ChunkSize, (uint)data.TerrainData.Header.ChunkSize);
-        parameters.Set(TerrainCommonKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
-        parameters.Set(TerrainCommonKeys.InvTerrainSize, invTerrainSize);
-        parameters.Set(TerrainCommonKeys.Heightmap, data.HeightmapTexture);
-        parameters.Set(TerrainCommonKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
-        parameters.Set(TerrainCommonKeys.ChunkBuffer, data.ChunkBuffer);
-        parameters.Set(TerrainCommonKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
-        parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)data.ChunksPerRowLod0);
-        parameters.Set(TerrainCommonKeys.TerrainNormalMap, data.NormalMapTexture);
-        parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / data.UnitsPerTexel);
+        parameters.Set(TerrainDataKeys.ChunkSize, (uint)data.TerrainData.Header.ChunkSize);
+        parameters.Set(TerrainDataKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
+        parameters.Set(TerrainDataKeys.InvTerrainSize, invTerrainSize);
+        parameters.Set(TerrainDataKeys.Heightmap, data.HeightmapTexture);
+        parameters.Set(TerrainDataKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
+        parameters.Set(TerrainDataKeys.ChunkBuffer, data.ChunkBuffer);
+        parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
+        parameters.Set(TerrainDataKeys.ChunksPerRow, (uint)data.ChunksPerRowLod0);
+        parameters.Set(TerrainDataKeys.TerrainNormalMap, data.NormalMapTexture);
+        parameters.Set(TerrainDataKeys.InvUnitsPerTexel, 1.0f / data.UnitsPerTexel);
 
         return true;
     }

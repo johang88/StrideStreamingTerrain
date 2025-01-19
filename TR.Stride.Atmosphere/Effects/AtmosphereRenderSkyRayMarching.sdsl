@@ -29,7 +29,7 @@
 
 			const float InvScaleToSkyUnit = 1.0 / ScaleToSkyUnit;
 
-			float DepthBufferValue = -1.0;
+			float DepthBufferValue = 1.0;
 
 			float viewHeight = length(WorldPos);
 			float3 L = 0;

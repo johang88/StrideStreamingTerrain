@@ -1,6 +1,6 @@
 ﻿using System.Runtime.InteropServices;
 
-namespace StrideTerrain.TerrainSystem;
+namespace StrideTerrain.TerrainSystem.Rendering.Shadows;
 
 [StructLayout(LayoutKind.Sequential)]
 public struct PerGroupDataStruct

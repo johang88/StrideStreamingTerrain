@@ -1,6 +1,7 @@
-﻿namespace StrideTerrain.TerrainSystem.Effects
+﻿namespace StrideTerrain.TerrainSystem.Effects.Material
 {
-    shader MaterialTerrainDisplacement : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, TerrainCommon
+    shader MaterialTerrainDisplacement 
+        : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, TerrainData, TerrainStreams
     {
         stage stream uint VertexId : SV_VERTEXID;
 

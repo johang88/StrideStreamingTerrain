@@ -4,6 +4,8 @@
 
 	shader AtmosphereRenderSkyCommon<MemberName AtmosphereGroup> : AtmosphereCommon<AtmosphereGroup>, Math
 	{
+		compose IAtmosphereShadow ShadowFunction;
+
 		float3 GetMultipleScattering(AtmosphereParameters Atmosphere, float3 scattering, float3 extinction, float3 worlPos, float viewZenithCosAngle)
 		{
 			float2 uv = saturate(float2(viewZenithCosAngle*0.5f + 0.5f, (length(worlPos) - Atmosphere.BottomRadius) / (Atmosphere.TopRadius - Atmosphere.BottomRadius)));
@@ -180,10 +182,10 @@
 				}
 			}
 
-			if (DepthBufferValue >= 0.0f)
+			if (DepthBufferValue < 1.0f)
 			{
 				ClipSpace.z = DepthBufferValue;
-				if (ClipSpace.z < 1.0f)
+				if (ClipSpace.z >= 0.0f)
 				{
 					float4 DepthBufferWorldPos = mul(float4(ClipSpace, 1.0), InvViewProjectionMatrix);
 					DepthBufferWorldPos /= DepthBufferWorldPos.w;
@@ -301,11 +303,8 @@
 
 				float3 multiScatteredLuminance = GetMultipleScattering(Atmosphere, medium.scattering, medium.extinction, P, SunZenithCosAngle);
 
-				float shadow = 1.0f;
-		#if SHADOWMAP_ENABLED
-				// First evaluate opaque shadow
-				shadow = getShadow(Atmosphere, P);
-		#endif
+				float InvScaleToSkyUnit = 1.0f / ScaleToSkyUnit;
+				float shadow = ShadowFunction.GetShadow((P - float3(0, Atmosphere.BottomRadius, 0)) * InvScaleToSkyUnit);
 
 				float3 S = globalL * (earthShadow * shadow * TransmittanceToSun * PhaseTimesScattering + multiScatteredLuminance * medium.scattering);
 

@@ -90,6 +90,11 @@
 			<DesignTimeSharedInput>True</DesignTimeSharedInput>
 			<AutoGen>True</AutoGen>
 		</Compile>
+		<Compile Update="Effects\AtmosphereShadowNone.sdsl.cs">
+		  <DesignTime>True</DesignTime>
+		  <DesignTimeSharedInput>True</DesignTimeSharedInput>
+		  <AutoGen>True</AutoGen>
+		</Compile>
 		<Compile Update="Effects\BlueNoise.sdsl.cs">
 			<DesignTime>True</DesignTime>
 			<DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -114,6 +119,11 @@
 			<DesignTime>True</DesignTime>
 			<DesignTimeSharedInput>True</DesignTimeSharedInput>
 			<AutoGen>True</AutoGen>
+		</Compile>
+		<Compile Update="Effects\IAtmosphereShadow.sdsl.cs">
+		  <DesignTime>True</DesignTime>
+		  <DesignTimeSharedInput>True</DesignTimeSharedInput>
+		  <AutoGen>True</AutoGen>
 		</Compile>
 		<Compile Update="Effects\Noise.sdsl.cs">
 			<DesignTime>True</DesignTime>
@@ -175,6 +185,9 @@
 		<None Update="Effects\AtmosphereSamplers.sdsl">
 			<LastGenOutput>AtmosphereSamplers.sdsl.cs</LastGenOutput>
 		</None>
+		<None Update="Effects\AtmosphereShadowNone.sdsl">
+		  <LastGenOutput>AtmosphereShadowNone.sdsl.cs</LastGenOutput>
+		</None>
 		<None Update="Effects\BlueNoise.sdsl">
 			<LastGenOutput>BlueNoise.sdsl.cs</LastGenOutput>
 		</None>
@@ -189,6 +202,9 @@
 		</None>
 		<None Update="Effects\CloudReconstruct.sdsl">
 			<LastGenOutput>CloudReconstruct.sdsl.cs</LastGenOutput>
+		</None>
+		<None Update="Effects\IAtmosphereShadow.sdsl">
+		  <LastGenOutput>IAtmosphereShadow.sdsl.cs</LastGenOutput>
 		</None>
 		<None Update="Effects\Noise.sdsl">
 			<LastGenOutput>Noise.sdsl.cs</LastGenOutput>

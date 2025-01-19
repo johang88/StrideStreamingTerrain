@@ -2,7 +2,7 @@
 using Stride.Rendering.Materials;
 using Stride.Shaders;
 
-namespace StrideTerrain.TerrainSystem;
+namespace StrideTerrain.TerrainSystem.Rendering.Materials;
 
 [DataContract]
 [Display("Terrain Displacement")]

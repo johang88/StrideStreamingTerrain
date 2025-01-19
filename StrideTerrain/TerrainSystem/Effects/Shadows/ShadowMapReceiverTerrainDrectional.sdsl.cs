@@ -14,7 +14,7 @@ using Stride.Shaders;
 using Stride.Core.Mathematics;
 using Buffer = Stride.Graphics.Buffer;
 
-namespace StrideTerrain.TerrainSystem.Effects
+namespace StrideTerrain.TerrainSystem.Effects.Shadows
 {
     public static partial class ShadowMapReceiverTerrainDrectionalKeys
     {

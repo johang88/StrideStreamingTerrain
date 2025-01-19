@@ -16,7 +16,7 @@ using Buffer = Stride.Graphics.Buffer;
 
 namespace StrideTerrain.TerrainSystem.Effects
 {
-    public static partial class TerrainCommonKeys
+    public static partial class TerrainDataKeys
     {
         public static readonly ObjectParameterKey<Texture> Heightmap = ParameterKeys.NewObject<Texture>();
         public static readonly ObjectParameterKey<Texture> TerrainNormalMap = ParameterKeys.NewObject<Texture>();

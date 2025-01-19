@@ -1,17 +1,14 @@
-﻿using SharpFont;
-using Stride.Core;
-using Stride.Core.Diagnostics;
+﻿using Stride.Core;
 using Stride.Core.Mathematics;
-using Stride.Graphics;
-using Stride.Physics;
 using Stride.Rendering;
 using Stride.Rendering.ComputeEffect;
 using Stride.Rendering.Lights;
 using Stride.Rendering.Shadows;
 using StrideTerrain.TerrainSystem.Effects;
+using StrideTerrain.TerrainSystem.Effects.Shadows;
 using System;
 
-namespace StrideTerrain.TerrainSystem;
+namespace StrideTerrain.TerrainSystem.Rendering.Shadows;
 
 /// <summary>
 /// Renders a custom shadow map for the terrain as well as all regular shadow maps.
@@ -19,7 +16,9 @@ namespace StrideTerrain.TerrainSystem;
 /// NOTE: Requires changing Draw() to virtual in ShadowMapRenderer. Could also implement 
 /// IShadowMapRenderer and forward to the regular shadow map renderer but I'm too lazy to do that.
 /// 
-/// Or maybe add a fancy `CompoundShadowMapRenderer` that has a list of shadow map renderer!
+/// Or maybe add a fancy `CompoundShadowMapRenderer` that has a list of shadow map renderers!
+/// 
+/// Based on https://github.com/OGRECave/ogre-next/blob/e8486341da0e0f9780e943a001adda33df00a268/Samples/2.0/Tutorials/Tutorial_Terrain/src/Terra/TerraShadowMapper.cpp
 /// </summary>
 [DataContract(DefaultMemberMode = DataMemberMode.Never)]
 public class TerrainShadowMapRenderer : ShadowMapRenderer
@@ -27,13 +26,17 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
     private static ValueParameterKey<Int4> StartXYKey = ParameterKeys.NewValue(Int4.Zero, "TerrainShadowGenerator.StartXY");
 
     private ComputeEffectShader? _terrainShadowGeneratorEffect;
-    private ComputeEffectShader? _terrainGenereateHeightmapEffect;
-    private Texture? _terrainHeightmap;
 
     internal Int4[] StartsBuffer = new Int4[4096];
     internal PerGroupDataStruct[] PerGroupDataBuffer = new PerGroupDataStruct[4096];
 
     private Vector3? _previousLightDirection = null;
+    private int _lastStreamingUpdate;
+
+    /// <summary>
+    /// If set to true then shadow map will only be recalculated if lighting conditions (or terrain streaming data) changes.
+    /// </summary>
+    [DataMember] public bool CacheShadowMap { get; set; } = true;
 
     public override void Draw(RenderDrawContext drawContext)
     {
@@ -71,22 +74,10 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
         if (directionalLight == null)
             return;
 
-        if ( _terrainShadowGeneratorEffect == null)
+        if (_terrainShadowGeneratorEffect == null)
         {
             _terrainShadowGeneratorEffect = new ComputeEffectShader(drawContext.RenderContext) { ShaderSourceName = "TerrainShadowGenerator" };
             _terrainShadowGeneratorEffect.DisposeBy(drawContext);
-        }
-
-        if (_terrainGenereateHeightmapEffect == null)
-        {
-            _terrainGenereateHeightmapEffect = new ComputeEffectShader(drawContext.RenderContext) { ShaderSourceName = "TerrainGenerateHeightmap" };
-            _terrainGenereateHeightmapEffect.DisposeBy(drawContext);
-        }
-
-        if (_terrainHeightmap == null)
-        {
-            _terrainHeightmap = Texture.New2D(renderContext.GraphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R16_Float, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
-            _terrainHeightmap.DisposeBy(drawContext);
         }
 
         var lightDirection = directionalLight.Direction;
@@ -99,29 +90,12 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             lightCosAngleChange = MathUtil.Clamp(lightCosAngleChange, -1.0f, 1.0f);
         }
 
-        //if (lightCosAngleChange < 0.9f)
+        if (lightCosAngleChange < 0.99f || terrain.LastStreamingUpdate != _lastStreamingUpdate)
         {
+            _lastStreamingUpdate = terrain.LastStreamingUpdate;
             _previousLightDirection = lightDirection;
             var shadowMapToTerrainSize = terrain.TerrainData.Header.Size / TerrainRuntimeData.ShadowMapSize;
 
-            // Build height map, currently not used ... 
-            //_terrainGenereateHeightmapEffect.Parameters.Set(TerrainGenerateHeightmapKeys.OutputTexture, _terrainHeightmap);
-            //_terrainGenereateHeightmapEffect.Parameters.Set(TerrainGenerateHeightmapKeys.OutputSizeToTerrainSize, (uint)shadowMapToTerrainSize);
-            //_terrainGenereateHeightmapEffect.Parameters.Set(TerrainGenerateHeightmapKeys.OutputSize, (uint)TerrainShadowMapResolution);
-            //_terrainGenereateHeightmapEffect.Parameters.Set(TerrainCommonKeys.Heightmap, terrain.HeightmapTexture);
-            //_terrainGenereateHeightmapEffect.Parameters.Set(TerrainCommonKeys.SectorToChunkMapBuffer, terrain.SectorToChunkMapBuffer);
-            //_terrainGenereateHeightmapEffect.Parameters.Set(TerrainCommonKeys.ChunkBuffer, terrain.ChunkBuffer);
-            //_terrainGenereateHeightmapEffect.Parameters.Set(TerrainCommonKeys.ChunkSize, (uint)terrain.TerrainData.Header.ChunkSize);
-            //_terrainGenereateHeightmapEffect.Parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)terrain.ChunksPerRowLod0);
-
-            //_terrainGenereateHeightmapEffect.ThreadGroupCounts = new Int3(64, 64, 1);
-            //_terrainGenereateHeightmapEffect.ThreadNumbers = new Int3(32, 32, 1);
-
-            //_terrainGenereateHeightmapEffect.Draw(drawContext, "ShadowMapRenderer.GenerateHeightmap");
-
-            // TODO: Only recalculate if light has moved.
-
-            //var xzDimensions = new Vector2(TerrainShadowMapResolution, TerrainShadowMapResolution);
             var xzDimensions = new Vector2(terrain.TerrainData.Header.Size * terrain.UnitsPerTexel, terrain.TerrainData.Header.Size * terrain.UnitsPerTexel);
 
             var lightDir2d = new Vector2(lightDirection.X, lightDirection.Z);
@@ -201,10 +175,10 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
                 _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.Delta, new Vector2(dx, dy));
             }
 
-            var xyStep = new Int2((x0 < x1) ? 1 : -1, (y0 < y1) ? 1 : -1);
+            var xyStep = new Int2(x0 < x1 ? 1 : -1, y0 < y1 ? 1 : -1);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.XyStep, new Vector2(xyStep.X, xyStep.Y));
 
-            heightDelta = (-heightDelta * (xzDimensions.X / width)) / terrain.TerrainData.Header.MaxHeight;
+            heightDelta = -heightDelta * (xzDimensions.X / width) / terrain.TerrainData.Header.MaxHeight;
             //Avoid sending +/- inf (which causes NaNs inside the shader).
             //Values greater than 1.0 (or less than -1.0) are pointless anyway.
             heightDelta = Math.Max(-1.0f, Math.Min(1.0f, heightDelta));
@@ -216,9 +190,9 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             if (y0 >= y1)
                 y0 = heightOrWidth;
 
-            float fStep = (dx * 0.5f) / dy;
+            float fStep = dx * 0.5f / dy;
             //TODO numExtraIterations correct? -1? +1?
-            uint numExtraIterations = (uint)(Math.Min(Math.Ceiling(dy), Math.Ceiling(((heightOrWidth - 1u) / fStep - 1u) * 0.5f)));
+            uint numExtraIterations = (uint)Math.Min(Math.Ceiling(dy), Math.Ceiling(((heightOrWidth - 1u) / fStep - 1u) * 0.5f));
 
             uint threadsPerGroup = 64;
             uint firstThreadGroups = AlignToNextMultiple(heightOrWidth, threadsPerGroup) / threadsPerGroup;
@@ -268,13 +242,13 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
                 {
                     if (writeXY)
                     {
-                        StartsBuffer[startsIndex].X = (int)x0 + (xN * xyStep.X);
-                        StartsBuffer[startsIndex].Y = (int)y0 - (i * xyStep.Y);
+                        StartsBuffer[startsIndex].X = (int)x0 + xN * xyStep.X;
+                        StartsBuffer[startsIndex].Y = (int)y0 - i * xyStep.Y;
                     }
                     else
                     {
-                        StartsBuffer[startsIndex].Z = (int)x0 + (xN * xyStep.X);
-                        StartsBuffer[startsIndex].W = (int)y0 - (i * xyStep.Y);
+                        StartsBuffer[startsIndex].Z = (int)x0 + xN * xyStep.X;
+                        StartsBuffer[startsIndex].W = (int)y0 - i * xyStep.Y;
                     }
 
                     startsIndex++;
@@ -294,13 +268,13 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.PerGroupData, PerGroupDataBuffer.Length, ref PerGroupDataBuffer[0]);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMap, terrain.ShadowMap);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMapToTerrainSize, (uint)shadowMapToTerrainSize);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainCommonKeys.Heightmap, terrain.HeightmapTexture);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainCommonKeys.SectorToChunkMapBuffer, terrain.SectorToChunkMapBuffer);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainCommonKeys.ChunkBuffer, terrain.ChunkBuffer);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainCommonKeys.ChunkSize, (uint)terrain.TerrainData.Header.ChunkSize);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)terrain.ChunksPerRowLod0);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainCommonKeys.MaxHeight, terrain.TerrainData.Header.MaxHeight);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainCommonKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.Heightmap, terrain.HeightmapTexture);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, terrain.SectorToChunkMapBuffer);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkBuffer, terrain.ChunkBuffer);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkSize, (uint)terrain.TerrainData.Header.ChunkSize);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunksPerRow, (uint)terrain.ChunksPerRowLod0);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.MaxHeight, terrain.TerrainData.Header.MaxHeight);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
 
             _terrainShadowGeneratorEffect.ThreadGroupCounts = new Int3((int)totalThreadGroups, 1, 1);
             _terrainShadowGeneratorEffect.ThreadNumbers = new Int3((int)threadsPerGroup, 1, 1);
@@ -310,29 +284,21 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
     }
 
     static int GetXStepsNeededToReachY(uint y, float fStep)
-    {
-        return (int)(Math.Ceiling(Math.Max(((y << 1) - 1u) * fStep, 0.0f)));
-    }
+        => (int)Math.Ceiling(Math.Max(((y << 1) - 1u) * fStep, 0.0f));
 
     static float GetErrorAfterXsteps(uint xIterationsToSkip, float dx, float dy)
     {
         //Round accumulatedError to next multiple of dx, then subtract accumulatedError.
         //That's the error at position (x; y). *MUST* be done in double precision, otherwise
         //we get artifacts with certain light angles.
-        double accumulatedError = dx * 0.5 + dy * (double)(xIterationsToSkip);
+        double accumulatedError = dx * 0.5 + dy * (double)xIterationsToSkip;
         double newErrorAtX = Math.Ceiling(accumulatedError / dx) * dx - accumulatedError;
-        return (float)(newErrorAtX);
+        return (float)newErrorAtX;
     }
 
     static uint AlignToNextMultiple(uint offset, uint alignment)
-    {
-        return ((offset + alignment - 1u) / alignment) * alignment;
-    }
+        => (offset + alignment - 1u) / alignment * alignment;
 
     static void Swap<T>(ref T a, ref T b)
-    {
-        T tmp = b;
-        b = a;
-        a = tmp;
-    }
+        => (a, b) = (b, a);
 }

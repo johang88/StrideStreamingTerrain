@@ -1,15 +1,14 @@
 ﻿using Stride.Core;
 using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
-using Stride.Core.Threading;
 using Stride.Rendering;
-using Stride.Rendering.Shadows;
 using StrideTerrain.TerrainSystem.Effects;
+using StrideTerrain.TerrainSystem.Effects.Material;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
 
-namespace StrideTerrain.TerrainSystem;
+namespace StrideTerrain.TerrainSystem.Rendering;
 
 public class TerrainRenderFeature : SubRenderFeature
 {
@@ -22,7 +21,7 @@ public class TerrainRenderFeature : SubRenderFeature
 
     public override void Extract()
     {
-        if ((Context.VisibilityGroup == null) || (!Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap)))
+        if (Context.VisibilityGroup == null || !Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap))
             return;
 
         foreach (var objectNodeReference in RootRenderFeature.ObjectNodeReferences)
@@ -49,7 +48,7 @@ public class TerrainRenderFeature : SubRenderFeature
     {
         base.Prepare(context);
 
-        if ((Context.VisibilityGroup == null) || (!Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap)))
+        if (Context.VisibilityGroup == null || !Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap))
             return;
 
         // It's a bit ugly but a convenient to get data to the shadow map renderer.
@@ -93,7 +92,7 @@ public class TerrainRenderFeature : SubRenderFeature
     {
         base.Draw(context, renderView, renderViewStage);
 
-        if ((Context.VisibilityGroup == null) || (!Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap)))
+        if (Context.VisibilityGroup == null || !Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap))
             return;
 
         var frustum = new BoundingFrustum(ref renderView.ViewProjection);
@@ -103,6 +102,7 @@ public class TerrainRenderFeature : SubRenderFeature
         foreach (var objectNodeReference in RootRenderFeature.ObjectNodeReferences)
         {
             // TODO: Check render stage index thing? It currently triggers in the debug renderer which it should not?
+            // Or just do this properly with the override for the alternative Draw(...).
             var objectNode = RootRenderFeature.GetObjectNode(objectNodeReference);
             if (objectNode.RenderObject is not RenderMesh renderMesh)
                 continue;
@@ -147,17 +147,17 @@ public class TerrainRenderFeature : SubRenderFeature
             ArrayPool<int>.Shared.Return(chunkInstanceData);
 
             // Update instancing and material data
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.ChunkSize, (uint)chunkSize);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.InvTerrainSize, invTerrainSize);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.Heightmap, data.HeightmapTexture);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.ChunkBuffer, data.ChunkBuffer);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.ChunkSize, (uint)chunkSize);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.InvTerrainSize, invTerrainSize);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.Heightmap, data.HeightmapTexture);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.ChunkBuffer, data.ChunkBuffer);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
             renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.ChunkInstanceData);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.ChunksPerRow, (uint)data.ChunksPerRowLod0);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.TerrainNormalMap, data.NormalMapTexture);
-            renderMesh.MaterialPass.Parameters.Set(TerrainCommonKeys.InvUnitsPerTexel, 1.0f / data.UnitsPerTexel);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.ChunksPerRow, (uint)data.ChunksPerRowLod0);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.TerrainNormalMap, data.NormalMapTexture);
+            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.InvUnitsPerTexel, 1.0f / data.UnitsPerTexel);
         }
     }
 }

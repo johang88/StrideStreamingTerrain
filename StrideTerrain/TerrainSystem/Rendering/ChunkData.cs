@@ -1,7 +1,7 @@
 ﻿using Stride.Core.Mathematics;
 using System.Runtime.InteropServices;
 
-namespace StrideTerrain.TerrainSystem;
+namespace StrideTerrain.TerrainSystem.Rendering;
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct ChunkData

@@ -14,10 +14,12 @@ using Stride.Shaders;
 using Stride.Core.Mathematics;
 using Buffer = Stride.Graphics.Buffer;
 
-namespace StrideTerrain.TerrainSystem.Effects
+namespace StrideTerrain.TerrainSystem.Effects.Shadows
 {
-    public static partial class MaterialTerrainDisplacementKeys
+    public static partial class TerrainAtmosphereShadowKeys
     {
-        public static readonly ObjectParameterKey<Buffer> ChunkInstanceData = ParameterKeys.NewObject<Buffer>();
+        public static readonly ValueParameterKey<Vector4> TerrainWorldSize = ParameterKeys.NewValue<Vector4>();
+        public static readonly ValueParameterKey<int> UseTerrainShadowMap = ParameterKeys.NewValue<int>(0);
+        public static readonly ObjectParameterKey<Texture> TerrainShadowMap = ParameterKeys.NewObject<Texture>();
     }
 }

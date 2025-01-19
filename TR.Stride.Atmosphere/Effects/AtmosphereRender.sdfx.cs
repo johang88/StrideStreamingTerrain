@@ -45,6 +45,14 @@ namespace TR.Stride.Atmosphere
             public void Generate(ShaderMixinSource mixin, ShaderMixinContext context)
             {
                 context.Mixin(mixin, "AtmosphereRenderTransmittanceLut", context.GetParam(AtmosphereParameters.AtmosphereGroup));
+
+                {
+                    var __mixinToCompose__ = context.GetParam(AtmosphereShadowKeys.ShadowFunction);
+                    var __subMixin = new ShaderMixinSource();
+                    context.PushComposition(mixin, "ShadowFunction", __subMixin);
+                    context.Mixin(__subMixin, __mixinToCompose__);
+                    context.PopComposition();
+                }
             }
 
             [System.Runtime.CompilerServices.ModuleInitializer]
@@ -62,6 +70,14 @@ namespace TR.Stride.Atmosphere
             public void Generate(ShaderMixinSource mixin, ShaderMixinContext context)
             {
                 context.Mixin(mixin, "AtmosphereMultipleScatteringTextureEffectCS", context.GetParam(AtmosphereParameters.AtmosphereGroup));
+
+                {
+                    var __mixinToCompose__ = context.GetParam(AtmosphereShadowKeys.ShadowFunction);
+                    var __subMixin = new ShaderMixinSource();
+                    context.PushComposition(mixin, "ShadowFunction", __subMixin);
+                    context.Mixin(__subMixin, __mixinToCompose__);
+                    context.PopComposition();
+                }
             }
 
             [System.Runtime.CompilerServices.ModuleInitializer]
@@ -79,6 +95,14 @@ namespace TR.Stride.Atmosphere
             public void Generate(ShaderMixinSource mixin, ShaderMixinContext context)
             {
                 context.Mixin(mixin, "AtmosphereRenderSkyViewLut", context.GetParam(AtmosphereParameters.AtmosphereGroup));
+
+                {
+                    var __mixinToCompose__ = context.GetParam(AtmosphereShadowKeys.ShadowFunction);
+                    var __subMixin = new ShaderMixinSource();
+                    context.PushComposition(mixin, "ShadowFunction", __subMixin);
+                    context.Mixin(__subMixin, __mixinToCompose__);
+                    context.PopComposition();
+                }
             }
 
             [System.Runtime.CompilerServices.ModuleInitializer]
@@ -96,6 +120,14 @@ namespace TR.Stride.Atmosphere
             public void Generate(ShaderMixinSource mixin, ShaderMixinContext context)
             {
                 context.Mixin(mixin, "AtmosphereRenderScatteringCameraVolume", context.GetParam(AtmosphereParameters.AtmosphereGroup));
+
+                {
+                    var __mixinToCompose__ = context.GetParam(AtmosphereShadowKeys.ShadowFunction);
+                    var __subMixin = new ShaderMixinSource();
+                    context.PushComposition(mixin, "ShadowFunction", __subMixin);
+                    context.Mixin(__subMixin, __mixinToCompose__);
+                    context.PopComposition();
+                }
             }
 
             [System.Runtime.CompilerServices.ModuleInitializer]

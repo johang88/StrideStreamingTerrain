@@ -1,49 +1,7 @@
 ﻿namespace StrideTerrain.TerrainSystem.Effects
 {
-    shader TerrainCommon : Texturing
+    shader TerrainQuery : TerrainData, Texturing
     {
-        stage stream int LodLevel;
-        stage stream float TerrainHeight;
-        stage stream float TerrainHeight01;
-
-        struct ChunkData
-        {
-            /*    
-    public byte LodLevel;
-    public byte North;
-    public byte South;
-    public byte West;
-    public byte East;
-    public byte ChunkX;
-    public byte ChunkZ;
-    public byte Padding0;*/
-            int Data0;
-            int Data1;
-            float Scale;
-            float3 Position;
-            int2 Uv;
-            float3 BoundsCenter;
-            float3 BoundsExtent;
-        };
-
-        rgroup PerMaterial
-        {
-            stage Texture2D<float> Heightmap;
-            stage Texture2D TerrainNormalMap;
-            stage StructuredBuffer<ChunkData> ChunkBuffer;
-            stage StructuredBuffer<int> SectorToChunkMapBuffer;
-        }
-
-        cbuffer PerMaterial 
-        {
-            stage uint ChunkSize;
-            stage float InvTerrainTextureSize;
-            stage float InvTerrainSize;
-            stage float MaxHeight;
-            stage uint ChunksPerRow;
-            stage float InvUnitsPerTexel;
-        }
-
         float GetTerrainHeightAt(float wx, float wz)
         {
             wx = wx * InvUnitsPerTexel;
