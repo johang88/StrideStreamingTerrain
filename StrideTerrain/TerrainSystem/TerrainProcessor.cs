@@ -656,41 +656,6 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         }
     }
 
-    public bool SetMaterialParameters(ParameterCollection parameters)
-    {
-        if (ComponentDatas.Count == 0)
-            return false;
-
-        var pair = ComponentDatas.First();
-        var data = pair.Value;
-        var component = pair.Key;
-
-        if (data.HeightmapTexture == null)
-            return false;
-
-        if (data.ChunkBuffer == null)
-            return false;
-
-        if (data.SectorToChunkMapBuffer == null)
-            return false;
-
-        var unitsPerTexel = component.UnitsPerTexel;
-        var invTerrainSize = 1.0f / (data.TerrainData.Header.Size * unitsPerTexel);
-
-        parameters.Set(TerrainDataKeys.ChunkSize, (uint)data.TerrainData.Header.ChunkSize);
-        parameters.Set(TerrainDataKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
-        parameters.Set(TerrainDataKeys.InvTerrainSize, invTerrainSize);
-        parameters.Set(TerrainDataKeys.Heightmap, data.HeightmapTexture);
-        parameters.Set(TerrainDataKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
-        parameters.Set(TerrainDataKeys.ChunkBuffer, data.ChunkBuffer);
-        parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
-        parameters.Set(TerrainDataKeys.ChunksPerRow, (uint)data.ChunksPerRowLod0);
-        parameters.Set(TerrainDataKeys.TerrainNormalMap, data.NormalMapTexture);
-        parameters.Set(TerrainDataKeys.InvUnitsPerTexel, 1.0f / data.UnitsPerTexel);
-
-        return true;
-    }
-
     protected override void OnSystemAdd()
     {
         base.OnSystemAdd();

@@ -116,15 +116,6 @@ public class GrassComponent : SyncScript
         if (terrainProcessor == null)
             return;
 
-        foreach (var material in Model.Model.Materials)
-        {
-            foreach (var pass in material.Material.Passes)
-            {
-                if (!terrainProcessor.SetMaterialParameters(pass.Parameters))
-                    return;
-            }
-        }
-
         var position = camera.GetWorldPosition();
         position.Y = 0;
 
