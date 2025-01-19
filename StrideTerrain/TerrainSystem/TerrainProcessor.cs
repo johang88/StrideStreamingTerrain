@@ -214,6 +214,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 FullyLoadLod(data.TerrainData.Header.MaxLod - 1);
 
                 data.IsInitialized = true;
+                data.ChunksPerRowLod0 = data.TerrainData.Header.Size / data.TerrainData.Header.ChunkSize;
             }
 
             void FullyLoadLod(int lod)
@@ -284,12 +285,12 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                     var chunk = chunkIndex - data.TerrainData.LodChunkOffsets[0];
 
-                    var chunksPerRowLod0 = data.TerrainData.Header.Size / data.TerrainData.Header.ChunkSize;
+                    data.ChunksPerRowLod0 = data.TerrainData.Header.Size / data.TerrainData.Header.ChunkSize;
 
                     var chunkOffset = data.TerrainData.Header.ChunkSize;
 
-                    var positionX = chunk % chunksPerRowLod0;
-                    var positionZ = chunk / chunksPerRowLod0;
+                    var positionX = chunk % data.ChunksPerRowLod0;
+                    var positionZ = chunk / data.ChunksPerRowLod0;
 
                     var chunkWorldPosition = new Vector3(positionX * chunkOffset + chunkOffset * 0.5f, 0, positionZ * chunkOffset + chunkOffset * 0.5f) * component.UnitsPerTexel;
 

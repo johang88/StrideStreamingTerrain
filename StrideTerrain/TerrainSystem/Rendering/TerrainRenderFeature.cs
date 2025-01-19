@@ -1,12 +1,15 @@
 ﻿using Stride.Core;
 using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
+using Stride.Core.Storage;
 using Stride.Rendering;
+using Stride.Rendering.UI;
 using StrideTerrain.TerrainSystem.Effects;
 using StrideTerrain.TerrainSystem.Effects.Material;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace StrideTerrain.TerrainSystem.Rendering;
 
@@ -18,6 +21,15 @@ public class TerrainRenderFeature : SubRenderFeature
     [DataMemberIgnore]
     public static readonly PropertyKey<Dictionary<RenderModel, TerrainRuntimeData>> ModelToTerrainMap = new("TerrainRenderFeature.ModelToTerrainMap", typeof(TerrainRenderFeature));
     public static readonly PropertyKey<List<TerrainRuntimeData>> TerrainList = new("TerrainRenderFeature.Terrains", typeof(TerrainRenderFeature));
+
+    private ConstantBufferOffsetReference _chunkSizeOffset;
+
+    protected override void InitializeCore()
+    {
+        base.InitializeCore();
+
+        _chunkSizeOffset = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameCBufferOffsetSlot(TerrainDataKeys.ChunkSize.Name);
+    }
 
     public override void Extract()
     {
@@ -41,10 +53,12 @@ public class TerrainRenderFeature : SubRenderFeature
 
             renderMesh.Enabled = true;
             renderMesh.ProfilingKey = ProfilingKeyDraw;
+
+            break; // Currently only support single terrain
         }
     }
 
-    public override void Prepare(RenderDrawContext context)
+    public override unsafe void Prepare(RenderDrawContext context)
     {
         base.Prepare(context);
 
@@ -59,10 +73,9 @@ public class TerrainRenderFeature : SubRenderFeature
         }
         terrains.Clear();
 
-        foreach (var objectNodeReference in RootRenderFeature.ObjectNodeReferences)
+        foreach (var renderNode in RootRenderFeature.RenderObjects)
         {
-            var objectNode = RootRenderFeature.GetObjectNode(objectNodeReference);
-            if (objectNode.RenderObject is not RenderMesh renderMesh)
+            if (renderNode is not RenderMesh renderMesh)
                 continue;
 
             var renderModel = renderMesh.RenderModel;
@@ -84,7 +97,37 @@ public class TerrainRenderFeature : SubRenderFeature
             data.ChunkBuffer!.SetData(context.CommandList, (ReadOnlySpan<ChunkData>)data.ChunkData.AsSpan(0, data.ChunkCount));
             data.SectorToChunkMapBuffer!.SetData(context.CommandList, (ReadOnlySpan<int>)data.SectorToChunkMap.AsSpan());
 
+            // Update per frame data
+            var terrainLogicalGroupKey = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameLogicalGroup("Terrain");
+            foreach (var frameLayout in ((RootEffectRenderFeature)RootRenderFeature).FrameLayouts)
+            {
+                var chunkSizeOffset = frameLayout.GetConstantBufferOffset(_chunkSizeOffset);
+                if (chunkSizeOffset == -1)
+                    continue;
+
+                var resourceGroup = frameLayout.Entry.Resources;
+                var mappedCB = resourceGroup.ConstantBuffer.Data;
+
+                var perFrameTerrain = (PerFrameTerrain*)((byte*)mappedCB + chunkSizeOffset);
+                perFrameTerrain->ChunkSize = (uint)data.TerrainData.Header.ChunkSize;
+                perFrameTerrain->InvTerrainTextureSize = TerrainRuntimeData.InvRuntimeTextureSize;
+                perFrameTerrain->InvTerrainSize = 1.0f / (data.TerrainData.Header.Size * data.UnitsPerTexel);
+                perFrameTerrain->MaxHeight = data.TerrainData.Header.MaxHeight;
+                perFrameTerrain->ChunksPerRow = (uint)data.ChunksPerRowLod0;
+                perFrameTerrain->InvUnitsPerTexel = 1.0f / data.UnitsPerTexel;
+
+                var logicalGroup = frameLayout.GetLogicalGroup(terrainLogicalGroupKey);
+                if (logicalGroup.Hash == ObjectId.Empty)
+                    continue;
+
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.HeightmapTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.NormalMapTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.ChunkBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.SectorToChunkMapBuffer);
+            }
+
             terrains.Add(data);
+            break; // Currently only support single terrain
         }
     }
 
@@ -99,12 +142,11 @@ public class TerrainRenderFeature : SubRenderFeature
 
         using var profilingScope = context.QueryManager.BeginProfile(Color4.Black, ProflingKeyCull);
 
-        foreach (var objectNodeReference in RootRenderFeature.ObjectNodeReferences)
+        foreach (var renderNode in RootRenderFeature.RenderObjects)
         {
             // TODO: Check render stage index thing? It currently triggers in the debug renderer which it should not?
             // Or just do this properly with the override for the alternative Draw(...).
-            var objectNode = RootRenderFeature.GetObjectNode(objectNodeReference);
-            if (objectNode.RenderObject is not RenderMesh renderMesh)
+            if (renderNode is not RenderMesh renderMesh)
                 continue;
 
             var renderModel = renderMesh.RenderModel;
@@ -122,15 +164,8 @@ public class TerrainRenderFeature : SubRenderFeature
                 continue;
             }
 
-            var terrainSize = data.TerrainData.Header.Size;
-            var unitsPerTexel = data.UnitsPerTexel;
-            var chunkSize = data.TerrainData.Header.ChunkSize;
-            var invTerrainSize = 1.0f / (terrainSize * unitsPerTexel);
-
-            data.ChunksPerRowLod0 = terrainSize / chunkSize;
-            var maxChunks = data.ChunksPerRowLod0 * data.ChunksPerRowLod0;
-
             // Frustum cull chunks. Could use dispatcher but not seeing any difference in timings.
+            var maxChunks = data.ChunksPerRowLod0 * data.ChunksPerRowLod0;
             renderMesh.InstanceCount = 0;
             var chunkInstanceData = ArrayPool<int>.Shared.Rent(maxChunks);
             for (var i = 0; i < data.ChunkCount; i++)
@@ -146,18 +181,8 @@ public class TerrainRenderFeature : SubRenderFeature
 
             ArrayPool<int>.Shared.Return(chunkInstanceData);
 
-            // Update instancing and material data
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.ChunkSize, (uint)chunkSize);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.InvTerrainTextureSize, TerrainRuntimeData.InvRuntimeTextureSize);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.InvTerrainSize, invTerrainSize);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.Heightmap, data.HeightmapTexture);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.MaxHeight, data.TerrainData.Header.MaxHeight);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.ChunkBuffer, data.ChunkBuffer);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, data.SectorToChunkMapBuffer);
+            // Update instancing material data            
             renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.ChunkInstanceData);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.ChunksPerRow, (uint)data.ChunksPerRowLod0);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.TerrainNormalMap, data.NormalMapTexture);
-            renderMesh.MaterialPass.Parameters.Set(TerrainDataKeys.InvUnitsPerTexel, 1.0f / data.UnitsPerTexel);
         }
     }
 }

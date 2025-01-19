@@ -13,7 +13,7 @@
             float3 BoundsExtent;
         };
 
-        rgroup PerMaterial
+        rgroup PerFrame.Terrain
         {
             stage Texture2D<float> Heightmap;
             stage Texture2D TerrainNormalMap;
@@ -21,7 +21,7 @@
             stage StructuredBuffer<int> SectorToChunkMapBuffer;
         }
 
-        cbuffer PerMaterial
+        cbuffer PerFrame.Terrain
         {
             stage uint ChunkSize;
             stage float InvTerrainTextureSize;
