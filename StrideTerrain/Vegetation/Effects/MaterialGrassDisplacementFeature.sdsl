@@ -15,9 +15,6 @@
 
         override void Compute()
         {
-            float3x3 rot = RotateY(FastRandom(streams.InstanceID * PI * 2.0f));
-            streams.Position.xyz = mul(streams.Position.xyz, rot);
-            streams.Position.xyz *= 0.8f + max(1.0f, FastRandom(streams.InstanceID)) * 0.5f;
         }
 
         stage override void TransformPosition()
@@ -25,23 +22,35 @@
             float4x4 instanceWorld = GetInstanceWorld(streams.InstanceID);
 
             float2 grassPosition = float2(World._m30 + instanceWorld._m30, World._m32 + instanceWorld._m32);
-            streams.PositionWS.xz += float2(World._m30, World._m32);
+
+            float3x3 rot = RotateY(FastRandom(streams.InstanceID * PI * 2.0f));
+            streams.Position.xyz = mul(streams.Position.xyz, rot);
+            streams.Position.xyz *= 0.8f + max(1.0f, FastRandom(streams.InstanceID)) * 1.0f;
+            streams.Position.y *= 2;
+            streams.Position.x += sin(Time * 1.5f + grassPosition.x * 0.1f) * streams.Position.y * 0.2f;
+            streams.Position.z += cos(Time * 1.5f + grassPosition.y * 0.1f) * streams.Position.y * 0.2f;
+
+            float fadeOutDistance = 50.0f;
+            float fadeOutRange = 16.0f;
+            float distanceToCamera = saturate((length(Eye.xz - grassPosition) - fadeOutDistance) / fadeOutRange);
+            streams.Position.xyz *= 1.0f - distanceToCamera;
+
+            streams.PositionWS.y = streams.Position.y;
+            streams.PositionWS.xz = streams.Position.xz + grassPosition;
 
             uint ox = streams.InstanceID + (uint)grassPosition.x;
             uint oy = streams.InstanceID + (uint)grassPosition.y;
 
             streams.PositionWS.xz += float2(FastRandom(ox), FastRandom(oy));
 
-            float fadeOutDistance = 128.0f;
-            float distanceToCamera = saturate(length(Eye.xyz - streams.PositionWS) - fadeOutDistance);
-            //streams.PositionWS.xyz *= 1.0f - distanceToCamera;
-
             float terrainHeight = GetTerrainHeightAt(streams.PositionWS.x, streams.PositionWS.z);
             float3 terrainNormal = GetTerrainNormalAt(streams.PositionWS.x, streams.PositionWS.z);
 
             streams.PositionWS.y += terrainHeight;
+            streams.meshNormal = terrainNormal;
+            streams.meshTangent = float4(0, 0, -1, 1);
 
-            if (terrainHeight < 80 || abs(terrainNormal.y) < 0.9f)
+            if (terrainHeight < 80 || terrainHeight > 180 || abs(terrainNormal.y) < 0.9f)
                 streams.PositionWS.y /= 0;
         }
     };

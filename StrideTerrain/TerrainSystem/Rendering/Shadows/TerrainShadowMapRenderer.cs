@@ -97,6 +97,7 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             var shadowMapToTerrainSize = terrain.TerrainData.Header.Size / TerrainRuntimeData.ShadowMapSize;
 
             var xzDimensions = new Vector2(terrain.TerrainData.Header.Size * terrain.UnitsPerTexel, terrain.TerrainData.Header.Size * terrain.UnitsPerTexel);
+            //var xzDimensions = new Vector2(terrain.ShadowMap.Width, terrain.ShadowMap.Height);
 
             var lightDir2d = new Vector2(lightDirection.X, lightDirection.Z);
             lightDir2d.Normalize();
@@ -268,7 +269,7 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.PerGroupData, PerGroupDataBuffer.Length, ref PerGroupDataBuffer[0]);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMap, terrain.ShadowMap);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMapToTerrainSize, (uint)shadowMapToTerrainSize);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.Heightmap, terrain.HeightmapTexture);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.Heightmap, terrain.HeightmapAtlas!.AtlasTexture);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, terrain.SectorToChunkMapBuffer);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkBuffer, terrain.ChunkBuffer);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkSize, (uint)terrain.TerrainData.Header.ChunkSize);

@@ -51,7 +51,7 @@
             
             uv *= InvTerrainTextureSize;
 
-            return TerrainNormalMap.SampleLevel(LinearSampler, uv, 0).xyz;
+            return normalize(TerrainNormalMap.SampleLevel(LinearSampler, uv, 0).xyz * 2.0 - 1.0);
         }
     };
 }

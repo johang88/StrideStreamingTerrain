@@ -102,6 +102,7 @@ RenderFeatures:
                             ShadowCasterRenderStage: ref!! 2351e20a-ed9c-47b6-aaff-58e71b86a2b1
                         d59ef45dd99e49d3af3887763d153aa7: !Stride.Rendering.Shadows.LightPointShadowMapRendererCubeMap,Stride.Rendering
                             ShadowCasterRenderStage: ref!! 074c3873-7517-46d8-9949-e96ba285b716
+                    CacheShadowMap: true
             42be209952db58294c9f06c58809b8ca: !Stride.Rendering.InstancingRenderFeature,Stride.Rendering {}
             9c99c0be553e2f63cd69b8507bbf6a5f*: !StrideTerrain.TerrainSystem.Rendering.TerrainRenderFeature,StrideTerrain {}
             b0e1ca363300be39a469cdb542181fa4*: !TR.Stride.Atmosphere.AtmosphereTransparentRenderFeature,TR.Stride.Atmosphere {}
@@ -221,7 +222,7 @@ SharedRenderers:
             FogStart: 10.0
             SkipBackground: false
         AmbientOcclusion:
-            Enabled: false
+            Enabled*: true
         LocalReflections:
             Enabled: false
             ResolvePassResolution: Full

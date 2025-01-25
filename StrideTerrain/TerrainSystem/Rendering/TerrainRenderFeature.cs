@@ -3,13 +3,11 @@ using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
 using Stride.Core.Storage;
 using Stride.Rendering;
-using Stride.Rendering.UI;
 using StrideTerrain.TerrainSystem.Effects;
 using StrideTerrain.TerrainSystem.Effects.Material;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.TaskbarClock;
 
 namespace StrideTerrain.TerrainSystem.Rendering;
 
@@ -120,8 +118,8 @@ public class TerrainRenderFeature : SubRenderFeature
                 if (logicalGroup.Hash == ObjectId.Empty)
                     continue;
 
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.HeightmapTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.NormalMapTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.HeightmapAtlas!.AtlasTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.NormalMapAtlas!.AtlasTexture);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.ChunkBuffer);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.SectorToChunkMapBuffer);
             }

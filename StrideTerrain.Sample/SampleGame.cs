@@ -2,7 +2,9 @@
 using Stride.Engine;
 using Stride.Games;
 using Stride.Graphics;
+using Stride.Rendering.Compositing;
 using StrideCommunity.ImGuiDebug;
+using StrideTerrain.Rendering;
 using StrideTerrain.TerrainSystem;
 using System.Linq;
 
@@ -17,7 +19,11 @@ public class SampleGame : Game
 
         //new PerfMonitor(Services);
         new HierarchyView(Services);
-        Inspector.FindFreeInspector(Services).Target = SceneSystem.SceneInstance.RootScene.Entities.FirstOrDefault(x => x.Name == "Terrain")?.Get<TerrainComponent>();
+        //Inspector.FindFreeInspector(Services).Target = SceneSystem.SceneInstance.RootScene.Entities.FirstOrDefault(x => x.Name == "Terrain")?.Get<TerrainComponent>();
+
+        var reverseZRenderer = (ReverseZRenderer)((SceneRendererCollection)((SceneCameraRenderer)SceneSystem.GraphicsCompositor.Game).Child).Children.First();
+        var forwardRenderer = (ForwardRenderer)reverseZRenderer.Child;
+        Inspector.FindFreeInspector(Services).Target = forwardRenderer.PostEffects;
     }
 
     public override void ConfirmRenderingSettings(bool gameCreation)

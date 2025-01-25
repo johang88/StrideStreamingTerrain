@@ -60,7 +60,8 @@ public class PlayerController : SyncScript
     public override void Update()
     {
         // var dt = Game.UpdateTime.Elapsed.Milliseconds * 0.001;
-        Move(MaxRunSpeed);
+        var speed = Input.IsKeyDown(Stride.Input.Keys.LeftShift) ? 30 : 1;
+        Move(MaxRunSpeed * speed);
 
         Jump();
     }

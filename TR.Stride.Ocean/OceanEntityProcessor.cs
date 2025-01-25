@@ -142,19 +142,19 @@ namespace TR.Stride.Ocean
                 }
 
                 // Read back wave data
-                if (data.Readback == null)
-                {
-                    data.Readback = new();
-                }
+                //if (data.Readback == null)
+                //{
+                //    data.Readback = new();
+                //}
 
-                data.Readback.FrameDelayCount = component.DisplacmentReadBackFrameDelay;
-                data.Readback.SetInput(data.Cascades[0].Displacement);
-                data.Readback.Draw(renderDrawContext);
+                //data.Readback.FrameDelayCount = component.DisplacmentReadBackFrameDelay;
+                //data.Readback.SetInput(data.Cascades[0].Displacement);
+                //data.Readback.Draw(renderDrawContext);
 
-                if (data.Readback.IsResultAvailable)
-                {
-                    component.Displacement = data.Readback.Result;
-                }
+                //if (data.Readback.IsResultAvailable)
+                //{
+                //    component.Displacement = data.Readback.Result;
+                //}
 
                 // Create materials
                 var materialsDirty = false;
@@ -236,7 +236,7 @@ namespace TR.Stride.Ocean
 
         public FastFourierTransform FFT { get; set; }
 
-        public ImageReadback<Vector4> Readback { get; set; }
+        //public ImageReadback<Vector4> Readback { get; set; }
 
         public void DestroyMesh()
         {
@@ -264,7 +264,7 @@ namespace TR.Stride.Ocean
             DestroyMesh();
             DestroyCascades();
             GaussianNoise?.Dispose();
-            Readback?.Dispose();
+            //Readback?.Dispose();
         }
     }
 

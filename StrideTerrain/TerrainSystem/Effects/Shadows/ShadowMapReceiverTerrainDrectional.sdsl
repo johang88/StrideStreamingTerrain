@@ -28,7 +28,6 @@
                 heightWeight = (heightWeight - shadowData.y) * shadowData.z * 1023;
 
                 shadow = lerp(shadowData.x, 1.0, saturate(heightWeight));
-                //shadow = shadowData.x;
             }
 
             return shadow * base.ComputeShadow(position, lightIndex);

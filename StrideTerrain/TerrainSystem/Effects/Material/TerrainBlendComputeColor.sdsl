@@ -67,11 +67,6 @@
 
             float3 output = outputX * triW.x + outputY * triW.y + outputZ * triW.z;
 
-            //output = float3(0, 0, 0);
-            //if (triW.x > 0.0f) output.x = 1.0f;
-            //if (triW.y > 0.0f) output.y = 1.0f;
-            //if (triW.z > 0.0f) output.z = 1.0f;
-
             return float4(output, 1);
         }
     };

@@ -1,0 +1,14 @@
+﻿namespace StrideTerrain.Vegetation.Effects
+{
+    shader MaterialWindDisplacementFeature 
+        : IMaterialSurface, PositionStream4, TransformationInstancing, Global
+    {
+        override void Compute()
+        {
+            float4x4 instanceWorld = GetInstanceWorld(streams.InstanceID);
+            float2 worldPosition = float2(World._m30 + instanceWorld._m30, World._m32 + instanceWorld._m32);
+            streams.Position.x += sin(Time * 0.3f + worldPosition.x * 0.1f) * streams.Position.y * 0.05f;
+            streams.Position.z += cos(Time * 0.2f + worldPosition.y * 0.1f) * streams.Position.y * 0.05f;
+        }
+    };
+}

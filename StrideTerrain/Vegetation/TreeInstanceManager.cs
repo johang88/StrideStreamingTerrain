@@ -67,6 +67,10 @@ public class TreeInstanceManager : StartupScript
 
         foreach (var tree in trees)
         {
+            // TMP: As everything else in this class ...
+            if (tree.X < 3000 || tree.Z < 3000 || tree.X > 5000 || tree.Z > 5000)
+                continue;
+
             var i = Random.Shared.Next(0, Models.Count);
             var scale = 0.8f + Random.Shared.NextSingle() * 1.8f;
             var rotation = Random.Shared.NextSingle() * 3.14f * 2.0f;
@@ -74,6 +78,8 @@ public class TreeInstanceManager : StartupScript
             matrices[i].Add(matrix);
             inverseMatrices[i].Add(Matrix.Invert(matrix));
         }
+
+        var totalCount = matrices.Select(x => x.Count).Sum();
 
         for (var i = 0; i < Models.Count; i++)
         {

@@ -84,6 +84,12 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Vegetation\Effects\MaterialWindDisplacementFeature.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>MaterialWindDisplacementFeature.sdsl</DependentUpon>
+	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
 	  <None Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl">
@@ -115,6 +121,9 @@
 	  </None>
 	  <None Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl">
 	    <LastGenOutput>MaterialGrassDisplacementFeature.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Vegetation\Effects\MaterialWindDisplacementFeature.sdsl">
+	    <LastGenOutput>MaterialWindDisplacementFeature.sdsl.cs</LastGenOutput>
 	  </None>
 	</ItemGroup>
 </Project>
