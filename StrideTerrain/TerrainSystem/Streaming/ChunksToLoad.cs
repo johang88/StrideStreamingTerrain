@@ -3,7 +3,7 @@
 namespace StrideTerrain.TerrainSystem.Streaming;
 
 [Flags]
-public enum PartsToLoad : int
+public enum ChunksToLoad : int
 {
     Heightmap = 0x01,
     NormalMap = 0x02,

@@ -118,8 +118,8 @@ public class TerrainRenderFeature : SubRenderFeature
                 if (logicalGroup.Hash == ObjectId.Empty)
                     continue;
 
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.HeightmapAtlas!.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.NormalMapAtlas!.AtlasTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.GpuTextureManager!.Heightmap!.AtlasTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.GpuTextureManager!.NormalMap!.AtlasTexture);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.ChunkBuffer);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.SectorToChunkMapBuffer);
             }

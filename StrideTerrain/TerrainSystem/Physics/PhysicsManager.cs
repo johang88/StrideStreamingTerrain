@@ -11,7 +11,7 @@ namespace StrideTerrain.TerrainSystem.Physics;
 /// <summary>
 /// Streams in terrain collider data (always lod0) centered around the player(camera).
 /// </summary>
-public sealed class PhysicsColliderStreamingManager : IDisposable
+public sealed class PhysicsManager : IDisposable
 {
     // TODO: This should be configurable
     private const int PhysicsEntityCount = 7;
@@ -21,7 +21,7 @@ public sealed class PhysicsColliderStreamingManager : IDisposable
     private readonly Scene _scene;
     private readonly PhysicsEntity[] _physicsEntities;
 
-    public PhysicsColliderStreamingManager(TerrainRuntimeData terrain, Scene scene, StreamingManager streamingManager)
+    public PhysicsManager(TerrainRuntimeData terrain, Scene scene, StreamingManager streamingManager)
     {
         _terrain = terrain;
         _scene = scene;
@@ -122,7 +122,7 @@ public sealed class PhysicsColliderStreamingManager : IDisposable
                     var chunkOffset = _terrain.TerrainData.Header.ChunkSize;
                     _physicsEntities[entityIndex].DesiredChunkPosition = new Vector3(chunkX * chunkOffset + chunkOffset * 0.5f, 0, chunkY * chunkOffset + chunkOffset * 0.5f) * _terrain.UnitsPerTexel;
 
-                    _streamingManager.Request(PartsToLoad.Heightmap, chunkDataIndex, StreamingCompletedCallback, _physicsEntities[entityIndex]);
+                    _streamingManager.Request(ChunksToLoad.Heightmap, chunkDataIndex, StreamingCompletedCallback, _physicsEntities[entityIndex]);
                 }
             }
         }

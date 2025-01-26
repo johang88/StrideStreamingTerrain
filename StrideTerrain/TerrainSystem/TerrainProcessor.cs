@@ -1,22 +1,16 @@
-﻿using Stride.Core;
-using Stride.Core.Annotations;
+﻿using Stride.Core.Annotations;
 using Stride.Core.Diagnostics;
-using Stride.Core.IO;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization.Contents;
 using Stride.Engine;
 using Stride.Games;
 using Stride.Graphics;
-using Stride.Physics;
 using Stride.Profiling;
 using Stride.Rendering;
-using StrideTerrain.TerrainSystem.Effects;
 using StrideTerrain.TerrainSystem.Rendering;
 using System;
 using System.Buffers;
 using System.Collections.Generic;
-using System.IO;
-using System.Linq;
 using System.Runtime.InteropServices;
 using Buffer = Stride.Graphics.Buffer;
 
@@ -71,6 +65,12 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 continue;
             }
 
+            // Sync component settings
+            data.UnitsPerTexel = component.UnitsPerTexel;
+            data.Lod0Distance = component.Lod0Distance;
+            data.MaximumLod = component.MaximumLod;
+            data.MinimumLod = component.MinimumLod;
+
             // Setup model
             var entity = component.Entity;
             data.ModelComponent = entity.GetOrCreate<ModelComponent>();
@@ -96,7 +96,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                 data.DataProvider.LoadTerrainData(ref data.TerrainData);
                 data.StreamingManager = new Streaming.StreamingManager(data.TerrainData, data.DataProvider);
-                data.PhysicsColliderStreamingManager = new Physics.PhysicsColliderStreamingManager(data, entity.Scene, data.StreamingManager);
+                data.PhysicsManager = new Physics.PhysicsManager(data, entity.Scene, data.StreamingManager);
+                data.GpuTextureManager = new GpuTextureManager(data, graphicsDevice, TerrainRuntimeData.RuntimeTextureSize, data.StreamingManager);
 
                 var (stream, baseOffset) = data.DataProvider.OpenStreamingData();
                 data.BaseOffset = baseOffset;
@@ -105,111 +106,12 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.TerrainDataUrl = component.TerrainData.Url;
                 data.TerrainStreamDataUrl = component.TerrainStreamingData.Url;
 
-                data.ChunkToTextureIndex = new int[data.TerrainData.Chunks.Length];
-                for (var i = 0; i < data.ChunkToTextureIndex.Length; i++)
-                {
-                    data.ChunkToTextureIndex[i] = -1;
-                }
-
-                data.ResidentChunks = new int[data.TerrainData.Chunks.Length];
-                data.ResidentChunksCount = 0;
-
-                data.ActiveChunks.Clear();
-                data.PendingChunks.Clear();
-
-                // Allocate initial freelist for streaming chunks (entire texture free by default).
-                var chunksPerRowStreaming = TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize;
-                data.MaxResidentChunks = chunksPerRowStreaming * chunksPerRowStreaming;
-
                 // Allocate streaming textures
-                data.HeightmapAtlas = new(graphicsDevice, PixelFormat.R16_UNorm, TerrainRuntimeData.RuntimeTextureSize, data.TerrainData.Header.ChunkTextureSize);
-                data.NormalMapAtlas = new(graphicsDevice, PixelFormat.R8G8B8A8_UNorm, TerrainRuntimeData.RuntimeTextureSize, data.TerrainData.Header.ChunkTextureSize);
                 data.ShadowMap ??= Texture.New2D(graphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R10G10B10A2_UNorm, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
-
-                // Load permanently resident chunks.
-                FullyLoadLod(data.TerrainData.Header.MaxLod);
-                FullyLoadLod(data.TerrainData.Header.MaxLod - 1);
 
                 data.IsInitialized = true;
                 data.ChunksPerRowLod0 = data.TerrainData.Header.Size / data.TerrainData.Header.ChunkSize;
             }
-
-            void FullyLoadLod(int lod)
-            {
-                if (lod < 0) return;
-                var chunksPerRow = data.TerrainData.GetNumberOfChunksPerRow(lod);
-                var chunksToLoad = chunksPerRow * chunksPerRow;
-                for (var i = 0; i < chunksToLoad; i++)
-                {
-                    var chunkIndex = data.TerrainData.LodChunkOffsets[lod] + i;
-                    LoadAndAllocateChunk(chunkIndex);
-                }
-            }
-
-            bool LoadAndAllocateChunk(int chunkIndex)
-            {
-                var textureIndex = -1;
-                if (data.NextFreeIndex == data.MaxResidentChunks)
-                {
-                    // Find anything to eject, if possible
-                    for (var i = 0; i < data.ResidentChunksCount; i++)
-                    {
-                        var c = data.ResidentChunks[i];
-                        if (!data.ActiveChunks.Contains(c))
-                        {
-                            textureIndex = data.ChunkToTextureIndex[c];
-                            data.ChunkToTextureIndex[c] = -1;
-                            data.ResidentChunks[i] = data.ResidentChunks[data.ResidentChunksCount - 1];
-                            data.ResidentChunksCount--;
-
-                            break;
-                        }
-                    }
-
-                    if (textureIndex == -1)
-                        return false;
-                }
-                else
-                {
-                    textureIndex = data.NextFreeIndex++;
-                }
-
-                data.ResidentChunks[data.ResidentChunksCount++] = chunkIndex;
-
-                var buffer = ArrayPool<byte>.Shared.Rent(Math.Max(data.TerrainData.Header.HeightmapSize, data.TerrainData.Header.NormalMapSize));
-                data.ReadChunk(ChunkType.Heightmap, chunkIndex, buffer);
-                data.HeightmapAtlas!.UpdateChunk(graphicsContext, buffer.AsSpan(0, data.TerrainData.Header.HeightmapSize), textureIndex);
-
-                data.ReadChunk(ChunkType.NormalMap, chunkIndex, buffer);
-
-                data.NormalMapAtlas!.UpdateChunk(graphicsContext, buffer.AsSpan(0, data.TerrainData.Header.NormalMapSize), textureIndex);
-
-                data.ChunkToTextureIndex[chunkIndex] = textureIndex;
-
-                data.LastStreamingUpdate++;
-
-                ArrayPool<byte>.Shared.Return(buffer);
-                return true;
-            }
-
-            void ProcessStreamingRequests()
-            {
-                var chunksToLoad = 16;
-                while (chunksToLoad > 0 & data.PendingChunks.Count > 0)
-                {
-                    var chunkIndex = data.PendingChunks.Pop();
-
-                    if (!LoadAndAllocateChunk(chunkIndex))
-                        break;
-
-                    chunksToLoad--;
-                }
-
-                data.ActiveChunks.Clear();
-                data.PendingChunks.Clear();
-            }
-
-            ProcessStreamingRequests();
         }
     }
 
@@ -262,12 +164,6 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.ModelComponent.Materials[0] = component.Material;
 
             data.ModelComponent.Enabled = true;
-
-            // Sync component settings
-            data.UnitsPerTexel = component.UnitsPerTexel;
-            data.Lod0Distance = component.Lod0Distance;
-            data.MaximumLod = component.MaximumLod;
-            data.MinimumLod = component.MinimumLod;
             
             // Setup basic draw settings, it's global per terrain so makes sense to do it here and not in the render feature
             var terrainSize = data.TerrainData.Header.Size;
@@ -299,8 +195,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
             data.CameraPosition = camera.GetWorldPosition();
 
+            data.PhysicsManager?.Update(data.CameraPosition.X, data.CameraPosition.Z);
+            data.GpuTextureManager?.Update(graphicsContext);
             data.StreamingManager?.ProcessPendingCompletions(6);
-            data.PhysicsColliderStreamingManager?.Update(data.CameraPosition.X, data.CameraPosition.Z);
 
             // Setup chunk lod, these are always based on the main camera position, frustum culling of the chunks are done in the render feature
             var maxLod = data.TerrainData.Header.MaxLod; // Max lod = single chunk
@@ -369,16 +266,19 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                     shouldSplit &= lod > minLod;
                     if (lod > maxLodSetting) shouldSplit = true;
 
-                    // Request streaming if desired
+                    // If max lod then skip if chunk is not resident yet
+                    // Cannot happen for other lod's as the chunk wont be split if child chunks are not resident.
+                    if (lod == maxLod && !data.GpuTextureManager!.RequestChunk(data.TerrainData.GetChunkIndex(lod, positionX, positionZ, chunksPerRowCurrentLod)))
+                        continue;
+
+                    // Request streaming if desired, chunk will only be split into next lod if all children are resident.
                     if (shouldSplit)
                     {
-                        if (!data.RequestChunk(data.TerrainData.GetChunkIndex(lod - 1, positionZ * 2 * chunksPerRowNextLod + (positionX * 2)))) shouldSplit = false;
-                        if (!data.RequestChunk(data.TerrainData.GetChunkIndex(lod - 1, positionZ * 2 * chunksPerRowNextLod + (positionX * 2 + 1)))) shouldSplit = false;
-                        if (!data.RequestChunk(data.TerrainData.GetChunkIndex(lod - 1, (positionZ * 2 + 1) * chunksPerRowNextLod + (positionX * 2)))) shouldSplit = false;
-                        if (!data.RequestChunk(data.TerrainData.GetChunkIndex(lod - 1, (positionZ * 2 + 1) * chunksPerRowNextLod + (positionX * 2 + 1)))) shouldSplit = false;
+                        if (!data.GpuTextureManager!.RequestChunk(data.TerrainData.GetChunkIndex(lod - 1, positionZ * 2 * chunksPerRowNextLod + (positionX * 2)))) shouldSplit = false;
+                        if (!data.GpuTextureManager!.RequestChunk(data.TerrainData.GetChunkIndex(lod - 1, positionZ * 2 * chunksPerRowNextLod + (positionX * 2 + 1)))) shouldSplit = false;
+                        if (!data.GpuTextureManager!.RequestChunk(data.TerrainData.GetChunkIndex(lod - 1, (positionZ * 2 + 1) * chunksPerRowNextLod + (positionX * 2)))) shouldSplit = false;
+                        if (!data.GpuTextureManager!.RequestChunk(data.TerrainData.GetChunkIndex(lod - 1, (positionZ * 2 + 1) * chunksPerRowNextLod + (positionX * 2 + 1)))) shouldSplit = false;
                     }
-
-                    data.ActiveChunks.Add(data.TerrainData.GetChunkIndex(lod, positionX, positionZ, chunksPerRowCurrentLod));
 
                     if (shouldSplit && lod > minLod)
                     {
@@ -406,9 +306,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                             }
                         }
 
-                        var textureIndex = data.ChunkToTextureIndex[chunkIndex];
+                        var textureIndex = data.GpuTextureManager!.GetTextureIndex(chunkIndex);
 
-                        var (tx, ty) = data.HeightmapAtlas!.GetCoordinates(textureIndex);
+                        var (tx, ty) = data.GpuTextureManager!.Heightmap!.GetCoordinates(textureIndex);
 
                         data.ChunkData[data.ChunkCount].UvX = tx;
                         data.ChunkData[data.ChunkCount].UvY = ty;

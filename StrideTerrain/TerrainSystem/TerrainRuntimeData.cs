@@ -24,7 +24,8 @@ public sealed class TerrainRuntimeData : IDisposable
 
     public ITerrainDataProvider? DataProvider;
     public StreamingManager? StreamingManager;
-    public PhysicsColliderStreamingManager? PhysicsColliderStreamingManager;
+    public PhysicsManager? PhysicsManager;
+    public GpuTextureManager? GpuTextureManager;
 
     // Minimum viable mesh, no buffers bound as all triangles are generated in the shader.
     public Mesh Mesh = new()
@@ -78,28 +79,7 @@ public sealed class TerrainRuntimeData : IDisposable
 
     public Stream? TerrainStream;
 
-    public StreamingTextureAtlas? HeightmapAtlas;
-
-    public StreamingTextureAtlas? NormalMapAtlas;
-
     public Texture? ShadowMap;
-
-    public int NextFreeIndex = 0;
-
-    public int MaxResidentChunks = 0;
-
-    public int[] ResidentChunks = [];
-
-    public int ResidentChunksCount = 0;
-
-    public HashSet<int> ActiveChunks = [];
-
-    public Stack<int> PendingChunks = [];
-
-    public int[] ChunkToTextureIndex = [];
-
-    // Can be used to check if streaming data has updated.
-    public int LastStreamingUpdate;
 
     public void Dispose()
     {
@@ -108,12 +88,6 @@ public sealed class TerrainRuntimeData : IDisposable
 
         TerrainStream?.Dispose();
         TerrainStream = null;
-
-        HeightmapAtlas?.Dispose();
-        HeightmapAtlas = null;
-
-        NormalMapAtlas?.Dispose();
-        NormalMapAtlas = null;
 
         ShadowMap?.Dispose();
         ShadowMap = null;
@@ -126,31 +100,11 @@ public sealed class TerrainRuntimeData : IDisposable
         StreamingManager?.Dispose();
         StreamingManager = null;
 
-        PhysicsColliderStreamingManager?.Dispose();
-        PhysicsColliderStreamingManager = null;
-    }
+        PhysicsManager?.Dispose();
+        PhysicsManager = null;
 
-    public void ReadChunk(ChunkType chunkType, int chunkIndex, Span<byte> buffer)
-    {
-        if (TerrainStream == null) throw new InvalidOperationException("Stream not available.");
-
-        var offset = chunkType == ChunkType.Heightmap ? TerrainData.Chunks[chunkIndex].HeightmapOffset : TerrainData.Chunks[chunkIndex].NormalMapOffset;
-
-        TerrainStream.Seek(BaseOffset + offset, SeekOrigin.Begin);
-        TerrainStream.ReadAtLeast(buffer, chunkType == ChunkType.Heightmap ? TerrainData.Header.HeightmapSize : TerrainData.Header.NormalMapSize);
-    }
-
-    public bool RequestChunk(int chunkIndex)
-    {
-        ActiveChunks.Add(chunkIndex);
-
-        if (ChunkToTextureIndex[chunkIndex] == -1)
-        {
-            PendingChunks.Push(chunkIndex);
-            return false;
-        }
-
-        return true;
+        GpuTextureManager?.Dispose();
+        GpuTextureManager = null;
     }
 }
 

@@ -90,9 +90,9 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             lightCosAngleChange = MathUtil.Clamp(lightCosAngleChange, -1.0f, 1.0f);
         }
 
-        if (lightCosAngleChange < 0.99f || terrain.LastStreamingUpdate != _lastStreamingUpdate)
+        if (lightCosAngleChange < 0.99f || terrain.GpuTextureManager!.LastStreamingUpdate != _lastStreamingUpdate)
         {
-            _lastStreamingUpdate = terrain.LastStreamingUpdate;
+            _lastStreamingUpdate = terrain.GpuTextureManager!.LastStreamingUpdate;
             _previousLightDirection = lightDirection;
             var shadowMapToTerrainSize = terrain.TerrainData.Header.Size / TerrainRuntimeData.ShadowMapSize;
 
@@ -269,7 +269,7 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.PerGroupData, PerGroupDataBuffer.Length, ref PerGroupDataBuffer[0]);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMap, terrain.ShadowMap);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMapToTerrainSize, (uint)shadowMapToTerrainSize);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.Heightmap, terrain.HeightmapAtlas!.AtlasTexture);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.Heightmap, terrain.GpuTextureManager!.Heightmap.AtlasTexture);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, terrain.SectorToChunkMapBuffer);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkBuffer, terrain.ChunkBuffer);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkSize, (uint)terrain.TerrainData.Header.ChunkSize);
