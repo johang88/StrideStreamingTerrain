@@ -92,8 +92,7 @@ public class TerrainRenderFeature : SubRenderFeature
             }
 
             // Update global buffer data
-            data.ChunkBuffer!.SetData(context.CommandList, (ReadOnlySpan<ChunkData>)data.ChunkData.AsSpan(0, data.ChunkCount));
-            data.SectorToChunkMapBuffer!.SetData(context.CommandList, (ReadOnlySpan<int>)data.SectorToChunkMap.AsSpan());
+            data.MeshManager!.UpdateBuffers(context.CommandList);
 
             // Update per frame data
             var terrainLogicalGroupKey = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameLogicalGroup("Terrain");
@@ -120,8 +119,8 @@ public class TerrainRenderFeature : SubRenderFeature
 
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.GpuTextureManager!.Heightmap!.AtlasTexture);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.GpuTextureManager!.NormalMap!.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.ChunkBuffer);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.SectorToChunkMapBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.MeshManager.ChunkBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.MeshManager.SectorToChunkMapBuffer);
             }
 
             terrains.Add(data);
@@ -162,25 +161,11 @@ public class TerrainRenderFeature : SubRenderFeature
                 continue;
             }
 
-            // Frustum cull chunks. Could use dispatcher but not seeing any difference in timings.
-            var maxChunks = data.ChunksPerRowLod0 * data.ChunksPerRowLod0;
-            renderMesh.InstanceCount = 0;
-            var chunkInstanceData = ArrayPool<int>.Shared.Rent(maxChunks);
-            for (var i = 0; i < data.ChunkCount; i++)
-            {
-                if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref data.ChunkData[i].Bounds, renderView.VisiblityIgnoreDepthPlanes))
-                    continue;
+            // TODO: Can this and the buffer upload be done in Prepare? Would need a buffer for each view in that case.
 
-                chunkInstanceData[renderMesh.InstanceCount++] = i;
-            }
-
-            // Upload to GPU.
-            data.ChunkInstanceData!.SetData(context.CommandList, (ReadOnlySpan<int>)chunkInstanceData.AsSpan(0, renderMesh.InstanceCount));
-
-            ArrayPool<int>.Shared.Return(chunkInstanceData);
-
-            // Update instancing material data            
-            renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.ChunkInstanceData);
+            // Prepare and upload instancing data for the draw call.
+            data.MeshManager!.PrepareDraw(context.CommandList, renderMesh, frustum, renderView.VisiblityIgnoreDepthPlanes);
+            renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.MeshManager.ChunkInstanceDataBuffer);
         }
     }
 }

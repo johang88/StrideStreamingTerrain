@@ -1,4 +1,5 @@
 ﻿using Stride.Graphics;
+using StrideTerrain.Common;
 using StrideTerrain.TerrainSystem.Streaming;
 using System;
 using System.Collections.Generic;
@@ -16,7 +17,6 @@ public class GpuTextureManager : IDisposable
 
     private readonly ChunkData[] _chunks;
 
-    private readonly TerrainRuntimeData _terrain;
     private readonly StreamingManager _streamingManager;
 
     private readonly Queue<int> _freeList;
@@ -24,18 +24,16 @@ public class GpuTextureManager : IDisposable
     private Dictionary<int, int> _chunkToTextureIndex = [];
     private int _frameCounter = 0;
 
-    // Can be used to check if streaming data has updated.
-    public int LastStreamingUpdate { get; private set; }
+    public bool InvalidateShadowMap { get; set; }
 
-    public GpuTextureManager(TerrainRuntimeData terrain, GraphicsDevice graphicsDevice, int atlasSize, StreamingManager streamingManager)
+    public GpuTextureManager(TerrainData terrain, GraphicsDevice graphicsDevice, int atlasSize, StreamingManager streamingManager)
     {
-        _terrain = terrain;
         _streamingManager = streamingManager;
 
-        Heightmap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UNorm, atlasSize, _terrain.TerrainData.Header.ChunkTextureSize);
-        NormalMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R8G8B8A8_UNorm, atlasSize, _terrain.TerrainData.Header.ChunkTextureSize);
+        Heightmap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UNorm, atlasSize, terrain.Header.ChunkTextureSize);
+        NormalMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R8G8B8A8_UNorm, atlasSize, terrain.Header.ChunkTextureSize);
         ShadowMap = Texture.New2D(graphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R10G10B10A2_UNorm, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
-
+        
         _freeList = new Queue<int>(Heightmap.ChunksPerRow * Heightmap.ChunksPerRow);
         _chunks = new ChunkData[Heightmap.ChunksPerRow * Heightmap.ChunksPerRow];
         for (var i = 0; i < _chunks.Length; i++)
@@ -142,7 +140,7 @@ public class GpuTextureManager : IDisposable
         var chunk = _chunks[chunkDataIndex];
         chunk.State = ChunkState.Resident;
 
-        LastStreamingUpdate++;
+        InvalidateShadowMap = true;
     }
 
     public bool RequestChunk(int chunkIndex)

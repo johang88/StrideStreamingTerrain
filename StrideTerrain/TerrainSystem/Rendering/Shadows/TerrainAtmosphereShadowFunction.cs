@@ -2,7 +2,6 @@
 using Stride.Core.Mathematics;
 using Stride.Rendering;
 using StrideTerrain.TerrainSystem.Effects.Shadows;
-using StrideTerrain.TerrainSystem.Rendering;
 using TR.Stride.Atmosphere;
 
 namespace StrideTerrain.TerrainSystem.Rendering.Shadows;
@@ -17,7 +16,7 @@ public class TerrainAtmosphereShadowFunction : IAtmosphereShadowFunction
         if (context.Tags.TryGetValue(TerrainRenderFeature.TerrainList, out var terrains) && terrains.Count == 1)
         {
             var terrain = terrains[0];
-            if (terrain.ShadowMap == null)
+            if (terrain.GpuTextureManager?.ShadowMap == null)
                 return;
 
             float invUnitsPerTexel = 1.0f / terrain.UnitsPerTexel;
@@ -25,7 +24,7 @@ public class TerrainAtmosphereShadowFunction : IAtmosphereShadowFunction
 
             parameters.Set(TerrainAtmosphereShadowKeys.TerrainWorldSize, new Vector4(invShadowMapsSize, invShadowMapsSize, 1.0f / terrain.TerrainData.Header.MaxHeight, 0.0f));
             parameters.Set(TerrainAtmosphereShadowKeys.UseTerrainShadowMap, 1);
-            parameters.Set(TerrainAtmosphereShadowKeys.TerrainShadowMap, terrain.ShadowMap);
+            parameters.Set(TerrainAtmosphereShadowKeys.TerrainShadowMap, terrain.GpuTextureManager.ShadowMap);
         }
         else
         {

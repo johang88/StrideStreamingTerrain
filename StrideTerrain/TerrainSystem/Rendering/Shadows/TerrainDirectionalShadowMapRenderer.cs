@@ -54,7 +54,7 @@ public class TerrainDirectionalShadowMapRenderer : LightDirectionalShadowMapRend
             if (context.Tags.TryGetValue(TerrainRenderFeature.TerrainList, out var terrains) && terrains.Count == 1)
             {
                 var terrain = terrains[0];
-                if (terrain.ShadowMap == null)
+                if (terrain.GpuTextureManager?.ShadowMap == null)
                     return;
 
                 float invUnitsPerTexel = 1.0f / terrain.UnitsPerTexel;
@@ -63,7 +63,7 @@ public class TerrainDirectionalShadowMapRenderer : LightDirectionalShadowMapRend
                 // Apply shader view parameters
                 parameters.Set(_terrainWorldSizeKey, new Vector4(invShadowMapsSize, invShadowMapsSize, 1.0f / terrain.TerrainData.Header.MaxHeight, 0.0f));
                 parameters.Set(_useTerrainShadowMapKey, 1);
-                parameters.Set(_terrainShadowMapKey, terrain.ShadowMap);
+                parameters.Set(_terrainShadowMapKey, terrain.GpuTextureManager.ShadowMap);
             }
             else
             {

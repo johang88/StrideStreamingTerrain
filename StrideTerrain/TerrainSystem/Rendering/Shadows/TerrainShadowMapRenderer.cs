@@ -31,7 +31,6 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
     internal PerGroupDataStruct[] PerGroupDataBuffer = new PerGroupDataStruct[4096];
 
     private Vector3? _previousLightDirection = null;
-    private int _lastStreamingUpdate;
 
     /// <summary>
     /// If set to true then shadow map will only be recalculated if lighting conditions (or terrain streaming data) changes.
@@ -51,7 +50,7 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
 
     private void DrawTerrainShadowMap(RenderDrawContext drawContext, TerrainRuntimeData terrain)
     {
-        if (!terrain.IsInitialized || terrain.ShadowMap == null)
+        if (!terrain.IsInitialized || terrain.GpuTextureManager?.ShadowMap == null)
             return;
 
         var renderSystem = drawContext.RenderContext.RenderSystem;
@@ -90,9 +89,9 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             lightCosAngleChange = MathUtil.Clamp(lightCosAngleChange, -1.0f, 1.0f);
         }
 
-        if (lightCosAngleChange < 0.99f || terrain.GpuTextureManager!.LastStreamingUpdate != _lastStreamingUpdate)
+        if (lightCosAngleChange < 0.99f || terrain.GpuTextureManager!.InvalidateShadowMap)
         {
-            _lastStreamingUpdate = terrain.GpuTextureManager!.LastStreamingUpdate;
+            terrain.GpuTextureManager.InvalidateShadowMap = false;
             _previousLightDirection = lightDirection;
             var shadowMapToTerrainSize = terrain.TerrainData.Header.Size / TerrainRuntimeData.ShadowMapSize;
 
@@ -111,8 +110,8 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
                 lightDir2d.Y = 0.0f;
             }
 
-            var width = (uint)terrain.ShadowMap.Width;
-            var height = (uint)terrain.ShadowMap.Height;
+            var width = (uint)terrain.GpuTextureManager.ShadowMap.Width;
+            var height = (uint)terrain.GpuTextureManager.ShadowMap.Height;
 
             //Bresenham's line algorithm.
             var x0 = 0.0f;
@@ -267,11 +266,11 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             // Set parameters and dispatch
             _terrainShadowGeneratorEffect.Parameters.Set(StartXYKey, StartsBuffer.Length, ref StartsBuffer[0]);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.PerGroupData, PerGroupDataBuffer.Length, ref PerGroupDataBuffer[0]);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMap, terrain.ShadowMap);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMap, terrain.GpuTextureManager.ShadowMap);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMapToTerrainSize, (uint)shadowMapToTerrainSize);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.Heightmap, terrain.GpuTextureManager!.Heightmap.AtlasTexture);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, terrain.SectorToChunkMapBuffer);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkBuffer, terrain.ChunkBuffer);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, terrain.MeshManager!.SectorToChunkMapBuffer);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkBuffer, terrain.MeshManager!.ChunkBuffer);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkSize, (uint)terrain.TerrainData.Header.ChunkSize);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunksPerRow, (uint)terrain.ChunksPerRowLod0);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.MaxHeight, terrain.TerrainData.Header.MaxHeight);
