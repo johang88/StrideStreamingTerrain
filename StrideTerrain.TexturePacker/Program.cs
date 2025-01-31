@@ -3,15 +3,15 @@ using Stride.TextureConverter;
 using System.CommandLine;
 using Stride.Graphics;
 using Stride.TextureConverter.Requests;
-using System.IO;
+using CsvHelper.Configuration;
+using System.Globalization;
+using CsvHelper;
+using StrideTerrain.TexturePacker;
+using System.Collections.Concurrent;
 
 var inputOption = new Option<DirectoryInfo>(
     name: "--input",
     description: "Input folder containing a valid texture pack.");
-
-var outputOption = new Option<string>(
-    name: "--output",
-    description: "Output filename base path, multiple files will be cereated.");
 
 var textureSizeOption = new Option<int>(
     name: "--texture-size",
@@ -19,84 +19,66 @@ var textureSizeOption = new Option<int>(
 
 var rootCommand = new RootCommand("StrideTerrain TexturePacker");
 rootCommand.AddOption(inputOption);
-rootCommand.AddOption(outputOption);
 rootCommand.AddOption(textureSizeOption);
 
-rootCommand.SetHandler((input, outputPath, textureSize) =>
+rootCommand.SetHandler((input, textureSize) =>
 {
-    var textures = input.GetDirectories()
-        .Select(textureDir => new TextureImportData(
-            textureDir.Name,
-            int.Parse(textureDir.Name[0..2]),
-            textureDir.GetFiles()
-        ))
-        .OrderBy(x => x.Index)
-        .ToList();
+    var start = DateTime.UtcNow;
+    var outputPath = input.FullName.TrimEnd('\\');
+
+    var csvConfiguration = new CsvConfiguration(CultureInfo.InvariantCulture)
+    {
+        NewLine = Environment.NewLine,
+    };
+
+    using var reader = new StreamReader(Path.Combine(input.FullName, "TexturePack.csv"));
+    using var csv = new CsvReader(reader, CultureInfo.InvariantCulture);
+    var materials = csv.GetRecords<Material>().ToList();
 
     using var textureTool = new TextureTool();
 
+    var diffuseTextures = new ConcurrentBag<(int Index, TexImage Texture)>();
+    var normalTextures = new ConcurrentBag<(int Index, TexImage Texture)>();
+    var roughnessTextures = new ConcurrentBag<(int Index, TexImage Texture)>();
     var valid = true;
-    foreach (var textureGroup in textures)
+    Parallel.For(0, materials.Count, i =>
     {
-        var names = textureGroup.Files.Select(x => new
-        {
-            Key = Path.GetFileNameWithoutExtension(x.Name),
-            Value = x
-        }).ToDictionary(x => x.Key, x => x.Value);
+        var material = materials[i];
+        diffuseTextures.Add((i, ValidateAndLoad(Path.Combine(input.FullName, material.Diffuse), TextureType.Diffuse)));
+        normalTextures.Add((i, ValidateAndLoad(Path.Combine(input.FullName, material.Normal), TextureType.Normal)));
+        roughnessTextures.Add((i, ValidateAndLoad(Path.Combine(input.FullName, material.Roughness), TextureType.Roughness)));
 
-        textureGroup.Diffuse = ValidateAndLoad("d"); // diffuse
-        textureGroup.Normal = ValidateAndLoad("n"); // normal
-        textureGroup.Roughness = ValidateAndLoad("r"); // roughness
-
-        TexImage? ValidateAndLoad(string part)
+        TexImage ValidateAndLoad(string path, TextureType textureType)
         {
-            if (!names.TryGetValue(part, out var path))
+            var texture = textureTool.Load(path, textureType == TextureType.Diffuse);
+            textureTool.Decompress(texture, textureType == TextureType.Diffuse);
+            if (texture.Width != texture.Height)
             {
+                Console.WriteLine($"Non square texture {path}");
                 valid = false;
-                Console.WriteLine($"{textureGroup.Name} is missing '{part}' part");
-                return null;
-            }
-            else
-            {
-                var isSrgb = part == "d";
-
-                var texture = textureTool.Load(path.FullName, isSrgb);
-                textureTool.Decompress(texture, isSrgb);
-                if (texture.Width != texture.Height)
-                {
-                    Console.WriteLine($"Non square texture {path.FullName}");
-                    valid = false;
-                    return null;
-                }
-
-                //if (texture.Format != PixelFormat.R8G8B8A8_UNorm && texture.Format != PixelFormat.R8G8B8A8_UNorm_SRgb)
-                //{
-                //    Console.WriteLine($"Non valid texture format {path.FullName}");
-                //    valid = false;
-                //    return null;
-                //}
-
-                if (texture.Width != textureSize)
-                {
-                    Console.WriteLine($"Resizing {textureGroup.Name}_{part}");
-                    textureTool.Resize(texture, textureSize, textureSize, Filter.Rescaling.Lanczos3);
-                }
-
-                var outputFormat = PixelFormat.BC1_UNorm_SRgb;
-                if (part == "n")
-                    outputFormat = PixelFormat.BC5_UNorm;
-                else if (part == "r")
-                    outputFormat = PixelFormat.BC4_UNorm;
-
-                Console.WriteLine($"Generating mip maps for {textureGroup.Name}_{part}");
-                textureTool.GenerateMipMaps(texture, Filter.MipMapGeneration.Box);
-                Console.WriteLine($"Compressing {textureGroup.Name}_{part}");
-                textureTool.Compress(texture, outputFormat, TextureQuality.Best);
-
                 return texture;
             }
+
+            if (texture.Width != textureSize)
+            {
+                Console.WriteLine($"Resizing {path}");
+                textureTool.Resize(texture, textureSize, textureSize, Filter.Rescaling.Lanczos3);
+            }
+
+            var outputFormat = PixelFormat.BC1_UNorm_SRgb;
+            if (textureType == TextureType.Normal)
+                outputFormat = PixelFormat.BC5_UNorm;
+            else if (textureType == TextureType.Roughness)
+                outputFormat = PixelFormat.BC4_UNorm;
+
+            Console.WriteLine($"Generating mip maps for {path}");
+            textureTool.GenerateMipMaps(texture, Filter.MipMapGeneration.Box);
+            Console.WriteLine($"Compressing {path}");
+            textureTool.Compress(texture, outputFormat, TextureQuality.Best);
+
+            return texture;
         }
-    }
+    });
 
     if (!valid)
     {
@@ -104,34 +86,21 @@ rootCommand.SetHandler((input, outputPath, textureSize) =>
         return;
     }
 
+    List<TexImage> Resolve(IEnumerable<(int Index, TexImage Texture)> textures)
+        => textures.OrderBy(x => x.Index).Select(x => x.Texture).ToList();
+
     Console.WriteLine($"Creating diffuse texture array");
-    var diffuseArray = textureTool.CreateTextureArray(textures.Select(x => x.Diffuse).ToList());
+    var diffuseArray = textureTool.CreateTextureArray(Resolve(diffuseTextures));
     Console.WriteLine($"Creating normal texture array");
-    var normalArray = textureTool.CreateTextureArray(textures.Select(x => x.Normal).ToList());
+    var normalArray = textureTool.CreateTextureArray(Resolve(normalTextures));
     Console.WriteLine($"Creating roughness texture array");
-    var roughnessArray = textureTool.CreateTextureArray(textures.Select(x => x.Roughness).ToList());
+    var roughnessArray = textureTool.CreateTextureArray(Resolve(roughnessTextures));
 
     textureTool.Save(diffuseArray, outputPath + "_diffuse.dds");
     textureTool.Save(normalArray, outputPath + "_normal.dds");
     textureTool.Save(roughnessArray, outputPath + "_roughness.dds");
 
-}, inputOption, outputOption, textureSizeOption);
+    Console.WriteLine($"Completed in {(DateTime.UtcNow - start).TotalSeconds:0.00} seconds.");
+}, inputOption, textureSizeOption);
 
 await rootCommand.InvokeAsync(args);
-
-internal class TextureImportData
-{
-    public string Name { get; }
-    public int Index { get; }
-    public FileInfo[] Files { get; }
-    public TexImage? Diffuse { get; set; }
-    public TexImage? Normal { get; set; }
-    public TexImage? Roughness { get; set; }
-
-    public TextureImportData(string name, int index, FileInfo[] files)
-    {
-        Name = name;
-        Index = index;
-        Files = files;
-    }
-}

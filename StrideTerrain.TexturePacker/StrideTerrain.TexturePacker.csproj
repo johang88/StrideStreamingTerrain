@@ -9,6 +9,7 @@
 	</PropertyGroup>
 
 	<ItemGroup>
+		<PackageReference Include="CsvHelper" />
 		<PackageReference Include="System.CommandLine" />
 		<PackageReference Include="Stride.Graphics" />
 		<PackageReference Include="Stride.TextureConverter" />
