@@ -49,10 +49,14 @@ rootCommand.AddOption(maxHeightOption);
 rootCommand.AddOption(maxLodOption);
 rootCommand.AddOption(nameOption);
 
+const bool CompressNormals = true;
+
 static float ConvertToFloatHeight(float minValue, float maxValue, float value) => MathUtil.InverseLerp(minValue, maxValue, MathUtil.Clamp(value, minValue, maxValue));
 
 rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, maxHeight, unitsPerTexel, maxLod) =>
 {
+    var start = DateTime.UtcNow;
+
     using var textureTool = new TextureTool();
     using var heightmap = textureTool.Load(input.FullName, false);
     using var controlMapData = textureTool.Load(controlMapInput.FullName, false);
@@ -169,7 +173,8 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
     // Write output stream data
     var textureSize = chunkSize + 1;
-    WriteStreamingData(outputPath, name, chunkSize, maxLod, heightmap, terrainSize, maxHeight, textureSize, chunks);
+    var normalMapTextureSize = chunkSize + 4;
+    WriteStreamingData(outputPath, name, chunkSize, maxLod, heightmap, terrainSize, maxHeight, textureSize, normalMapTextureSize, chunks);
 
     lodChunkOffsets.Reverse();
 
@@ -181,13 +186,14 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
             Version = TerrainDataHeader.VERSION,
             ChunkSize = chunkSize,
             ChunkTextureSize = textureSize,
+            NormalMapTextureSize = normalMapTextureSize,
             Size = terrainSize,
             UnitsPerTexel = unitsPerTexel,
             MaxHeight = maxHeight,
             HeightmapSize = textureSize * textureSize * sizeof(ushort),
-            NormalMapSize = textureSize * textureSize * sizeof(byte) * 2,
             ControlMapSize = textureSize * textureSize * sizeof(ushort),
-            MaxLod = maxLod
+            MaxLod = maxLod,
+            CompressedNormalMap = CompressNormals
         },
         LodChunkOffsets = [.. lodChunkOffsets],
         Chunks = [.. chunks]
@@ -205,7 +211,9 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
     data.Write(writer);
 
-    void WriteStreamingData(string outputPath, string name, int chunkSize, int maxLod, TexImage heightmap, int terrainSize, float maxHeight, int textureSize, List<TerrainChunk> chunks)
+    Console.WriteLine($"Completed in {(DateTime.UtcNow - start).TotalSeconds:0.00} seconds.");
+
+    unsafe void WriteStreamingData(string outputPath, string name, int chunkSize, int maxLod, TexImage heightmap, int terrainSize, float maxHeight, int textureSize, int normalMapTextureSize, List<TerrainChunk> chunks)
     {
         var outputPathStreamData = Path.Combine(outputPath, $"{name}_StreamingData");
 
@@ -219,7 +227,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
         var chunkHeightmap = new ushort[textureSize * textureSize];
         var chunkControlMap = new ushort[textureSize * textureSize];
-        var chunkNormalMap = new byte[textureSize * textureSize * 2];
+        var chunkNormalMap = new byte[normalMapTextureSize * normalMapTextureSize * 2];
 
         for (var lod = maxLod; lod >= 0; lod--)
         {
@@ -234,14 +242,30 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
                 for (var x = 0; x < chunksPerRowCurrentLod; x++)
                 {
                     var (localMinHeight, localMaxHeight) = FillChunkHeightmap(x, y, scale, textureSize);
-                    FillChunkNormalMap(x, y, scale, textureSize);
+                    FillChunkNormalMap(x, y, scale, normalMapTextureSize);
                     FillChunkControlMap(x, y, scale, textureSize);
+
+                    var normalMapSize = chunkNormalMap.Length;
+
+                    if (CompressNormals)
+                    {
+                        fixed (byte* ptr = chunkNormalMap)
+                        {
+                            // Compress
+                            using var normalMap = new TexImage((nint)ptr, chunkNormalMap.Length, normalMapTextureSize, normalMapTextureSize, 1, PixelFormat.R8G8_UNorm, 1, 1, TexImage.TextureDimension.Texture3D);
+                            textureTool.Compress(normalMap, PixelFormat.BC5_UNorm);
+
+                            // Copy data back
+                            normalMapSize = normalMap.DataSize;
+                            Marshal.Copy(normalMap.Data, chunkNormalMap, 0, normalMapSize);
+                        }
+                    }
 
                     var heightmapOffset = writer.BaseStream.Position;
                     writer.Write(MemoryMarshal.AsBytes(chunkHeightmap.AsSpan()));
 
                     var normalMapOffset = writer.BaseStream.Position;
-                    writer.Write(MemoryMarshal.AsBytes(chunkNormalMap.AsSpan()));
+                    writer.Write(MemoryMarshal.AsBytes(chunkNormalMap.AsSpan(0, normalMapSize)));
 
                     var controlMapOffset = writer.BaseStream.Position;
                     writer.Write(MemoryMarshal.AsBytes(chunkControlMap.AsSpan()));
@@ -251,6 +275,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
                         HeightmapOffset = heightmapOffset,
                         NormalMapOffset = normalMapOffset,
                         ControlMapOffset = controlMapOffset,
+                        NormalMapSize = normalMapSize,
                         MinHeight = ConvertToFloatHeight(0, ushort.MaxValue, localMinHeight) * maxHeight,
                         MaxHeight = ConvertToFloatHeight(0, ushort.MaxValue, localMaxHeight) * maxHeight
                     });
@@ -263,7 +288,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
             ushort localMinHeight = ushort.MaxValue;
             ushort localMaxHeight = ushort.MinValue;
 
-            for (var y = 0; y < textureSize; y++)
+            Parallel.For(0, textureSize, y =>
             {
                 for (var x = 0; x < textureSize; x++)
                 {
@@ -276,14 +301,14 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
                     localMinHeight = Math.Min(localMinHeight, height);
                     localMaxHeight = Math.Max(localMaxHeight, height);
                 }
-            }
+            });
 
             return (localMinHeight, localMaxHeight);
         }
 
         void FillChunkControlMap(int cx, int cy, int scale, int textureSize)
         {
-            for (var y = 0; y < textureSize; y++)
+            Parallel.For(0, textureSize, y =>
             {
                 for (var x = 0; x < textureSize; x++)
                 {
@@ -293,12 +318,12 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
                     var value = controlMap[hy * terrainSize + hx];
                     chunkControlMap[y * textureSize + x] = value;
                 }
-            }
+            });
         }
 
         void FillChunkNormalMap(int cx, int cy, int scale, int textureSize)
         {
-            for (var y = 0; y < textureSize; y++)
+            Parallel.For(0, textureSize, y =>
             {
                 for (var x = 0; x < textureSize; x++)
                 {
@@ -311,7 +336,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
                     chunkNormalMap[index + 0] = nx;
                     chunkNormalMap[index + 1] = nz;
                 }
-            }
+            });
         }
     }
 }, inputOption, controlMapOption, outputPathOption, nameOption, chunkSizeOption, maxHeightOption, unitsPerTexelOption, maxLodOption);

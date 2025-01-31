@@ -84,7 +84,7 @@ public sealed class StreamingManager : IDisposable, IStreamingManager
     {
         if (!_requestPool.TryPop(out var streamingRequest))
         {
-            streamingRequest = new StreamingRequest(_terrain.Header.ChunkTextureSize);
+            streamingRequest = new StreamingRequest(_terrain.Header.ChunkTextureSize, _terrain.Header.NormalMapTextureSize);
         }
 
         streamingRequest.ChunksToLoad = chunksToLoad;
@@ -120,6 +120,7 @@ public sealed class StreamingManager : IDisposable, IStreamingManager
         // Read heightmap.
         if ((streamingRequest.ChunksToLoad & ChunksToLoad.Heightmap) == ChunksToLoad.Heightmap)
         {
+            streamingRequest.HeightmapLength = _terrain.Header.HeightmapSize;
             _stream.Seek(_baseOffset + _terrain.Chunks[streamingRequest.ChunkIndex].HeightmapOffset, SeekOrigin.Begin);
             _stream.ReadAtLeast(streamingRequest.HeightmapData, _terrain.Header.HeightmapSize);
         }
@@ -127,23 +128,29 @@ public sealed class StreamingManager : IDisposable, IStreamingManager
         // Read normal map.
         if ((streamingRequest.ChunksToLoad & ChunksToLoad.NormalMap) == ChunksToLoad.NormalMap)
         {
+            streamingRequest.NormalMapLength = _terrain.Chunks[streamingRequest.ChunkIndex].NormalMapSize;
             _stream.Seek(_baseOffset + _terrain.Chunks[streamingRequest.ChunkIndex].NormalMapOffset, SeekOrigin.Begin);
-            _stream.ReadAtLeast(streamingRequest.NormalMapData, _terrain.Header.NormalMapSize);
+            _stream.ReadAtLeast(streamingRequest.NormalMapData, _terrain.Chunks[streamingRequest.ChunkIndex].NormalMapSize);
         }
 
         // Read control map.
         if ((streamingRequest.ChunksToLoad & ChunksToLoad.ControlMap) == ChunksToLoad.ControlMap)
         {
+            streamingRequest.ControlMapLength = _terrain.Header.ControlMapSize;
             _stream.Seek(_baseOffset + _terrain.Chunks[streamingRequest.ChunkIndex].ControlMapOffset, SeekOrigin.Begin);
             _stream.ReadAtLeast(streamingRequest.ControlMapData, _terrain.Header.ControlMapSize);
         }
     }
 
-    private class StreamingRequest(int chunkTextureSize) : IStreamingRequest
+    private class StreamingRequest(int chunkTextureSize, int normalMapTextureSize) : IStreamingRequest
     {
         public readonly byte[] HeightmapData = new byte[chunkTextureSize * chunkTextureSize * sizeof(ushort)]; // r16_unorm
-        public readonly byte[] NormalMapData = new byte[chunkTextureSize * chunkTextureSize * 4]; // rgba8
+        public readonly byte[] NormalMapData = new byte[normalMapTextureSize * normalMapTextureSize * 2]; // rg8_unrom (or bc5)
         public readonly byte[] ControlMapData = new byte[chunkTextureSize * chunkTextureSize * sizeof(ushort)]; // r16_uint
+
+        public int HeightmapLength;
+        public int NormalMapLength;
+        public int ControlMapLength;
 
         public ChunksToLoad ChunksToLoad { get; set; }
         public int ChunkIndex { get; set; }
@@ -152,19 +159,19 @@ public sealed class StreamingManager : IDisposable, IStreamingManager
 
         public bool TryGetHeightmap(out Span<byte> data)
         {
-            data = HeightmapData;
+            data = HeightmapData.AsSpan(0, HeightmapLength);
             return (ChunksToLoad & ChunksToLoad.Heightmap) == ChunksToLoad.Heightmap;
         }
 
         public bool TryGetNormalMap(out Span<byte> data)
         {
-            data = NormalMapData;
+            data = NormalMapData.AsSpan(0, NormalMapLength);
             return (ChunksToLoad & ChunksToLoad.NormalMap) == ChunksToLoad.NormalMap;
         }
 
         public bool TryGetControlMap(out Span<byte> data)
         {
-            data = ControlMapData;
+            data = ControlMapData.AsSpan(0, ControlMapLength);
             return (ChunksToLoad & ChunksToLoad.ControlMap) == ChunksToLoad.ControlMap;
         }
     }

@@ -10,6 +10,7 @@ public struct TerrainChunk
     public long HeightmapOffset;
     public long NormalMapOffset;
     public long ControlMapOffset;
+    public int NormalMapSize;
 
     public readonly void Write(BinaryWriter writer)
     {
@@ -18,6 +19,7 @@ public struct TerrainChunk
         writer.Write(HeightmapOffset);
         writer.Write(NormalMapOffset);
         writer.Write(ControlMapOffset);
+        writer.Write(NormalMapSize);
     }
 
     public void Read(BinaryReader reader)
@@ -27,5 +29,6 @@ public struct TerrainChunk
         HeightmapOffset = reader.ReadInt64();
         NormalMapOffset = reader.ReadInt64();
         ControlMapOffset = reader.ReadInt64();
+        NormalMapSize = reader.ReadInt32();
     }
 }

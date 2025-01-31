@@ -11,13 +11,14 @@ public struct TerrainDataHeader
     public int Version;
     public int ChunkSize;
     public int ChunkTextureSize;
+    public int NormalMapTextureSize;
     public int Size;
     public float UnitsPerTexel;
     public float MaxHeight;
     public int HeightmapSize;
-    public int NormalMapSize;
     public int ControlMapSize;
     public int MaxLod;
+    public bool CompressedNormalMap;
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]

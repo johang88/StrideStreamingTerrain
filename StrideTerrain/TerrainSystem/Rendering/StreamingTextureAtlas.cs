@@ -2,14 +2,14 @@
 using System;
 
 namespace StrideTerrain.TerrainSystem.Rendering;
-public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFormat pixelFormat, int size, int chunkSize) : IDisposable
+public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFormat pixelFormat, int size, int chunkSize, int chunkTextureSize) : IDisposable
 {
     public readonly int Size = size;
     public readonly int ChunkSize = chunkSize;
     public readonly int ChunksPerRow = size / chunkSize;
 
     public Texture AtlasTexture = Texture.New2D(graphicsDevice, size, size, pixelFormat);
-    public Texture StagingTexutre = Texture.New2D(graphicsDevice, chunkSize, chunkSize, pixelFormat, usage: GraphicsResourceUsage.Dynamic);
+    public Texture StagingTexutre = Texture.New2D(graphicsDevice, chunkTextureSize, chunkTextureSize, pixelFormat, usage: GraphicsResourceUsage.Dynamic);
 
     public (int tx, int ty) GetCoordinates(int textureIndex)
     {
