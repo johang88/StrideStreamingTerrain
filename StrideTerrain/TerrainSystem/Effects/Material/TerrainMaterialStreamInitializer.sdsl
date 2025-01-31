@@ -208,8 +208,8 @@
             float surfaceSlopeBlend = ComputeSlopeBlend(streams.meshNormal, backgroundNormal, baseDampening, slopeThreshold, blendSharpness);
             streams.TerrainDiffuse = lerp(overlay.Diffuse, background.Diffuse, surfaceSlopeBlend);
             streams.TerrainRoughness = lerp(overlay.Roughness, background.Roughness, surfaceSlopeBlend);
-            streams.TerrainNormal = lerp(overlayNormal, backgroundNormal, surfaceSlopeBlend);
-            streams.normalWS = normalize(streams.TerrainNormal);
+            streams.TerrainNormal = normalize(lerp(overlayNormal, backgroundNormal, surfaceSlopeBlend));
+            streams.normalWS = streams.TerrainNormal;
         }
 
         float ComputeSlopeBlend(float3 normal, float3 backgroundNormal, float baseDampening, float slopeThreshold, float blendSharpness)
