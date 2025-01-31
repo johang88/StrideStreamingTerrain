@@ -1,48 +1,23 @@
-﻿using System.Runtime.InteropServices;
+﻿using System;
+using System.Runtime.InteropServices;
 
 namespace StrideTerrain.Common;
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct TerrainDataHeader
 {
-    public const int VERSION = 0x5;
+    public const int VERSION = 0x11;
 
     public int Version;
     public int ChunkSize;
     public int ChunkTextureSize;
     public int Size;
+    public float UnitsPerTexel;
     public float MaxHeight;
     public int HeightmapSize;
     public int NormalMapSize;
+    public int ControlMapSize;
     public int MaxLod;
-
-    public readonly void Write(BinaryWriter writer)
-    {
-        writer.Write(Version);
-        writer.Write(ChunkSize);
-        writer.Write(ChunkTextureSize);
-        writer.Write(Size);
-        writer.Write(MaxHeight);
-        writer.Write(HeightmapSize);
-        writer.Write(NormalMapSize);
-        writer.Write(MaxLod);
-    }
-
-    public void Read(BinaryReader reader)
-    {
-        Version = reader.ReadInt32();
-
-        if (Version != VERSION)
-            throw new InvalidDataException($"Invalid version, expected {VERSION}, got {Version}");
-
-        ChunkSize = reader.ReadInt32();
-        ChunkTextureSize = reader.ReadInt32();
-        Size = reader.ReadInt32();
-        MaxHeight = reader.ReadSingle();
-        HeightmapSize = reader.ReadInt32();
-        NormalMapSize = reader.ReadInt32();
-        MaxLod = reader.ReadInt32();
-    }
 }
 
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
@@ -63,7 +38,10 @@ public struct TerrainData
 
     public readonly void Write(BinaryWriter writer)
     {
-        Header.Write(writer);
+        var buffer = new byte[Marshal.SizeOf<TerrainDataHeader>()];
+        MemoryMarshal.Write(buffer, Header);
+        writer.Write(buffer);
+
         foreach (var offset in LodChunkOffsets)
         {
             writer.Write(offset);
@@ -77,9 +55,14 @@ public struct TerrainData
 
     public void Read(BinaryReader reader)
     {
-        Header.Read(reader);
+        var header = reader.ReadBytes(Marshal.SizeOf<TerrainDataHeader>());
+        Header = MemoryMarshal.Read<TerrainDataHeader>(header);
+
+        if (Header.Version != TerrainDataHeader.VERSION)
+            throw new InvalidDataException($"Invalid version, expected {TerrainDataHeader.VERSION}, got {Header.Version}");
+
         LodChunkOffsets = new int[Header.MaxLod + 1];
-        for (var i =0; i < LodChunkOffsets.Length; i++)
+        for (var i = 0; i < LodChunkOffsets.Length; i++)
         {
             LodChunkOffsets[i] = reader.ReadInt32();
         }

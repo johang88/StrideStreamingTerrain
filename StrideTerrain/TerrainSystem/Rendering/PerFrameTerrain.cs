@@ -10,6 +10,7 @@ struct PerFrameTerrain
 {
     public uint ChunkSize;
     public float InvTerrainTextureSize;
+    public float TerrainTextureSize;
     public float InvTerrainSize;
     public float MaxHeight;
     public uint ChunksPerRow;

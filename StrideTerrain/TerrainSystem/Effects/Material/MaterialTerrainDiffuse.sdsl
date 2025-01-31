@@ -1,0 +1,11 @@
+﻿namespace StrideTerrain.TerrainSystem.Effects.Material
+{
+    shader MaterialTerrainDiffuse : IMaterialSurfacePixel, TerrainMaterialStreams
+    {
+        override void Compute()
+        {
+            streams.matDiffuse = float4(streams.TerrainDiffuse, 1);
+            streams.matColorBase = float4(streams.TerrainDiffuse, 1);
+        }
+    };
+}

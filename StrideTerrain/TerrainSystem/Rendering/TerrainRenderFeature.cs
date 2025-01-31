@@ -5,8 +5,6 @@ using Stride.Core.Storage;
 using Stride.Rendering;
 using StrideTerrain.TerrainSystem.Effects;
 using StrideTerrain.TerrainSystem.Effects.Material;
-using System;
-using System.Buffers;
 using System.Collections.Generic;
 
 namespace StrideTerrain.TerrainSystem.Rendering;
@@ -108,6 +106,7 @@ public class TerrainRenderFeature : SubRenderFeature
                 var perFrameTerrain = (PerFrameTerrain*)((byte*)mappedCB + chunkSizeOffset);
                 perFrameTerrain->ChunkSize = (uint)data.TerrainData.Header.ChunkSize;
                 perFrameTerrain->InvTerrainTextureSize = TerrainRuntimeData.InvRuntimeTextureSize;
+                perFrameTerrain->TerrainTextureSize = TerrainRuntimeData.RuntimeTextureSize;
                 perFrameTerrain->InvTerrainSize = 1.0f / (data.TerrainData.Header.Size * data.UnitsPerTexel);
                 perFrameTerrain->MaxHeight = data.TerrainData.Header.MaxHeight;
                 perFrameTerrain->ChunksPerRow = (uint)data.ChunksPerRowLod0;
@@ -117,10 +116,11 @@ public class TerrainRenderFeature : SubRenderFeature
                 if (logicalGroup.Hash == ObjectId.Empty)
                     continue;
 
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.GpuTextureManager!.Heightmap!.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.GpuTextureManager!.NormalMap!.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.MeshManager.ChunkBuffer);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.MeshManager.SectorToChunkMapBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.GpuTextureManager!.Heightmap.AtlasTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.GpuTextureManager!.NormalMap.AtlasTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.GpuTextureManager!.ControlMap.AtlasTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.MeshManager.ChunkBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 4, data.MeshManager.SectorToChunkMapBuffer);
             }
 
             terrains.Add(data);

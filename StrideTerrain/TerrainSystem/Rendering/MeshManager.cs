@@ -1,5 +1,4 @@
-﻿using SharpFont;
-using Stride.Core.Mathematics;
+﻿using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.Rendering;
 using System;

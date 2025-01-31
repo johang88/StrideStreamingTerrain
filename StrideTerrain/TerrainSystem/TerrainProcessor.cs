@@ -9,10 +9,7 @@ using Stride.Profiling;
 using Stride.Rendering;
 using StrideTerrain.TerrainSystem.Rendering;
 using System;
-using System.Buffers;
 using System.Collections.Generic;
-using System.Runtime.InteropServices;
-using Buffer = Stride.Graphics.Buffer;
 
 namespace StrideTerrain.TerrainSystem;
 
@@ -66,7 +63,6 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             }
 
             // Sync component settings
-            data.UnitsPerTexel = component.UnitsPerTexel;
             data.Lod0Distance = component.Lod0Distance;
             data.MaximumLod = component.MaximumLod;
             data.MinimumLod = component.MinimumLod;
@@ -93,7 +89,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.ChunksPerRowLod0 = data.TerrainData.Header.Size / data.TerrainData.Header.ChunkSize;
 
                 data.StreamingManager = new Streaming.StreamingManager(data.TerrainData, data.DataProvider);
+#if !GAME_EDITOR
                 data.PhysicsManager = new Physics.PhysicsManager(data, entity.Scene, data.StreamingManager);
+#endif
                 data.GpuTextureManager = new GpuTextureManager(data.TerrainData, graphicsDevice, TerrainRuntimeData.RuntimeTextureSize, data.StreamingManager);
                 data.MeshManager = new MeshManager(data, graphicsDevice, data.GpuTextureManager);
 
@@ -120,6 +118,10 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         if (camera == null)
             return;
 
+        var modelRenderProcessor = EntityManager.GetProcessor<ModelRenderProcessor>();
+        if (modelRenderProcessor == null)
+            return; // Just wait until it's available.
+
         var graphicsDevice = Services.GetService<IGraphicsDeviceService>().GraphicsDevice;
         var debugTextSystem = Services.GetService<DebugTextSystem>();
         var graphicsContext = Services.GetService<GraphicsContext>();
@@ -132,15 +134,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             var component = pair.Key;
             var data = pair.Value;
 
-            if (component.Material == null)
+            if (component.Material == null || !data.IsInitialized)
                 continue;
-
-            if (!data.IsInitialized)
-                continue;
-
-            var modelRenderProcessor = EntityManager.GetProcessor<ModelRenderProcessor>();
-            if (modelRenderProcessor == null)
-                continue; // Just wait until it's available.
 
             // Get render model and setup mapping so terrain data can be retrieved in the render feature.
             if (data.RenderModel == null)
@@ -153,7 +148,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.RenderModel = renderModel;
             }
 
-            // Sync material.
+            // Sync material if changed.
             if (data.ModelComponent!.Materials[0] != component.Material)
                 data.ModelComponent.Materials[0] = component.Material;
 

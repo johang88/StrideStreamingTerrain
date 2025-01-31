@@ -13,11 +13,12 @@ public class GpuTextureManager : IDisposable
 {
     public StreamingTextureAtlas Heightmap { get; private init; }
     public StreamingTextureAtlas NormalMap { get; private init; }
+    public StreamingTextureAtlas ControlMap { get; private init; }
     public Texture ShadowMap { get; private init; }
 
     private readonly ChunkData[] _chunks;
 
-    private readonly StreamingManager _streamingManager;
+    private readonly IStreamingManager _streamingManager;
 
     private readonly Queue<int> _freeList;
     private readonly Stack<int> _pendingChunks = [];
@@ -26,12 +27,13 @@ public class GpuTextureManager : IDisposable
 
     public bool InvalidateShadowMap { get; set; }
 
-    public GpuTextureManager(TerrainData terrain, GraphicsDevice graphicsDevice, int atlasSize, StreamingManager streamingManager)
+    public GpuTextureManager(TerrainData terrain, GraphicsDevice graphicsDevice, int atlasSize, IStreamingManager streamingManager)
     {
         _streamingManager = streamingManager;
 
         Heightmap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UNorm, atlasSize, terrain.Header.ChunkTextureSize);
-        NormalMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R8G8B8A8_UNorm, atlasSize, terrain.Header.ChunkTextureSize);
+        NormalMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R8G8_UNorm, atlasSize, terrain.Header.ChunkTextureSize);
+        ControlMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UInt, atlasSize, terrain.Header.ChunkTextureSize);
         ShadowMap = Texture.New2D(graphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R10G10B10A2_UNorm, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
         
         _freeList = new Queue<int>(Heightmap.ChunksPerRow * Heightmap.ChunksPerRow);
@@ -52,6 +54,7 @@ public class GpuTextureManager : IDisposable
     {
         Heightmap?.Dispose();
         NormalMap?.Dispose();
+        ControlMap?.Dispose();
         ShadowMap?.Dispose();
     }
 
@@ -110,7 +113,7 @@ public class GpuTextureManager : IDisposable
             chunk.ChunkIndex = chunkDataIndex;
             chunk.State = ChunkState.Loading;
 
-            _streamingManager.Request(ChunksToLoad.Heightmap | ChunksToLoad.NormalMap, chunkDataIndex, StreamingCompletedCallback, graphicsContext);
+            _streamingManager.Request(ChunksToLoad.Heightmap | ChunksToLoad.NormalMap | ChunksToLoad.ControlMap, chunkDataIndex, StreamingCompletedCallback, graphicsContext);
         }
 
         _frameCounter++;
@@ -128,14 +131,14 @@ public class GpuTextureManager : IDisposable
         if (graphicsContext == null)
             return; // Can't happen
 
-        if (!streamingRequest.TryGetHeightmap(out var heightmap))
-            return; // Can't happen
+        if (streamingRequest.TryGetHeightmap(out var heightmap))
+            Heightmap.UpdateChunk(graphicsContext, heightmap, chunkDataIndex);
 
-        if (!streamingRequest.TryGetNormalMap(out var normalMap))
-            return; // Can't happen
+        if (streamingRequest.TryGetNormalMap(out var normalMap))
+            NormalMap.UpdateChunk(graphicsContext, normalMap, chunkDataIndex);
 
-        Heightmap.UpdateChunk(graphicsContext, heightmap, chunkDataIndex);
-        NormalMap.UpdateChunk(graphicsContext, normalMap, chunkDataIndex);
+        if (streamingRequest.TryGetControlMap(out var controlMap))
+            ControlMap.UpdateChunk(graphicsContext, controlMap, chunkDataIndex);
 
         var chunk = _chunks[chunkDataIndex];
         chunk.State = ChunkState.Resident;

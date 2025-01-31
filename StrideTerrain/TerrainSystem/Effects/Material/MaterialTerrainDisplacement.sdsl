@@ -1,7 +1,7 @@
 ﻿namespace StrideTerrain.TerrainSystem.Effects.Material
 {
     shader MaterialTerrainDisplacement 
-        : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, TerrainData, TerrainStreams
+        : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, TerrainData, TerrainStreams, TerrainMaterialStreams
     {
         stage stream uint VertexId : SV_VERTEXID;
 
@@ -48,30 +48,41 @@
 
             vertexPosition.y = 0;
 
+            streams.TerrainFract = vertexPosition.xz;
+
             vertexPosition.x += (float)offsetX;
             vertexPosition.z += (float)offsetZ;
 
             // Setup some uv's
             uv = uv + int2(vertexPosition.xz);
-            streams.TexCoord1 = uv * InvTerrainTextureSize;
-            streams.TexCoord3 = vertexPosition.xz / (streams.LodLevel + 1);
             streams.TexCoord2 = uv * InvTerrainTextureSize * 100;
+            streams.TexCoord1 = uv * InvTerrainTextureSize;
 
-            streams.meshNormal = float3(0, 1, 0);
-            streams.meshTangent = float4(0, 0, -1, 1);
-           
             streams.Position = float4((vertexPosition * scale) + worldPosition, 1);
             streams.PositionWS = streams.Position;
 
-            streams.TexCoord = streams.PositionWS.xz * InvTerrainSize;
-            
-            float height = Heightmap.Load(int3(uv.xy, 0), 0).x;
+            streams.TexCoord = (uv.xy + 0.5f) * InvTerrainTextureSize;
+
+            //float height = Heightmap.Load(int3(uv.xy, 0), 0).x;
+            float height = Heightmap.SampleLevel(LinearSampler, streams.TexCoord, 0).x;
             streams.Position.y = height * MaxHeight;
+
+            // Uncomment for holes!
+            //uint controlMap = TerrainControlMap.Load(int3(uv.xy, 0), 0).x;
+            //if (((controlMap >> 5) & 0x1F) == 0)
+            //{
+                //streams.Position.y /= 0;
+            //}
             
             streams.TerrainHeight01 = height;
             streams.TerrainHeight = streams.Position.y;
 
-            streams.meshNormal = TerrainNormalMap.Load(int3(uv.xy, 0), 0).xyz * 2.0 - 1.0;
+            float3 normal = float3(0, 0, 0);
+            normal.xz = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord, 0).xy * 2.0f - 1.0f;
+            normal.y = sqrt(max(0.0f, 1.0f - (normal.x * normal.x + normal.z * normal.z)));
+
+            streams.meshNormal = normal;
+            streams.TerrainAtlasCoord = float2(uv.xy);
         }
     };
 }

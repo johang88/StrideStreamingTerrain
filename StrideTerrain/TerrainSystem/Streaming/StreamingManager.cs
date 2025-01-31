@@ -18,10 +18,8 @@ namespace StrideTerrain.TerrainSystem.Streaming;
 /// is implemented for the terrain. The inbuilt streaming system does not support files sizes above
 /// int.MaxValue and neither does virtual file system stream.
 /// </summary>
-public sealed class StreamingManager : IDisposable
+public sealed class StreamingManager : IDisposable, IStreamingManager
 {
-    public delegate void StreamingRequestCompletedCallback(IStreamingRequest streamingRequest, object? callbackData);
-
     private Thread? _ioThread;
     private readonly CancellationTokenSource _cts = new();
 
@@ -132,12 +130,20 @@ public sealed class StreamingManager : IDisposable
             _stream.Seek(_baseOffset + _terrain.Chunks[streamingRequest.ChunkIndex].NormalMapOffset, SeekOrigin.Begin);
             _stream.ReadAtLeast(streamingRequest.NormalMapData, _terrain.Header.NormalMapSize);
         }
+
+        // Read control map.
+        if ((streamingRequest.ChunksToLoad & ChunksToLoad.ControlMap) == ChunksToLoad.ControlMap)
+        {
+            _stream.Seek(_baseOffset + _terrain.Chunks[streamingRequest.ChunkIndex].ControlMapOffset, SeekOrigin.Begin);
+            _stream.ReadAtLeast(streamingRequest.ControlMapData, _terrain.Header.ControlMapSize);
+        }
     }
 
     private class StreamingRequest(int chunkTextureSize) : IStreamingRequest
     {
         public readonly byte[] HeightmapData = new byte[chunkTextureSize * chunkTextureSize * sizeof(ushort)]; // r16_unorm
         public readonly byte[] NormalMapData = new byte[chunkTextureSize * chunkTextureSize * 4]; // rgba8
+        public readonly byte[] ControlMapData = new byte[chunkTextureSize * chunkTextureSize * sizeof(ushort)]; // r16_uint
 
         public ChunksToLoad ChunksToLoad { get; set; }
         public int ChunkIndex { get; set; }
@@ -154,6 +160,12 @@ public sealed class StreamingManager : IDisposable
         {
             data = NormalMapData;
             return (ChunksToLoad & ChunksToLoad.NormalMap) == ChunksToLoad.NormalMap;
+        }
+
+        public bool TryGetControlMap(out Span<byte> data)
+        {
+            data = ControlMapData;
+            return (ChunksToLoad & ChunksToLoad.ControlMap) == ChunksToLoad.ControlMap;
         }
     }
 }

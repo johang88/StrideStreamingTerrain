@@ -7,4 +7,5 @@ public interface IStreamingRequest
     int ChunkIndex { get; }
     bool TryGetHeightmap(out Span<byte> data);
     bool TryGetNormalMap(out Span<byte> data);
+    bool TryGetControlMap(out Span<byte> data);
 }

@@ -43,14 +43,19 @@
 
             streams.PositionWS.xz += float2(FastRandom(ox), FastRandom(oy));
 
-            float terrainHeight = GetTerrainHeightAt(streams.PositionWS.x, streams.PositionWS.z);
-            float3 terrainNormal = GetTerrainNormalAt(streams.PositionWS.x, streams.PositionWS.z);
+            float2 terrainAtlasUv = GetTerrainAtlasUv(streams.PositionWS.x, streams.PositionWS.z);
+            float terrainHeight = GetTerrainHeightAt(terrainAtlasUv);
+            float3 terrainNormal = GetTerrainNormalAt(terrainAtlasUv);
+            uint backgroundTextureIndex = GetBackgroundTextureIndexAt(GetTerrainAtlasUv(grassPosition.x, grassPosition.y));
+
+            // TODO: Very nice hardcode.
+            int isGrass = (backgroundTextureIndex == 0 || backgroundTextureIndex == 4 || backgroundTextureIndex == 22 || backgroundTextureIndex == 27 || backgroundTextureIndex == 28) ? 1 : 0;
 
             streams.PositionWS.y += terrainHeight;
             streams.meshNormal = terrainNormal;
             streams.meshTangent = float4(0, 0, -1, 1);
 
-            if (terrainHeight < 80 || terrainHeight > 180 || abs(terrainNormal.y) < 0.9f)
+            if (/*terrainHeight < 80 || terrainHeight > 180 || abs(terrainNormal.y) < 0.9f ||*/ isGrass == 0)
                 streams.PositionWS.y /= 0;
         }
     };

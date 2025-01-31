@@ -7,5 +7,6 @@ public enum ChunksToLoad : int
 {
     Heightmap = 0x01,
     NormalMap = 0x02,
-    All = Heightmap | NormalMap
+    ControlMap = 0x04,
+    All = Heightmap | NormalMap | ControlMap
 }

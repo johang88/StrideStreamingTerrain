@@ -20,10 +20,12 @@ namespace StrideTerrain.TerrainSystem.Effects
     {
         public static readonly ObjectParameterKey<Texture> Heightmap = ParameterKeys.NewObject<Texture>();
         public static readonly ObjectParameterKey<Texture> TerrainNormalMap = ParameterKeys.NewObject<Texture>();
+        public static readonly ObjectParameterKey<Texture> TerrainControlMap = ParameterKeys.NewObject<Texture>();
         public static readonly ObjectParameterKey<Buffer> ChunkBuffer = ParameterKeys.NewObject<Buffer>();
         public static readonly ObjectParameterKey<Buffer> SectorToChunkMapBuffer = ParameterKeys.NewObject<Buffer>();
         public static readonly ValueParameterKey<uint> ChunkSize = ParameterKeys.NewValue<uint>();
         public static readonly ValueParameterKey<float> InvTerrainTextureSize = ParameterKeys.NewValue<float>();
+        public static readonly ValueParameterKey<float> TerrainTextureSize = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> InvTerrainSize = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> MaxHeight = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<uint> ChunksPerRow = ParameterKeys.NewValue<uint>();

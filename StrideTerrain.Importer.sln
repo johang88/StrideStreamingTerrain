@@ -7,6 +7,8 @@ Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StrideTerrain.Importer", "S
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StrideTerrain.Common", "StrideTerrain.Common\StrideTerrain.Common.csproj", "{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "StrideTerrain.TexturePacker", "StrideTerrain.TexturePacker\StrideTerrain.TexturePacker.csproj", "{7127D182-B084-4A27-A9DC-E9FCC9604DEF}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -21,6 +23,10 @@ Global
 		{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3998BB0F-9E15-4670-90C9-F80AE7F53CDE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{7127D182-B084-4A27-A9DC-E9FCC9604DEF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{7127D182-B084-4A27-A9DC-E9FCC9604DEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{7127D182-B084-4A27-A9DC-E9FCC9604DEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{7127D182-B084-4A27-A9DC-E9FCC9604DEF}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

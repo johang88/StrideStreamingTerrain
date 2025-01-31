@@ -98,4 +98,11 @@ public class TreeInstanceManager : StartupScript
             Models[i].Type = instancingBuffer;
         }
     }
+
+    class TreeInstance
+    {
+        public float X;
+        public float Y;
+        public float Z;
+    }
 }

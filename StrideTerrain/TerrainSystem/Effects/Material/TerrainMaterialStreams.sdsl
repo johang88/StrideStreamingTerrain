@@ -1,0 +1,16 @@
+﻿namespace StrideTerrain.TerrainSystem.Effects.Material
+{
+    shader TerrainMaterialStreams : TerrainStreams
+    {
+        // Material per pixel data
+        stage stream float3 TerrainDiffuse;
+        stage stream float3 TerrainNormal;
+        stage stream float TerrainRoughness;
+
+        // PER VERTEX: Base coordinates in terrain atlas for current quad
+        stage stream float2 TerrainAtlasCoord;
+
+        // PER VERTEX: Fractional part in quad, interpolates between [0,1]
+        stage stream float2 TerrainFract;
+    };
+}

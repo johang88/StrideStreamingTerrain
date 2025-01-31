@@ -4,11 +4,15 @@ using Stride.Graphics;
 using Stride.TextureConverter;
 using StrideTerrain.Common;
 using System.CommandLine;
-using System.Text.Json;
+using System.Runtime.InteropServices;
 
 var inputOption = new Option<FileInfo>(
     name: "--input",
     description: "Heightmap input file, must be square");
+
+var controlMapOption = new Option<FileInfo>(
+    name: "--control-map",
+    description: "Witcher 3 style control map");
 
 var outputPathOption = new Option<string>(
     name: "--output",
@@ -31,25 +35,27 @@ var maxHeightOption = new Option<float>(
     name: "--max-height",
     description: "Max height");
 
-var treesOptions = new Option<bool>(
-    name: "--trees",
-    description: "Generate tree location");
+var unitsPerTexelOption = new Option<float>(
+    name: "--units-per-texel",
+    description: "Units per texel");
 
 var rootCommand = new RootCommand("StrideTerrain Importer");
 rootCommand.AddOption(inputOption);
+rootCommand.AddOption(controlMapOption);
 rootCommand.AddOption(outputPathOption);
 rootCommand.AddOption(chunkSizeOption);
+rootCommand.AddOption(unitsPerTexelOption);
 rootCommand.AddOption(maxHeightOption);
 rootCommand.AddOption(maxLodOption);
 rootCommand.AddOption(nameOption);
-rootCommand.AddOption(treesOptions);
 
 static float ConvertToFloatHeight(float minValue, float maxValue, float value) => MathUtil.InverseLerp(minValue, maxValue, MathUtil.Clamp(value, minValue, maxValue));
 
-rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, generateTreeData) =>
+rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, maxHeight, unitsPerTexel, maxLod) =>
 {
     using var textureTool = new TextureTool();
     using var heightmap = textureTool.Load(input.FullName, false);
+    using var controlMapData = textureTool.Load(controlMapInput.FullName, false);
 
     if (heightmap.Width != heightmap.Height)
     {
@@ -77,24 +83,27 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
         }
     }
 
-    unsafe ushort[] LoadHeightData()
+    unsafe ushort[] LoadData(TexImage image)
     {
-        var data = (ushort*)heightmap.Data;
-        var pixelSize = heightmap.Format == PixelFormat.R16G16B16A16_UNorm ? 4 : 1;
+        var data = (ushort*)image.Data;
+        var pixelSize = image.Format == PixelFormat.R16G16B16A16_UNorm ? 4 : 1;
         var heights = new ushort[terrainSize * terrainSize];
 
         for (var y = 0; y < terrainSize; y++)
         {
             for (var x = 0; x < terrainSize; x++)
             {
-                heights[y * terrainSize + x] = data[(y * heightmap.Width + x) * pixelSize];
+                heights[y * terrainSize + x] = data[(y * image.Width + x) * pixelSize];
             }
         }
 
         return heights;
     }
 
-    var heights = LoadHeightData();
+    Console.WriteLine("Loading heights");
+    var heights = LoadData(heightmap);
+    Console.WriteLine("Loading control map");
+    var controlMap = LoadData(controlMapData);
 
     float HeightAt(int x, int y)
     {
@@ -105,51 +114,50 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
 
     Vector3 NormalAt(int x, int y)
     {
-        var heightL = HeightAt(x - 1, y);
-        var heightR = HeightAt(x + 1, y);
-        var heightD = HeightAt(x, y - 1);
-        var heightU = HeightAt(x, y + 1);
+        float hL = HeightAt(x - 1, y);  // Left
+        float hR = HeightAt(x + 1, y);  // Right
+        float hD = HeightAt(x, y - 1);  // Down
+        float hU = HeightAt(x, y + 1);  // Up
 
-        var normal = new Vector3(heightL - heightR, 2.0f, heightD - heightU);
-        normal.Normalize();
+        var scale = new Vector3(unitsPerTexel * terrainSize, 1.0f, unitsPerTexel * terrainSize);
+        var dx = new Vector3(2.0f, hR - hL, 0.0f);
+        var dz = new Vector3(0.0f, hU - hD, 2.0f);
+
+        var normal = Vector3.Normalize(Vector3.Cross(dz, dx));
 
         return normal;
     }
 
-    if (generateTreeData)
+    unsafe byte[] LoadNormals()
     {
-        var trees = new List<TreeInstance>(terrainSize * terrainSize);
-        for (var y = 0; y < terrainSize; y += 32)
+        var normals = new byte[terrainSize * terrainSize * 2];
+        Parallel.For(0, terrainSize, y =>
         {
-            for (var x = 0; x < terrainSize; x += 32)
+            for (var x = 0; x < terrainSize; x++)
             {
-                var ox = Random.Shared.Next(0, 31);
-                var oy = Random.Shared.Next(0, 32);
-                var height = HeightAt(x + ox, y + oy);
-                if (height >= 85 && height < 200)
-                {
-                    var normal = NormalAt(x + ox, y + oy);
-                    if (Math.Abs(normal.Z) < 0.05f)
-                    {
-                        trees.Add(new()
-                        {
-                            X = (x + ox) * 0.45f,
-                            Y = height,
-                            Z = (y + oy) * 0.45f
-                        });
-                    }
-                }
+                var normal = NormalAt(x, y);
+                normal = (normal + 1.0f) * 0.5f;
+
+                var index = (y * terrainSize + x) * 2;
+                normals[index + 0] = (byte)(normal.X * 255);
+                // normals[index + 1] = (byte)(normal.Y * 255);, Y is be reconustrcuted at runtime.
+                normals[index + 1] = (byte)(normal.Z * 255);
             }
-        }
+        });
 
-        var outputPathTreeData = Path.Combine(outputPath, $"{name}_Trees.json");
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.General)
-        {
-            IncludeFields = true
-        };
-        File.WriteAllText(outputPathTreeData, JsonSerializer.Serialize(trees, options));
+        return normals;
+    }
 
-        return;
+    Console.WriteLine("Loading normals");
+    var normals = LoadNormals();
+
+    (byte x, byte y) GetNormal(int x, int y)
+    {
+        x = Math.Clamp(x, 0, terrainSize - 1);
+        y = Math.Clamp(y, 0, terrainSize - 1);
+
+        var index = (y * terrainSize + x) * 2;
+        return (normals[index + 0], normals[index + 1]);
     }
 
     var actualMaxLod = (int)Math.Log2(terrainSize / chunkSize); // Max lod = single chunk
@@ -161,6 +169,7 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
 
     // Write output stream data
     var textureSize = chunkSize + 1;
+    var normalMapTextureSize = chunkSize + 4;
     WriteStreamingData(outputPath, name, chunkSize, maxLod, heightmap, terrainSize, maxHeight, textureSize, chunks);
 
     lodChunkOffsets.Reverse();
@@ -174,9 +183,11 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
             ChunkSize = chunkSize,
             ChunkTextureSize = textureSize,
             Size = terrainSize,
+            UnitsPerTexel = unitsPerTexel,
             MaxHeight = maxHeight,
             HeightmapSize = textureSize * textureSize * sizeof(ushort),
-            NormalMapSize = textureSize * textureSize * sizeof(byte) * 4,
+            NormalMapSize = textureSize * textureSize * sizeof(byte) * 2,
+            ControlMapSize = textureSize * textureSize * sizeof(ushort),
             MaxLod = maxLod
         },
         LodChunkOffsets = [.. lodChunkOffsets],
@@ -208,10 +219,12 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
         using var writer = new BinaryWriter(outputStream);
 
         var chunkHeightmap = new ushort[textureSize * textureSize];
+        var chunkControlMap = new ushort[textureSize * textureSize];
         var chunkNormalMap = new byte[textureSize * textureSize * 4];
 
         for (var lod = maxLod; lod >= 0; lod--)
         {
+            Console.WriteLine($"Processing lod: {lod}");
             lodChunkOffsets.Add(chunks.Count);
 
             var scale = 1 << lod;
@@ -221,34 +234,24 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
             {
                 for (var x = 0; x < chunksPerRowCurrentLod; x++)
                 {
-                    FillChunkHeightmap(x, y, scale, textureSize);
+                    var (localMinHeight, localMaxHeight) = FillChunkHeightmap(x, y, scale, textureSize);
                     FillChunkNormalMap(x, y, scale, textureSize);
-
-                    ushort localMinHeight = ushort.MaxValue;
-                    ushort localMaxHeight = ushort.MinValue;
-
-                    for (var i = 0; i < chunkHeightmap.Length; i++)
-                    {
-                        localMinHeight = Math.Min(localMinHeight, chunkHeightmap[i]);
-                        localMaxHeight = Math.Max(localMaxHeight, chunkHeightmap[i]);
-                    }
+                    FillChunkControlMap(x, y, scale, textureSize);
 
                     var heightmapOffset = writer.BaseStream.Position;
-                    foreach (var v in chunkHeightmap)
-                    {
-                        writer.Write(v);
-                    }
+                    writer.Write(MemoryMarshal.AsBytes(chunkHeightmap.AsSpan()));
 
                     var normalMapOffset = writer.BaseStream.Position;
-                    foreach (var v in chunkNormalMap)
-                    {
-                        writer.Write(v);
-                    }
+                    writer.Write(MemoryMarshal.AsBytes(chunkNormalMap.AsSpan()));
+
+                    var controlMapOffset = writer.BaseStream.Position;
+                    writer.Write(MemoryMarshal.AsBytes(chunkControlMap.AsSpan()));
 
                     chunks.Add(new()
                     {
                         HeightmapOffset = heightmapOffset,
                         NormalMapOffset = normalMapOffset,
+                        ControlMapOffset = controlMapOffset,
                         MinHeight = ConvertToFloatHeight(0, ushort.MaxValue, localMinHeight) * maxHeight,
                         MaxHeight = ConvertToFloatHeight(0, ushort.MaxValue, localMaxHeight) * maxHeight
                     });
@@ -256,8 +259,11 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
             }
         }
 
-        void FillChunkHeightmap(int cx, int cy, int scale, int textureSize)
+        (uint localMinHeight, uint localMaxHeight) FillChunkHeightmap(int cx, int cy, int scale, int textureSize)
         {
+            ushort localMinHeight = ushort.MaxValue;
+            ushort localMaxHeight = ushort.MinValue;
+
             for (var y = 0; y < textureSize; y++)
             {
                 for (var x = 0; x < textureSize; x++)
@@ -267,6 +273,26 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
 
                     var height = heights[hy * terrainSize + hx];
                     chunkHeightmap[y * textureSize + x] = height;
+
+                    localMinHeight = Math.Min(localMinHeight, height);
+                    localMaxHeight = Math.Max(localMaxHeight, height);
+                }
+            }
+
+            return (localMinHeight, localMaxHeight);
+        }
+
+        void FillChunkControlMap(int cx, int cy, int scale, int textureSize)
+        {
+            for (var y = 0; y < textureSize; y++)
+            {
+                for (var x = 0; x < textureSize; x++)
+                {
+                    var hx = Math.Clamp(cx * chunkSize * scale + x * scale, 0, terrainSize - 1);
+                    var hy = Math.Clamp(cy * chunkSize * scale + y * scale, 0, terrainSize - 1);
+
+                    var value = controlMap[hy * terrainSize + hx];
+                    chunkControlMap[y * textureSize + x] = value;
                 }
             }
         }
@@ -280,18 +306,15 @@ rootCommand.SetHandler((input, outputPath, name, chunkSize, maxHeight, maxLod, g
                     var hx = cx * chunkSize * scale + x * scale;
                     var hy = cy * chunkSize * scale + y * scale;
 
-                    var normal = NormalAt(hx, hy);
-                    normal = normal * 0.5f + new Vector3(0.5f, 0.5f, 0.5f);
+                    var (nx, nz) = GetNormal(hx, hy);
 
-                    var index = (y * textureSize + x) * 4;
-                    chunkNormalMap[index + 0] = (byte)(normal.X * 255);
-                    chunkNormalMap[index + 1] = (byte)(normal.Y * 255);
-                    chunkNormalMap[index + 2] = (byte)(normal.Z * 255);
-                    chunkNormalMap[index + 3] = 255;
+                    var index = (y * textureSize + x) * 2;
+                    chunkNormalMap[index + 0] = nx;
+                    chunkNormalMap[index + 1] = nz;
                 }
             }
         }
     }
-}, inputOption, outputPathOption, nameOption, chunkSizeOption, maxHeightOption, maxLodOption, treesOptions);
+}, inputOption, controlMapOption, outputPathOption, nameOption, chunkSizeOption, maxHeightOption, unitsPerTexelOption, maxLodOption);
 
 await rootCommand.InvokeAsync(args);

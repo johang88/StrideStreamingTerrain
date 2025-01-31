@@ -17,11 +17,11 @@ public sealed class PhysicsManager : IDisposable
     private const int PhysicsEntityCount = 7;
 
     private readonly TerrainRuntimeData _terrain;
-    private readonly StreamingManager _streamingManager;
+    private readonly IStreamingManager _streamingManager;
     private readonly Scene _scene;
     private readonly PhysicsEntity[] _physicsEntities;
 
-    public PhysicsManager(TerrainRuntimeData terrain, Scene scene, StreamingManager streamingManager)
+    public PhysicsManager(TerrainRuntimeData terrain, Scene scene, IStreamingManager streamingManager)
     {
         _terrain = terrain;
         _scene = scene;

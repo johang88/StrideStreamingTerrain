@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "StrideTerrain.TexturePacker": {
+      "commandName": "Project",
+      "commandLineArgs": "--input \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Terrain\\pack\" --output \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Terrain\\Skellige\" --texture-size 2048"
+    }
+  }
+}

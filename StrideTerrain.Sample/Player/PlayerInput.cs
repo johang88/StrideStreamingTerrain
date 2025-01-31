@@ -6,6 +6,8 @@ using Stride.Engine;
 using Stride.Engine.Events;
 using Stride.Input;
 using Stride.Physics;
+using StrideTerrain.TerrainSystem;
+using StrideTerrain.TerrainSystem.Effects.Material;
 
 namespace StrideTerrain.Sample.Player;
 

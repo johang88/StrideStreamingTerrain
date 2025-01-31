@@ -17,6 +17,7 @@
         {
             stage Texture2D<float> Heightmap;
             stage Texture2D TerrainNormalMap;
+            stage Texture2D<int> TerrainControlMap;
             stage StructuredBuffer<ChunkData> ChunkBuffer;
             stage StructuredBuffer<int> SectorToChunkMapBuffer;
         }
@@ -25,6 +26,7 @@
         {
             stage uint ChunkSize;
             stage float InvTerrainTextureSize;
+            stage float TerrainTextureSize;
             stage float InvTerrainSize;
             stage float MaxHeight;
             stage uint ChunksPerRow;
