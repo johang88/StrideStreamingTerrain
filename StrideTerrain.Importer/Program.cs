@@ -169,7 +169,6 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
     // Write output stream data
     var textureSize = chunkSize + 1;
-    var normalMapTextureSize = chunkSize + 4;
     WriteStreamingData(outputPath, name, chunkSize, maxLod, heightmap, terrainSize, maxHeight, textureSize, chunks);
 
     lodChunkOffsets.Reverse();
@@ -220,7 +219,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
         var chunkHeightmap = new ushort[textureSize * textureSize];
         var chunkControlMap = new ushort[textureSize * textureSize];
-        var chunkNormalMap = new byte[textureSize * textureSize * 4];
+        var chunkNormalMap = new byte[textureSize * textureSize * 2];
 
         for (var lod = maxLod; lod >= 0; lod--)
         {

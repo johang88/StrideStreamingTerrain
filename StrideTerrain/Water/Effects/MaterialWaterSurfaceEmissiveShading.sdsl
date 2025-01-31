@@ -1,5 +1,5 @@
 ﻿/*
-Mostly taken from here https://codeberg.org/rmemr/w3.terrain-texturing and modified to work with stride.
+Mostly taken from here https://codeberg.org/rmemr/w3.terrain-texturing and modified to work with stride
 */
 
 namespace StrideTerrain.Water.Effects
@@ -74,9 +74,9 @@ namespace StrideTerrain.Water.Effects
             float sceneDepthCS = GetZProjDepthFromUV(screenSpaceUvOffset);
             float sceneDepthVS = ComputeDepthFromZProjReverseZ(sceneDepthCS);
 
-            float depthDifference = sceneDepthVS - depthVS;
+            float depthDifference = depthVS - sceneDepthVS;
 
-            uvOffset *= saturate(depthDifference);
+            uvOffset *= 1.0f - saturate(depthDifference);
 
             screenSpaceUvOffset = (streams.ShadingPosition.xy + uvOffset) / ViewSize.xy;
 
@@ -91,7 +91,7 @@ namespace StrideTerrain.Water.Effects
             float3 viewVector = Eye.xyz - streams.PositionWS.xyz;
             float3 viewDir = normalize(viewVector);
 
-            float fresnel = dot(streams.meshNormalWS, viewDir);
+            float fresnel = dot(streams.normalWS, viewDir);
             fresnel = saturate(1 - fresnel);
             fresnel =  saturate(FresenlOffset + FresnelStrength * pow(fresnel, FresnelPower));
 

@@ -42,8 +42,7 @@ public class MaterialWaterEmissiveMapFeature : MaterialFeature, IMaterialEmissiv
     public override void GenerateShader(MaterialGeneratorContext context)
     {
         context.MaterialPass.Parameters.Set(MaterialWaterSurfaceEmissiveShadingKeys.CausticsTexture, Caustics);
-        context.MaterialPass.Parameters.Set(WaterNormalMapKeys.NormalMap, Caustics);
-
+        
         context.MaterialPass.Parameters.Set(MaterialWaterSurfaceEmissiveShadingKeys.CausticsSpeed, CausticsSpeed);
         context.MaterialPass.Parameters.Set(MaterialWaterSurfaceEmissiveShadingKeys.CausticsScale, CausticsScale);
         context.MaterialPass.Parameters.Set(MaterialWaterSurfaceEmissiveShadingKeys.CausticsStrength, CausticsStrength);
@@ -58,6 +57,9 @@ public class MaterialWaterEmissiveMapFeature : MaterialFeature, IMaterialEmissiv
         context.MaterialPass.Parameters.Set(MaterialWaterSurfaceEmissiveShadingKeys.FresenlOffset, FresenlOffset);
         context.MaterialPass.Parameters.Set(MaterialWaterSurfaceEmissiveShadingKeys.FresnelStrength, FresnelStrength);
         context.MaterialPass.Parameters.Set(MaterialWaterSurfaceEmissiveShadingKeys.FresnelPower, FresnelPower);
+
+        context.MaterialPass.Parameters.Set(WaterNormalMapKeys.NormalMap, NormalMap);
+        context.MaterialPass.Parameters.Set(WaterNormalMapKeys.Speed, Speed);
 
         var shaderBuilder = context.AddShading(this);
         shaderBuilder.ShaderSources.Add(new ShaderClassSource("MaterialWaterSurfaceEmissiveShading"));
