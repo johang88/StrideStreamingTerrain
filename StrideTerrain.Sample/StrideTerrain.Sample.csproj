@@ -21,7 +21,6 @@
 	<ItemGroup>
 		<ProjectReference Include="..\StrideCommunity.ImGuiDebug\StrideCommunity.ImGuiDebug.csproj" />
 		<ProjectReference Include="..\StrideTerrain\StrideTerrain.csproj" />
-		<ProjectReference Include="..\TR.Stride.Atmosphere\TR.Stride.Atmosphere.csproj" />
 		<ProjectReference Include="..\TR.Stride.Ocean\TR.Stride.Ocean.csproj" />
 	</ItemGroup>
 

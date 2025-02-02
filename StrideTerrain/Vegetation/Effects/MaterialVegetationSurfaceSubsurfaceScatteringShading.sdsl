@@ -1,0 +1,49 @@
+﻿namespace StrideTerrain.Vegetation.Effects
+{
+	shader MaterialVegetationSurfaceSubsurfaceScatteringShading : IMaterialSurfaceShading, Math
+	{
+		compose ComputeColor SubsurfaceLightingAmount;
+		compose ComputeColor Extinction;
+
+		//stream float subsurfaceLightingAmount;
+		stream float3 extinction;
+
+		float3 CalculateSubSurfaceColor(float3 L, float3 V, float3 N, float subsurfaceLightingAmount, float3 diffuse, float3 extinction)
+		{
+			float3 H = normalize(L + V);
+			
+			float inScatter = pow(saturate(dot(L, -V)), 12) * lerp(3.0, 0.1, subsurfaceLightingAmount);
+			float normalContribution = saturate(dot(N, H) * subsurfaceLightingAmount + 1 - subsurfaceLightingAmount);
+			float backScatter = normalContribution / (PI * 2);
+			
+			return diffuse * lerp(backScatter, 1, inScatter) * extinction;
+		}
+
+		override void PrepareForLightingAndShading()
+		{
+			base.PrepareForLightingAndShading();
+			streams.subsurfaceLightingAmount = SubsurfaceLightingAmount.Compute().x ;
+			streams.extinction = Extinction.Compute().xyz;
+		}
+
+		override float3 ComputeDirectLightContribution()
+		{
+			float3 result = CalculateSubSurfaceColor(
+				streams.lightDirectionWS,
+				streams.viewWS,
+				streams.normalWS, 
+				streams.subsurfaceLightingAmount,
+				streams.lightColor * streams.matDiffuseVisible,
+				streams.extinction
+			);
+
+			return result;
+		}
+
+		override float3 ComputeEnvironmentLightContribution()
+		{
+			// Patched in Stride skybox light shader
+			return float3(0, 0, 0);
+		}
+	};
+}

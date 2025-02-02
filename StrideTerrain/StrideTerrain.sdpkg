@@ -10,6 +10,7 @@ AssetFolders:
     -   Path: !dir Assets
     -   Path: !dir Effects
     -   Path: !dir TerrainSystem/Effects
+    -   Path: !dir Weather/Effects
 ResourceFolders:
     - !dir Resources
 OutputGroupDirectories: {}

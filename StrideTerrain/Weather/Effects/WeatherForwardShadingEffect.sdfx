@@ -1,0 +1,16 @@
+﻿namespace StrideTerrain.Weather.Effects
+{
+    params WeatherForwardShadingEffectParameters
+    {
+        bool Enable = false;
+    }
+
+    effect WeatherForwardShadingEffect
+    {
+        using params WeatherForwardShadingEffectParameters;
+
+        mixin StrideForwardShadingEffect;
+        
+        mixin WeatherFordwardRenderer<WeatherForwardShadingEffectParameters.Enable>;
+    }
+}

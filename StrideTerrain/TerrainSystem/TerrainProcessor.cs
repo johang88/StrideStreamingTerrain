@@ -103,6 +103,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.ModelComponent.IsShadowCaster = false;
                 data.ModelComponent.Materials[0] = component.Material;
                 data.ModelComponent.Enabled = false; // Stays disabled until everything is ready.
+                data.ModelComponent.RenderGroup = component.RenderGroup;
 
                 data.TerrainDataUrl = component.TerrainData.Url;
                 data.IsInitialized = true;

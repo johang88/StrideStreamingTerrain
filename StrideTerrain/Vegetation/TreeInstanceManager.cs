@@ -19,7 +19,7 @@ public class TreeInstanceManager : StartupScript
 {
     private static readonly ProfilingKey ProfilingKeyDraw = new("Trees.Draw");
 
-    private static JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.General)
+    private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.General)
     {
         IncludeFields = true
     };
@@ -27,7 +27,7 @@ public class TreeInstanceManager : StartupScript
     public List<InstancingComponent> Models { get; set; } = [];
     public UrlReference? TreeData { get; set; }
 
-    private List<InstancingUserBuffer> _instancingBuffers = [];
+    private readonly List<InstancingUserBuffer> _instancingBuffers = [];
 
     public override void Cancel()
     {
@@ -72,7 +72,7 @@ public class TreeInstanceManager : StartupScript
                 continue;
 
             var i = Random.Shared.Next(0, Models.Count);
-            var scale = 0.8f + Random.Shared.NextSingle() * 1.8f;
+            var scale = 1.3f + Random.Shared.NextSingle() * 2.6f;
             var rotation = Random.Shared.NextSingle() * 3.14f * 2.0f;
             var matrix = Matrix.Scaling(scale) * Matrix.RotationY(rotation) * Matrix.Translation(tree.X, tree.Y, tree.Z);
             matrices[i].Add(matrix);
@@ -89,7 +89,7 @@ public class TreeInstanceManager : StartupScript
             var instancingBuffer = new InstancingUserBuffer
             {
                 InstanceWorldBuffer = Buffer.New(GraphicsDevice, worldMatrices, BufferFlags.ShaderResource | BufferFlags.StructuredBuffer),
-                InstanceWorldInverseBuffer = Buffer.New(GraphicsDevice, worldMatrices, BufferFlags.ShaderResource | BufferFlags.StructuredBuffer),
+                InstanceWorldInverseBuffer = Buffer.New(GraphicsDevice, inverseWorldMatrices, BufferFlags.ShaderResource | BufferFlags.StructuredBuffer),
                 InstanceCount = worldMatrices.Length,
                 BoundingBox = new BoundingBox(new(-8000, -400, -8000), new(8000, 400, 8000)) // TODO I guess
             };

@@ -1,0 +1,31 @@
+﻿namespace StrideTerrain.Weather.Effects
+{
+    shader WeatherFordwardRenderer<bool AerialPerspective> : WeatherForwardRendererBase, ShadingBase, PositionStream4, Camera, Transformation
+    {
+        stage override float4 Shading()
+        {
+            float4 shading = base.Shading();
+
+            float2 pixelPosition = streams.ShadingPosition.xy;
+            float2 uv = pixelPosition / ViewSize;
+
+            float3 cameraPosition = Eye.xyz;
+
+            float3 V = streams.PositionWS.xyz - cameraPosition;
+            float dist = length(V);
+            V /= dist;
+
+            float3 result = shading.rgb;
+            //if (AerialPerspective)
+            {
+                float4 AP = GetAerialPerspectiveTransmittance(uv, streams.PositionWS.z, cameraPosition, CameraVolumeLUT);
+                result = result.rgb * (1.0 - AP.a) + AP.rgb;
+            }
+
+            float4 fogColor = GetFogColor(Fog, Atmosphere, dist, cameraPosition, V, SunDirection, SunColor, SkyLuminanceLUT, TransmittanceLUT);
+            result = lerp(result, fogColor.rgb, fogColor.a);
+
+            return float4(result.rgb, shading.a);
+        }
+    };
+}

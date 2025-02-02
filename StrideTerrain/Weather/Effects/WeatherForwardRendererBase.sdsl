@@ -1,0 +1,22 @@
+﻿namespace StrideTerrain.Weather.Effects
+{
+    shader WeatherForwardRendererBase : FogBase, AtmosphereBase
+    {
+        cbuffer PerFrame.Weather
+        {
+			AtmosphereParameters Atmosphere;
+            FogParameters Fog;
+            float3 SunDirection;
+            float Padding0;
+            [Color] float3 SunColor;
+            float Padding;
+        }
+
+        rgroup PerFrame.Weather
+        {
+            stage Texture2D<float4> TransmittanceLUT;
+            stage Texture2D<float4> SkyLuminanceLUT;
+            stage Texture3D<float4> CameraVolumeLUT;
+        }
+    };
+}

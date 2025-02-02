@@ -18,7 +18,6 @@
 
 	<ItemGroup>
 		<ProjectReference Include="..\StrideTerrain.Sample\StrideTerrain.Sample.csproj" />
-		<ProjectReference Include="..\TR.Stride.Atmosphere\TR.Stride.Atmosphere.csproj" />
 		<ProjectReference Include="..\TR.Stride.Ocean\TR.Stride.Ocean.csproj" />
 	</ItemGroup>
 

@@ -18,8 +18,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StrideCommunity.ImGuiDebug", "StrideCommunity.ImGuiDebug\StrideCommunity.ImGuiDebug.csproj", "{C600FD5A-7763-44D1-B6B9-E92C0E5579F6}"
 EndProject
-Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TR.Stride.Atmosphere", "TR.Stride.Atmosphere\TR.Stride.Atmosphere.csproj", "{2D1A4EBC-0F14-4ABC-BD1D-97CA68FF8B73}"
-EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "StrideTerrain.Common", "StrideTerrain.Common\StrideTerrain.Common.csproj", "{45CBC32E-2F76-417F-8EEE-2F850AD2CAA8}"
 EndProject
 Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "TR.Stride.Common", "TR.Stride.Common\TR.Stride.Common.csproj", "{966204C8-99DD-4BCF-9655-F006A3007BB0}"
@@ -57,12 +55,6 @@ Global
 		{C600FD5A-7763-44D1-B6B9-E92C0E5579F6}.DebugExGameEditor|Any CPU.Build.0 = DebugExGameEditor|Any CPU
 		{C600FD5A-7763-44D1-B6B9-E92C0E5579F6}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{C600FD5A-7763-44D1-B6B9-E92C0E5579F6}.Release|Any CPU.Build.0 = Release|Any CPU
-		{2D1A4EBC-0F14-4ABC-BD1D-97CA68FF8B73}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{2D1A4EBC-0F14-4ABC-BD1D-97CA68FF8B73}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{2D1A4EBC-0F14-4ABC-BD1D-97CA68FF8B73}.DebugExGameEditor|Any CPU.ActiveCfg = DebugExGameEditor|Any CPU
-		{2D1A4EBC-0F14-4ABC-BD1D-97CA68FF8B73}.DebugExGameEditor|Any CPU.Build.0 = DebugExGameEditor|Any CPU
-		{2D1A4EBC-0F14-4ABC-BD1D-97CA68FF8B73}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{2D1A4EBC-0F14-4ABC-BD1D-97CA68FF8B73}.Release|Any CPU.Build.0 = Release|Any CPU
 		{45CBC32E-2F76-417F-8EEE-2F850AD2CAA8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{45CBC32E-2F76-417F-8EEE-2F850AD2CAA8}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45CBC32E-2F76-417F-8EEE-2F850AD2CAA8}.DebugExGameEditor|Any CPU.ActiveCfg = DebugExGameEditor|Any CPU

@@ -4,6 +4,7 @@ using Stride.Graphics;
 using Stride.Rendering.Compositing;
 using StrideCommunity.ImGuiDebug;
 using StrideTerrain.Rendering;
+using StrideTerrain.TerrainSystem;
 using System.Linq;
 
 namespace StrideTerrain.Sample;
@@ -16,11 +17,11 @@ public class SampleGame : Game
         _ = new ImGuiSystem(Services, GraphicsDeviceManager);
 
         //new PerfMonitor(Services);
-        //new HierarchyView(Services);
-        //Inspector.FindFreeInspector(Services).Target = SceneSystem.SceneInstance.RootScene.Entities.FirstOrDefault(x => x.Name == "Terrain")?.Get<TerrainComponent>();
+        new HierarchyView(Services);
+        Inspector.FindFreeInspector(Services).Target = SceneSystem.SceneInstance.RootScene.Entities.FirstOrDefault(x => x.Name == "Terrain")?.Get<TerrainComponent>();
 
-        var reverseZRenderer = (ReverseZRenderer)((SceneRendererCollection)((SceneCameraRenderer)SceneSystem.GraphicsCompositor.Game).Child).Children.First();
-        var forwardRenderer = (ForwardRenderer)reverseZRenderer.Child;
+        //var reverseZRenderer = (ReverseZRenderer)((SceneRendererCollection)((SceneCameraRenderer)SceneSystem.GraphicsCompositor.Game).Child).Children.First();
+        //var forwardRenderer = (ForwardRenderer)reverseZRenderer.Child;
         //Inspector.FindFreeInspector(Services).Target = forwardRenderer.PostEffects;
     }
 

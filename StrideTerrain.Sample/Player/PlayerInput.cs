@@ -43,99 +43,129 @@ public class PlayerInput : SyncScript
 
     public List<Keys> KeysJump { get; } = new List<Keys>();
 
+    private Entity _oldCameraEntity = null;
+
     public override void Update()
     {
-        // Character movement: should be camera-aware
+        if (_oldCameraEntity == null)
         {
-            // Left stick: movement
-            var moveDirection = Vector2.Zero;
-
-            // Keyboard: movement
-            if (KeysLeft.Any(key => Input.IsKeyDown(key)))
-                moveDirection += -Vector2.UnitX;
-            if (KeysRight.Any(key => Input.IsKeyDown(key)))
-                moveDirection += +Vector2.UnitX;
-            if (KeysUp.Any(key => Input.IsKeyDown(key)))
-                moveDirection += +Vector2.UnitY;
-            if (KeysDown.Any(key => Input.IsKeyDown(key)))
-                moveDirection += -Vector2.UnitY;
-
-            // Broadcast the movement vector as a world-space Vector3 to allow characters to be controlled
-            var worldSpeed = Camera != null
-                ? Utils.LogicDirectionToWorldDirection(moveDirection, Camera, Vector3.UnitY)
-                : new Vector3(moveDirection.X, 0, moveDirection.Y);
-
-            // Adjust vector's magnitute - worldSpeed has been normalized
-            var moveLength = moveDirection.Length();
-            var isDeadZoneLeft = moveLength < DeadZone;
-            if (isDeadZoneLeft)
+            // Character movement: should be camera-aware
             {
-                worldSpeed = Vector3.Zero;
-            }
-            else
-            {
-                if (moveLength > 1)
+                // Left stick: movement
+                var moveDirection = Vector2.Zero;
+
+                // Keyboard: movement
+                if (KeysLeft.Any(key => Input.IsKeyDown(key)))
+                    moveDirection += -Vector2.UnitX;
+                if (KeysRight.Any(key => Input.IsKeyDown(key)))
+                    moveDirection += +Vector2.UnitX;
+                if (KeysUp.Any(key => Input.IsKeyDown(key)))
+                    moveDirection += +Vector2.UnitY;
+                if (KeysDown.Any(key => Input.IsKeyDown(key)))
+                    moveDirection += -Vector2.UnitY;
+
+                // Broadcast the movement vector as a world-space Vector3 to allow characters to be controlled
+                var worldSpeed = Camera != null
+                    ? Utils.LogicDirectionToWorldDirection(moveDirection, Camera, Vector3.UnitY)
+                    : new Vector3(moveDirection.X, 0, moveDirection.Y);
+
+                // Adjust vector's magnitute - worldSpeed has been normalized
+                var moveLength = moveDirection.Length();
+                var isDeadZoneLeft = moveLength < DeadZone;
+                if (isDeadZoneLeft)
                 {
-                    moveLength = 1;
+                    worldSpeed = Vector3.Zero;
                 }
                 else
                 {
-                    moveLength = (moveLength - DeadZone) / (1f - DeadZone);
+                    if (moveLength > 1)
+                    {
+                        moveLength = 1;
+                    }
+                    else
+                    {
+                        moveLength = (moveLength - DeadZone) / (1f - DeadZone);
+                    }
+
+                    worldSpeed *= moveLength;
                 }
 
-                worldSpeed *= moveLength;
+                MoveDirectionEventKey.Broadcast(worldSpeed);
             }
 
-            MoveDirectionEventKey.Broadcast(worldSpeed);
+            // Camera rotation: left-right rotates the camera horizontally while up-down controls its altitude
+            {
+                // Right stick: camera rotation
+                var cameraDirection = Vector2.Zero;
+                var isDeadZoneRight = cameraDirection.Length() < DeadZone;
+                if (isDeadZoneRight)
+                    cameraDirection = Vector2.Zero;
+                else
+                    cameraDirection.Normalize();
+
+                // Mouse-based camera rotation. Only enabled after you click the screen to lock your cursor, pressing escape cancels this
+                if (Input.IsMouseButtonDown(MouseButton.Left) && !ImGui.GetIO().WantCaptureMouse)
+                {
+                    Input.LockMousePosition(true);
+                    Game.IsMouseVisible = false;
+                }
+                if (Input.IsKeyPressed(Keys.Escape))
+                {
+                    Input.UnlockMousePosition();
+                    Game.IsMouseVisible = true;
+                }
+                if (Input.IsMousePositionLocked)
+                {
+                    cameraDirection += new Vector2(Input.MouseDelta.X, -Input.MouseDelta.Y) * MouseSensitivity;
+                }
+
+                // Broadcast the camera direction directly, as a screen-space Vector2
+                CameraDirectionEventKey.Broadcast(cameraDirection);
+            }
+
+            // Jumping: don't bother with jump restrictions here, just pass the button states
+            {
+                // Keyboard: jumping
+                var didJump = KeysJump.Any(key => Input.IsKeyPressed(key));
+
+                JumpEventKey.Broadcast(didJump);
+            }
+
+            if (Input.IsKeyPressed(Keys.G))
+            {
+                var simulation = this.GetSimulation();
+                var p = Entity.Transform.Position;
+                var result = simulation.Raycast(new Vector3(p.X, 1000, p.Z), new Vector3(p.X, -1000, p.Z));
+
+                if (result.Succeeded && result.Collider.Entity != Entity)
+                {
+                    Entity.Get<CharacterComponent>().Teleport(result.Point);
+                }
+            }
         }
 
-        // Camera rotation: left-right rotates the camera horizontally while up-down controls its altitude
+        if (Input.IsKeyPressed(Keys.B))
         {
-            // Right stick: camera rotation
-            var cameraDirection = Vector2.Zero;
-            var isDeadZoneRight = cameraDirection.Length() < DeadZone;
-            if (isDeadZoneRight)
-                cameraDirection = Vector2.Zero;
+            if (_oldCameraEntity != null)
+            {
+                SceneSystem.SceneInstance.RootScene.Entities.Remove(Camera.Entity);
+                Camera.Entity.Remove(Camera);
+                _oldCameraEntity.Add(Camera);
+                _oldCameraEntity = null;
+            }
             else
-                cameraDirection.Normalize();
-
-            // Mouse-based camera rotation. Only enabled after you click the screen to lock your cursor, pressing escape cancels this
-            if (Input.IsMouseButtonDown(MouseButton.Left) && !ImGui.GetIO().WantCaptureMouse)
             {
-                Input.LockMousePosition(true);
-                Game.IsMouseVisible = false;
-            }
-            if (Input.IsKeyPressed(Keys.Escape))
-            {
-                Input.UnlockMousePosition();
-                Game.IsMouseVisible = true;
-            }
-            if (Input.IsMousePositionLocked)
-            {
-                cameraDirection += new Vector2(Input.MouseDelta.X, -Input.MouseDelta.Y) * MouseSensitivity;
-            }
+                _oldCameraEntity = Camera.Entity;
+                Camera.Entity.Remove(Camera);
 
-            // Broadcast the camera direction directly, as a screen-space Vector2
-            CameraDirectionEventKey.Broadcast(cameraDirection);
-        }
-
-        // Jumping: don't bother with jump restrictions here, just pass the button states
-        {
-            // Keyboard: jumping
-            var didJump = KeysJump.Any(key => Input.IsKeyPressed(key));
-
-            JumpEventKey.Broadcast(didJump);
-        }
-
-        if (Input.IsKeyPressed(Keys.G))
-        {
-            var simulation = this.GetSimulation();
-            var p = Entity.Transform.Position;
-            var result = simulation.Raycast(new Vector3(p.X, 1000, p.Z), new Vector3(p.X, -1000, p.Z));
-            
-            if (result.Succeeded && result.Collider.Entity != Entity)
-            {
-                Entity.Get<CharacterComponent>().Teleport(result.Point);
+                var cameraEntity = new Entity()
+                {
+                    Camera,
+                    new BasicCameraController()
+                };
+                cameraEntity.Transform.Position = Entity.Transform.Position;
+                cameraEntity.Transform.Rotation = Entity.Transform.Rotation;
+                SceneSystem.SceneInstance.RootScene.Entities.Add(cameraEntity);
             }
         }
     }

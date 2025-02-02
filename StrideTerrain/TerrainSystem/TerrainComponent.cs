@@ -34,4 +34,6 @@ public class TerrainComponent : EntityComponent
     [DataMember(11), DefaultValue(-1)] public int MaximumLod { get; set; } = -1;
 
     [DataMember(12), DefaultValue(0)] public int MinimumLod { get; set; } = 0;
+
+    [DataMember(15)] public RenderGroup RenderGroup { get; set; } = RenderGroup.Group29;
 }

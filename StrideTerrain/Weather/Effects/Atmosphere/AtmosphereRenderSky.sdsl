@@ -1,0 +1,124 @@
+﻿namespace StrideTerrain.Weather.Effects.Atmosphere
+{
+    shader AtmosphereRenderSky<bool RenderSun> : ImageEffectShader, AtmosphereBase, FogBase
+    {
+        stage Texture2D<float4> TransmittanceLUT;
+        stage Texture2D<float4> SkyLuminanceLUT;
+        stage Texture2D<float4> MultiScatteringLUT;
+        stage Texture2D<float4> SkyViewLUT;
+
+        cbuffer Atmosphere
+        {
+			AtmosphereParameters Atmosphere;
+            FogParameters Fog;
+            float4x4 InvViewProjection;
+            float3 SunDirection;
+            [Color] float3 SunColor;
+            float3 CameraPosition;
+            float2 InvResolution;
+        }
+
+        stage override float4 Shading()
+        {
+            float2 pixelPosition = streams.ShadingPosition.xy;
+            float4 unprojected = mul(float4((pixelPosition * InvResolution) * float2(2.0, -2.0) - float2(1.0, -1.0), 0, 1), InvViewProjection);
+	        unprojected.xyz /= unprojected.w;
+
+            const float3 V = normalize(unprojected.xyz - CameraPosition);
+
+            AtmosphereParameters atmosphere = Atmosphere;
+
+            float3 skyRelativePosition = CameraPosition;
+
+            float3 worldPosition = GetCameraPlanetPos(atmosphere, skyRelativePosition);
+            float3 worldDirection = V;
+
+            float viewHeight = length(worldPosition);
+            
+            float3 luminance = 0;
+
+            float3 sunDirection = SunDirection;
+
+            if (viewHeight < atmosphere.TopRadius)
+            {
+                float2 uv;
+                float3 upVector = normalize(worldPosition);
+                float viewZenithCosAngle = dot(worldDirection, upVector);
+
+                float3 sideVector = normalize(cross(upVector, worldDirection)); // Assumes non parallel vectors
+                float3 forwardVector = normalize(cross(sideVector, upVector)); // Aligns toward the sun light but perpendicular to up vector
+                float2 lightOnPlane = float2(dot(sunDirection, forwardVector), dot(sunDirection, sideVector));
+                lightOnPlane = normalize(lightOnPlane);
+                float lightViewCosAngle = lightOnPlane.x;
+
+                bool intersectGround = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0, 0, 0), atmosphere.BottomRadius) >= 0.0f;
+
+                SkyViewLutParamsToUv(atmosphere, intersectGround, viewZenithCosAngle, lightViewCosAngle, viewHeight, uv);
+
+		        luminance = SkyViewLUT.SampleLevel(SamplerLinearClamp, uv, 0).rgb;
+            }
+            else
+            {
+                // Move to top atmosphere as the starting point for ray marching.
+		        // This is critical to be after the above to not disrupt above atmosphere tests and voxel selection.
+		        if (MoveToTopAtmosphere(worldPosition, worldDirection, atmosphere.TopRadius))
+		        {
+			        // Apply the start offset after moving to the top of atmosphere to avoid black pixels
+			        worldPosition += worldDirection * AP_START_OFFSET_KM;
+
+			        float3 sunIlluminance = SunColor;
+
+			        const float tDepth = 0.0;
+			        const float sampleCountIni = 0.0;
+			        const bool variableSampleCount = true;
+			        const bool opaque = false;
+			        const bool ground = false;
+			        const bool mieRayPhase = true;
+			        const bool multiScatteringApprox = true;
+			        SingleScatteringResult ss = IntegrateScatteredLuminance(
+				        atmosphere, pixelPosition, worldPosition, worldDirection, sunDirection, sunIlluminance, tDepth, sampleCountIni, variableSampleCount,
+				        opaque, ground, mieRayPhase, multiScatteringApprox, TransmittanceLUT, MultiScatteringLUT);
+
+			        luminance = ss.L;
+		        }
+            }
+
+            if (RenderSun)
+            {
+                float3 sunIlluminance = SunColor;
+		        luminance = luminance + GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, TransmittanceLUT);
+            }
+
+            float3 totalColor = luminance;
+            {
+		        const float3 planetCenter = atmosphere.PlanetCenter * SKY_UNIT_TO_M;
+		        const float bottomRadius = atmosphere.BottomRadius * SKY_UNIT_TO_M;
+		        const float topRadius = bottomRadius + Fog.HeightEnd;
+                const float3 rayOrigin = CameraPosition;
+                const float3 rayDirection = V;
+		        float dist = RaySphereIntersectNearest(rayOrigin, rayDirection, planetCenter, topRadius);
+
+		        if(dist >= 0)
+		        {
+			        // Offset origin with fog start value.
+			        // We can't do this with normal distance due to infinite distance.
+			        const float3 offsetO = rayOrigin + rayDirection * Fog.Start;
+                    float4 fogColor = GetFogColor(Fog, atmosphere, dist, offsetO, rayDirection, sunDirection, SunColor, SkyLuminanceLUT, TransmittanceLUT);
+			        if (fogColor.a > 0) // this check avoids switching to fully fogged above fog level camera at zero density
+			        {
+				        if (length(rayOrigin - planetCenter) > topRadius) // check if we are above fog height sphere
+				        {
+					        // hack: flip fog when camera is above
+					        fogColor.a = 1 - fogColor.a; // this only supports non-premultiplied fog
+				        }
+				        totalColor = lerp(totalColor, fogColor.rgb, fogColor.a); // non-premultiplied fog
+			        }
+		        }
+            }
+
+            totalColor = clamp(totalColor, 0, 65000);
+
+            return float4(totalColor.xyz, 1);
+        }
+    };
+}

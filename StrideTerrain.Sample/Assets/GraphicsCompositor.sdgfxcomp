@@ -45,7 +45,7 @@ RenderFeatures:
                 RenderGroup*: Group0, Group1, Group2, Group3, Group4, Group5, Group6, Group7, Group8, Group9, Group10, Group11, Group12, Group13, Group14, Group15, Group16, Group17, Group18, Group19, Group20, Group21, Group22, Group23, Group24, Group25, Group26, Group27, Group28, Group29, Group30
                 OpaqueRenderStage: ref!! 36384924-9805-4c6b-a7f8-5a1aeed504f5
                 TransparentRenderStage: ref!! a0f4c837-aea2-48db-a2e6-bb8866f35fa4
-                EffectName*: AtmosphereForwardShadingEffect
+                EffectName*: WeatherForwardShadingEffect
             6f7224048750e7260ea87c444f74b32c: !Stride.Rendering.Shadows.ShadowMapRenderStageSelector,Stride.Rendering
                 ShadowMapRenderStage: ref!! 244215b8-2f84-470e-bfd3-1f9f8db74fa6
                 EffectName: StrideForwardShadingEffect.ShadowMapCaster
@@ -86,7 +86,7 @@ RenderFeatures:
             65743b4380f4cc43b2b4bdc23cd0c07c: !Stride.Rendering.Lights.ForwardLightingRenderFeature,Stride.Rendering
                 LightRenderers:
                     7ac2775468f53c4399b2f3f6357c85c9: !Stride.Rendering.Lights.LightAmbientRenderer,Stride.Rendering {}
-                    7b68f9cd17404a4ba9e5f7df72e3b48d*: !TR.Stride.Atmosphere.AtmosphereLightDirectionalGroupRenderer,TR.Stride.Atmosphere {}
+                    7b68f9cd17404a4ba9e5f7df72e3b48d*: !StrideTerrain.Weather.WeatherLightDirectionalGroupRenderer,StrideTerrain {}
                     411fdcfb9fc388449a0443173dfa3f27: !Stride.Rendering.Lights.LightSkyboxRenderer,Stride.Rendering {}
                     facdcd5b543cf1c6bdf2138aab6cc473: !Stride.Rendering.Lights.LightClusteredPointSpotGroupRenderer,Stride.Rendering {}
                     79582329a9cf466e960f8920f579de9b: !Stride.Rendering.Lights.LightPointGroupRenderer,Stride.Rendering {}
@@ -105,8 +105,8 @@ RenderFeatures:
                     CacheShadowMap: true
             42be209952db58294c9f06c58809b8ca: !Stride.Rendering.InstancingRenderFeature,Stride.Rendering {}
             9c99c0be553e2f63cd69b8507bbf6a5f*: !StrideTerrain.TerrainSystem.Rendering.TerrainRenderFeature,StrideTerrain {}
-            b0e1ca363300be39a469cdb542181fa4*: !TR.Stride.Atmosphere.AtmosphereTransparentRenderFeature,TR.Stride.Atmosphere {}
             6700e307d6a0f7a85b7f51dc6cdc2c66*: !StrideTerrain.Rendering.ProfilingKeyRenderFeature,StrideTerrain {}
+            ede89884d7890de51a8cc07de0f053ee*: !StrideTerrain.Weather.WeatherTransparentRenderFeature,StrideTerrain {}
     28e9bf54a5adbe063f59fb17acb2723e: !Stride.Rendering.Sprites.SpriteRenderFeature,Stride.Rendering
         RenderStageSelectors:
             d74665cff080638a2439c4422e542d85: !Stride.Rendering.Sprites.SpriteTransparentRenderStageSelector,Stride.Rendering
@@ -130,34 +130,14 @@ RenderFeatures:
                 TransparentRenderStage: ref!! a0f4c837-aea2-48db-a2e6-bb8866f35fa4
                 EffectName: null
         PipelineProcessors: {}
-    e2ba214589554ae39c5d75ef38cc31a6*: !TR.Stride.Atmosphere.AtmosphereRenderFeature,TR.Stride.Atmosphere
+    e2ba214589554ae39c5d75ef38cc31a6*: !StrideTerrain.Weather.WeatherRenderFeature,StrideTerrain
         RenderStageSelectors:
-            2bf86caf6d726fe3fb78413fe18c52a9: !Stride.Rendering.SimpleGroupToRenderStageSelector,Stride.Rendering
-                RenderStage: ref!! a0f4c837-aea2-48db-a2e6-bb8866f35fa4
-                EffectName: AtmosphereRenderSkyRayMarchingEffect
-        PipelineProcessors: {}
-        TransmittanceLutSettings:
-            Width: 256
-            Height: 64
-            Format: R16G16B16A16_Float
-        MultiScatteringTextureSettings:
-            Size: 32
-            Format: R16G16B16A16_Float
-        SkyViewLutSettings:
-            Width: 192
-            Height: 108
-            Format: R11G11B10_Float
-        AtmosphereCameraScatteringVolumeSettings:
-            Size: 32
-            Slices: 32
-            Format: R16G16B16A16_Float
-        FastSky: true
-        FastAerialPerspectiveEnabled: true
-        DrawDebugTextures: false
-        CloudCurlNoiseTexture: 1ad2816e-e961-4803-8704-d51dfd1e179f:Noise
-        CloudBlueNoiseTexture: 1ba8bbc0-a2dc-4d14-ad0d-5240a66eff1d:BlueNoise
-        WeatherTexture: 5398e085-e65d-43e5-b5a8-f011dbaf9d90:WeatherTexture
-        AtmosphereShadowFunction: !TR.Stride.Atmosphere.AtmosphereShadowFunctionNone,TR.Stride.Atmosphere {}
+            2bf86caf6d726fe3fb78413fe18c52a9: !StrideTerrain.Weather.WeatherRenderStageSelector,StrideTerrain
+                Opaque: ref!! 36384924-9805-4c6b-a7f8-5a1aeed504f5
+                Transparent: ref!! a0f4c837-aea2-48db-a2e6-bb8866f35fa4
+                EffectName: AtmosphereRenderSkyEffect
+        Opaque: ref!! 36384924-9805-4c6b-a7f8-5a1aeed504f5
+        Transparent: ref!! a0f4c837-aea2-48db-a2e6-bb8866f35fa4
 SharedRenderers:
     60459475d3a3adaf2d1ba5d99913ca75: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine
         Id: cc9387fc-ac31-40f8-bcfc-92e3167836d9
@@ -190,7 +170,8 @@ SharedRenderers:
         Clear:
             Id: 66a42307-1985-4316-871a-768449238c11
             Color: {R: 0.40491876, G: 0.41189542, B: 0.43775, A: 1.0}
-        LightProbes: true
+            Depth*: 0.0
+        LightProbes*: false
         OpaqueRenderStage: ref!! 36384924-9805-4c6b-a7f8-5a1aeed504f5
         TransparentRenderStage: ref!! a0f4c837-aea2-48db-a2e6-bb8866f35fa4
         ShadowMapRenderStages:
@@ -208,6 +189,8 @@ SharedRenderers:
         SubsurfaceScatteringBlurEffect: null
         MSAALevel: None
         MSAAResolver: {}
+        BindDepthAsResourceDuringTransparentRendering*: true
+        BindOpaqueAsResourceDuringTransparentRendering*: true
     34ecb9b2633eacfc439ba8744fe05102: !PostProcessingEffects
         Id: b02a154b-4af3-4a26-8e04-0528affd6417
         Outline:
@@ -222,7 +205,7 @@ SharedRenderers:
             FogStart: 10.0
             SkipBackground: false
         AmbientOcclusion:
-            Enabled*: true
+            Enabled*: false
         LocalReflections:
             Enabled: false
             ResolvePassResolution: Full
@@ -266,7 +249,14 @@ Game: !Stride.Rendering.Compositing.SceneCameraRenderer,Stride.Engine
             d39c5ddbf8b7d5ca02bafb6496b1cc3c*: !StrideTerrain.Rendering.ReverseZRenderer,StrideTerrain
                 Id: 1cc670fd-b2b2-4d27-8193-f73dff01c2de
                 Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! cc9387fc-ac31-40f8-bcfc-92e3167836d9
-            01d338078e9b21121ead0868932613dd*: !Stride.Rendering.Compositing.DebugRenderer,Stride.Rendering ref!! d8ec013d-d4f4-4296-8d72-91a34fc9d7b3
+            01d338078e9b21121ead0868932613dd*: !StrideTerrain.Rendering.CubeMapRenderer,StrideTerrain
+                Id: 96f1c405-5a43-4e51-8c8f-eae662a72291
+                Child: !StrideTerrain.Rendering.ReverseZRenderer,StrideTerrain
+                    Id: 2ceab78c-6362-44a8-97c0-63f393938d11
+                    Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
+                RenderMask: Group29, Group30
+                Resolution: 1024
+            761b5dd7e6f1514ae0ec8bf6836278c8*: !Stride.Rendering.Compositing.DebugRenderer,Stride.Rendering ref!! d8ec013d-d4f4-4296-8d72-91a34fc9d7b3
     RenderMask: All
 SingleView: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
 Editor*: !StrideTerrain.Rendering.ReverseZRenderer,StrideTerrain
