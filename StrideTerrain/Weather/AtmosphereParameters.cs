@@ -1,56 +1,58 @@
-﻿using Stride.Core.Mathematics;
+﻿using Stride.Core;
+using Stride.Core.Mathematics;
 using System.Runtime.InteropServices;
 
 namespace StrideTerrain.Weather;
 
+[DataContract]
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct AtmosphereParameters
 {
     // Radius of the planet (center to ground)
-    public float BottomRadius;
+    [DataMember] public float BottomRadius;
     // Maximum considered atmosphere height (center to atmosphere top)
-    public float TopRadius;
+    [DataMember] public float TopRadius;
 
-    public Vector2 Padding0;
+    [DataMemberIgnore] public Vector2 Padding0;
 
-    public Vector3 PlanetCenter;
+    [DataMember] public Vector3 PlanetCenter;
 
     // Rayleigh scattering exponential distribution scale in the atmosphere
-    public float RayleighDensityExpScale;
+    [DataMember] public float RayleighDensityExpScale;
     // Rayleigh scattering coefficients
-    public Vector3 RayleighScattering;
+    [DataMember] public Vector3 RayleighScattering;
 
     // Mie scattering exponential distribution scale in the atmosphere
-    public float MieDensityExpScale;
+    [DataMember] public float MieDensityExpScale;
     // Mie scattering coefficients
-    public Vector3 MieScattering;
-    public float Padding1;
+    [DataMember] public Vector3 MieScattering;
+    [DataMemberIgnore] public float Padding1;
     // Mie extinction coefficients
-    public Vector3 MieExtinction;
-    public float Padding2;
+    [DataMember] public Vector3 MieExtinction;
+    [DataMemberIgnore] public float Padding2;
     // Mie absorption coefficients
-    public Vector3 MieAbsorption;
+    [DataMember] public Vector3 MieAbsorption;
     // Mie phase function excentricity
-    public float MiePhaseG;
+    [DataMember] public float MiePhaseG;
 
     // Another medium type in the atmosphere
-    public float AbsorptionDensity0LayerWidth;
-    public float AbsorptionDensity0ConstantTerm;
-    public float AbsorptionDensity0LinearTerm;
-    public float AbsorptionDensity1ConstantTerm;
+    [DataMember] public float AbsorptionDensity0LayerWidth;
+    [DataMember] public float AbsorptionDensity0ConstantTerm;
+    [DataMember] public float AbsorptionDensity0LinearTerm;
+    [DataMember] public float AbsorptionDensity1ConstantTerm;
     // This other medium only absorb light, e.g. useful to represent ozone in the earth atmosphere
-    public Vector3 AbsorptionExtinction;
-    public float AbsorptionDensity1LinearTerm;
+    [DataMember] public Vector3 AbsorptionExtinction;
+    [DataMember] public float AbsorptionDensity1LinearTerm;
 
     // The albedo of the ground.
-    public Vector3 GroundAlbedo;
-    public float Padding3;
+    [DataMember] public Vector3 GroundAlbedo;
+    [DataMemberIgnore] public float Padding3;
 
-    public Vector2 RayMarchMinMaxSPP;
-    public float DistanceSPPMaxInv;
+    [DataMember] public Vector2 RayMarchMinMaxSPP;
+    [DataMember] public float DistanceSPPMaxInv;
 
     // Artist controlled distance scale of aerial perspective
-    public float AerialPerspectiveScale;
+    [DataMember] public float AerialPerspectiveScale;
 
     public AtmosphereParameters()
     {

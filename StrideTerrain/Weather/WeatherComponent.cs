@@ -9,8 +9,6 @@ public class WeatherComponent : EntityComponent
 {
     public LightComponent? Sun { get; set; }
 
-    public LightComponent? Sky { get; set; }
-
     public AtmosphereParameters Atmosphere { get; set; } = new();
 
     public FogParameters Fog { get; set; } = new();

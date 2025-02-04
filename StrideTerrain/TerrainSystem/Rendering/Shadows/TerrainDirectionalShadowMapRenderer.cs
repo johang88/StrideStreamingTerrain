@@ -4,10 +4,8 @@ using Stride.Rendering;
 using Stride.Rendering.Lights;
 using Stride.Rendering.Shadows;
 using Stride.Shaders;
-using StrideTerrain.Rendering;
-using StrideTerrain.TerrainSystem.Effects;
+using StrideTerrain.Rendering.ReverseZ;
 using StrideTerrain.TerrainSystem.Effects.Shadows;
-using StrideTerrain.TerrainSystem.Rendering;
 
 namespace StrideTerrain.TerrainSystem.Rendering.Shadows;
 

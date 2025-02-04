@@ -12,6 +12,7 @@ using System;
 using Buffer = Stride.Graphics.Buffer;
 using Stride.Core.Diagnostics;
 using StrideTerrain.Rendering;
+using StrideTerrain.Rendering.Profiling;
 
 namespace StrideTerrain.Vegetation;
 

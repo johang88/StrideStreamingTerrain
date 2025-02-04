@@ -2,7 +2,7 @@
 using Stride.Rendering;
 using System.Collections.Generic;
 
-namespace StrideTerrain.Rendering;
+namespace StrideTerrain.Rendering.ReverseZ;
 
 public class ReverseZPipelineProcessor : PipelineProcessor
 {

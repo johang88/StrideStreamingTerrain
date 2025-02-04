@@ -26,8 +26,8 @@ public class WeatherLightDirectionalGroupRenderer : LightGroupRendererShadow
 
     private class DirectionalLightShaderGroup : LightShaderGroupDynamic
     {
-        private ValueParameterKey<int> countKey;
-        private ValueParameterKey<DirectionalLightData> lightsKey;
+        private ValueParameterKey<int> countKey= null!;
+        private ValueParameterKey<DirectionalLightData> lightsKey = null!;
         private FastListStruct<DirectionalLightData> lightsData = new FastListStruct<DirectionalLightData>(8);
 
         public DirectionalLightShaderGroup(RenderContext renderContext, ILightShadowMapShaderGroupData shadowGroupData)
@@ -47,7 +47,7 @@ public class WeatherLightDirectionalGroupRenderer : LightGroupRendererShadow
             base.UpdateLightCount();
 
             var mixin = new ShaderMixinSource();
-            mixin.Mixins.Add(new ShaderClassSource("LightDirectionalGroup", LightCurrentCount));
+            mixin.Mixins.Add(new ShaderClassSource("WeatherLightDirectionalGroup", LightCurrentCount));
             // Old fixed path kept in case we need it again later
             //mixin.Mixins.Add(new ShaderClassSource("LightDirectionalGroup", LightCurrentCount));
             //mixin.Mixins.Add(new ShaderClassSource("DirectLightGroupFixed", LightCurrentCount));

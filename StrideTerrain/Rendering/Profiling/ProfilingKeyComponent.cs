@@ -3,7 +3,7 @@ using Stride.Core.Diagnostics;
 using Stride.Engine;
 using Stride.Engine.Design;
 
-namespace StrideTerrain.Rendering;
+namespace StrideTerrain.Rendering.Profiling;
 
 [DefaultEntityComponentRenderer(typeof(ProfilingKeyRenderProcessor))]
 public class ProfilingKeyComponent : EntityComponent

@@ -1,7 +1,7 @@
 ﻿using Stride.Graphics;
 using Stride.Rendering;
 
-namespace StrideTerrain.Rendering;
+namespace StrideTerrain.Rendering.ReverseZ;
 
 public class CustomWireframePipelineProcessor : PipelineProcessor
 {

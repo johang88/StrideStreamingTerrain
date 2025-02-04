@@ -69,12 +69,19 @@ public class WeatherTransparentRenderFeature :SubRenderFeature
         if (_weatherRenderFeature == null)
             return;
 
+        if (!context.RenderContext.Tags.TryGetValue(WeatherLutRenderer.TransmittanceLut, out var transmittanceLut))
+            return;
+
+        if (!context.RenderContext.Tags.TryGetValue(WeatherLutRenderer.MultiScatteredLuminanceLut, out var multiScatteredLuminanceLut))
+            return;
+
+        if (!context.RenderContext.Tags.TryGetValue(WeatherLutRenderer.SkyLuminanceLut, out var skyLuminanceLut))
+            return;
+
         var weather = _weatherRenderFeature.ActiveWeatherRenderObject;
         var cameraVolumeLut = _weatherRenderFeature.CameraVolumeLut;
-        var skyLuminanceLut = _weatherRenderFeature.SkyLuminanceLut;
-        var transmittanceLut = _weatherRenderFeature.TransmittanceLut;
 
-        if (weather == null || cameraVolumeLut == null || skyLuminanceLut == null || transmittanceLut == null)
+        if (weather == null || cameraVolumeLut == null)
             return;
 
         var logicalGroupKey = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameLogicalGroup("Weather");

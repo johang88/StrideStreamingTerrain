@@ -6,8 +6,7 @@
         {
             base.PrepareDirectLightCore(lightIndex);
 
-            float3 V = float3(0, 0, 0);
-            float3 transmittance = GetAtmosphericLightTransmittance(Atmosphere, streams.PositionWS, streams.lightDirectionWS, TransmittanceLUT);
+            float3 transmittance = GetAtmosphericLightTransmittance(Atmosphere, streams.PositionWS.xyz / streams.PositionWS.w, streams.lightDirectionWS, TransmittanceLUT);
 
             streams.lightColor *= transmittance;
         }

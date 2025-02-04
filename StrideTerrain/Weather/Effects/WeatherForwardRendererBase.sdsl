@@ -4,12 +4,12 @@
     {
         cbuffer PerFrame.Weather
         {
-			AtmosphereParameters Atmosphere;
-            FogParameters Fog;
-            float3 SunDirection;
-            float Padding0;
-            [Color] float3 SunColor;
-            float Padding;
+			stage AtmosphereParameters Atmosphere;
+            stage FogParameters Fog;
+            stage float3 SunDirection;
+            stage float Padding0;
+            [Color] stage float3 SunColor;
+            stage float Padding;
         }
 
         rgroup PerFrame.Weather

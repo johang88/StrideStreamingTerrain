@@ -1,15 +1,22 @@
 ﻿using Stride.Core;
+using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.Rendering;
 using Stride.Rendering.Compositing;
+using Stride.Rendering.ComputeEffect.GGXPrefiltering;
+using Stride.Rendering.ComputeEffect.LambertianPrefiltering;
+using Stride.Rendering.Skyboxes;
 using System;
 
 namespace StrideTerrain.Rendering;
 public class CubeMapRenderer : SceneRendererBase
 {
+    private static readonly ProfilingKey RenderCubeMapProfilingKey = new("CubeMapRenderer.RenderCubeMap");
+    private static readonly ProfilingKey AmbientProbeProfilingKey = new("CubeMapRenderer.AmbientProbe");
+    private static readonly ProfilingKey SpecularProbeProfilingKey = new("CubeMapRenderer.SpecularProbe");
+
     public static readonly PropertyKey<bool> IsRenderingCubemap = new("CubeMapRenderer.IsRenderingCubemap", typeof(RenderContext));
-    public static readonly PropertyKey<Texture?> Cubemap = new("CubeMapRenderer.CubeMap", typeof(RenderContext));
 
     private RenderView _renderView = new();
 
@@ -20,6 +27,12 @@ public class CubeMapRenderer : SceneRendererBase
     private int _currentFace = 0; // Render one face per frame
 
     private Texture? _cubeMap = null;
+    public Skybox? Skybox = null;
+
+    private LambertianPrefilteringSH? _lamberFiltering;
+    private RadiancePrefilteringGGX? _specularRadiancePrefilterGGX;
+
+    private Texture? _cubeMapSpecular;
 
     protected override void InitializeCore()
     {
@@ -27,13 +40,25 @@ public class CubeMapRenderer : SceneRendererBase
 
         _cubeMap = Texture.NewCube(Context.GraphicsDevice, Resolution, PixelFormat.R16G16B16A16_Float, TextureFlags.ShaderResource);
         _cubeMap.DisposeBy(this);
+
+        _cubeMapSpecular = Texture.NewCube(Context.GraphicsDevice, Resolution, MipMapCount.Auto, PixelFormat.R16G16B16A16_Float, TextureFlags.ShaderResource | TextureFlags.UnorderedAccess);
+        _cubeMapSpecular.DisposeBy(this);
+
+        _lamberFiltering = new LambertianPrefilteringSH(Context);
+        _lamberFiltering.DisposeBy(this);
+        _lamberFiltering.RadianceMap = _cubeMap;
+
+        _specularRadiancePrefilterGGX = new(Context);
+        _specularRadiancePrefilterGGX.DisposeBy(this);
+
+        _specularRadiancePrefilterGGX.RadianceMap = _cubeMap;
+        _specularRadiancePrefilterGGX.PrefilteredRadiance = _cubeMapSpecular;
+        _specularRadiancePrefilterGGX.SamplingsCount = 16;
     }
 
     protected override void CollectCore(RenderContext context)
     {
         base.CollectCore(context);
-
-        context.Tags.Set(Cubemap, _cubeMap);
 
         _currentFace++;
         if (_currentFace >= 6)
@@ -101,17 +126,50 @@ public class CubeMapRenderer : SceneRendererBase
         using (context.PushTagAndRestore(CameraComponentRendererExtensions.Current, null))
         using (drawContext.PushRenderTargetsAndRestore())
         {
-            _renderView.CullingMask = RenderMask;
+            using (drawContext.QueryManager.BeginProfile(Color4.Black, RenderCubeMapProfilingKey))
+            {
+                _renderView.CullingMask = RenderMask;
 
-            var depthBuffer = PushScopedResource(context.Allocator.GetTemporaryTexture2D(Resolution, Resolution, drawContext.CommandList.DepthStencilBuffer.ViewFormat, TextureFlags.DepthStencil | TextureFlags.ShaderResource));
-            var renderTexture = PushScopedResource(context.Allocator.GetTemporaryTexture2D(Resolution, Resolution, PixelFormat.R16G16B16A16_Float));
+                var depthBuffer = PushScopedResource(context.Allocator.GetTemporaryTexture2D(Resolution, Resolution, drawContext.CommandList.DepthStencilBuffer.ViewFormat, TextureFlags.DepthStencil | TextureFlags.ShaderResource));
+                var renderTexture = PushScopedResource(context.Allocator.GetTemporaryTexture2D(Resolution, Resolution, PixelFormat.R16G16B16A16_Float));
 
-            drawContext.CommandList.SetRenderTargetAndViewport(depthBuffer, renderTexture);
+                drawContext.CommandList.SetRenderTargetAndViewport(depthBuffer, renderTexture);
 
-            Child?.Draw(drawContext);
+                Child?.Draw(drawContext);
 
-            // TODO: Copy to correct face
-            drawContext.CommandList.CopyRegion(renderTexture, 0, null, _cubeMap, _currentFace);
+                // TODO: Copy to correct face
+                drawContext.CommandList.CopyRegion(renderTexture, 0, null, _cubeMap, _currentFace);
+            }
+        }
+
+        if (Skybox != null && _specularRadiancePrefilterGGX != null && _lamberFiltering != null)
+        {
+            using (drawContext.QueryManager.BeginProfile(Color4.Black, SpecularProbeProfilingKey))
+            {
+                using (drawContext.PushRenderTargetsAndRestore())
+                {
+                    _lamberFiltering.Draw(drawContext);
+                }
+
+                var coefficients = _lamberFiltering.PrefilteredLambertianSH.Coefficients;
+                for (int i = 0; i < coefficients.Length; i++)
+                {
+                    coefficients[i] = coefficients[i] * SphericalHarmonics.BaseCoefficients[i];
+                }
+
+                Skybox.DiffuseLightingParameters.Set(SphericalHarmonicsEnvironmentColorKeys.SphericalColors, coefficients);
+            }
+
+            using (drawContext.QueryManager.BeginProfile(Color4.Black, SpecularProbeProfilingKey))
+            {
+                using (drawContext.PushRenderTargetsAndRestore())
+                {
+                    _specularRadiancePrefilterGGX.Draw(drawContext);
+                    drawContext.CommandList.ClearState();
+                }
+
+                Skybox.SpecularLightingParameters.Set(SkyboxKeys.CubeMap, _cubeMapSpecular);
+            }
         }
     }
 }

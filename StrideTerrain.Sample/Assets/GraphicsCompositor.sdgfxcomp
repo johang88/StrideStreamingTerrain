@@ -73,7 +73,7 @@ RenderFeatures:
             ae4336b0a9514e8488e8e0ccbcef25f4: !Stride.Rendering.ShadowMeshPipelineProcessor,Stride.Rendering
                 ShadowMapRenderStage: ref!! 074c3873-7517-46d8-9949-e96ba285b716
                 DepthClipping: true
-            127b7e95cf88a85870201e64a779dc5c*: !StrideTerrain.Rendering.ReverseZPipelineProcessor,StrideTerrain
+            127b7e95cf88a85870201e64a779dc5c*: !StrideTerrain.Rendering.ReverseZ.ReverseZPipelineProcessor,StrideTerrain
                 ExcludedRenderStages:
                     0ea47998d7c93dc60d27e7d74715a68b: ref!! 244215b8-2f84-470e-bfd3-1f9f8db74fa6
                     ca274ea98cf012a3d2f9d68153934967: ref!! 2351e20a-ed9c-47b6-aaff-58e71b86a2b1
@@ -105,7 +105,7 @@ RenderFeatures:
                     CacheShadowMap: true
             42be209952db58294c9f06c58809b8ca: !Stride.Rendering.InstancingRenderFeature,Stride.Rendering {}
             9c99c0be553e2f63cd69b8507bbf6a5f*: !StrideTerrain.TerrainSystem.Rendering.TerrainRenderFeature,StrideTerrain {}
-            6700e307d6a0f7a85b7f51dc6cdc2c66*: !StrideTerrain.Rendering.ProfilingKeyRenderFeature,StrideTerrain {}
+            6700e307d6a0f7a85b7f51dc6cdc2c66*: !StrideTerrain.Rendering.Profiling.ProfilingKeyRenderFeature,StrideTerrain {}
             ede89884d7890de51a8cc07de0f053ee*: !StrideTerrain.Weather.WeatherTransparentRenderFeature,StrideTerrain {}
     28e9bf54a5adbe063f59fb17acb2723e: !Stride.Rendering.Sprites.SpriteRenderFeature,Stride.Rendering
         RenderStageSelectors:
@@ -246,20 +246,33 @@ Game: !Stride.Rendering.Compositing.SceneCameraRenderer,Stride.Engine
     Child: !Stride.Rendering.Compositing.SceneRendererCollection,Stride.Rendering
         Id: 82568e46-92e7-421a-8dca-114a74e0cd69
         Children:
-            d39c5ddbf8b7d5ca02bafb6496b1cc3c*: !StrideTerrain.Rendering.ReverseZRenderer,StrideTerrain
-                Id: 1cc670fd-b2b2-4d27-8193-f73dff01c2de
+            d39c5ddbf8b7d5ca02bafb6496b1cc3c*: !StrideTerrain.Weather.WeatherLutRenderer,StrideTerrain
+                Id: 49fdcbfb-b972-4dcd-beb2-60b70c3aca7d
+            761b5dd7e6f1514ae0ec8bf6836278c8*: !StrideTerrain.Rendering.ReverseZ.ReverseZRenderer,StrideTerrain
+                Id: 5c36ffa1-0c6b-456d-98df-11dbd4bb6c4a
                 Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! cc9387fc-ac31-40f8-bcfc-92e3167836d9
-            01d338078e9b21121ead0868932613dd*: !StrideTerrain.Rendering.CubeMapRenderer,StrideTerrain
-                Id: 96f1c405-5a43-4e51-8c8f-eae662a72291
-                Child: !StrideTerrain.Rendering.ReverseZRenderer,StrideTerrain
-                    Id: 2ceab78c-6362-44a8-97c0-63f393938d11
-                    Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
+            12487434ea264d141a6c33eed0bb1938*: !StrideTerrain.Rendering.CubeMapRenderer,StrideTerrain
+                Id: ddf153ea-1b1c-4349-9925-4eface69e84c
+                Skybox: 575c3c85-e2af-4c18-8240-c8075fee32f1:DynamicSkyBox
+                Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
                 RenderMask: Group29, Group30
                 Resolution: 1024
-            761b5dd7e6f1514ae0ec8bf6836278c8*: !Stride.Rendering.Compositing.DebugRenderer,Stride.Rendering ref!! d8ec013d-d4f4-4296-8d72-91a34fc9d7b3
+            bb10dc44a280d57b6755ec4af0e0bba2*: !Stride.Rendering.Compositing.DebugRenderer,Stride.Rendering ref!! d8ec013d-d4f4-4296-8d72-91a34fc9d7b3
+            01d338078e9b21121ead0868932613dd: ~(Deleted)
     RenderMask: All
 SingleView: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
-Editor*: !StrideTerrain.Rendering.ReverseZRenderer,StrideTerrain
-    Id: 60289cf5-d83f-455f-af0a-060789bddd05
-    Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! cc9387fc-ac31-40f8-bcfc-92e3167836d9
+Editor*: !Stride.Rendering.Compositing.SceneRendererCollection,Stride.Rendering
+    Id: 4b3721db-c7fa-41b2-b51a-ea30b483fd59
+    Children:
+        cc0e7155a5f70aec3685518af3e1edcf: !StrideTerrain.Weather.WeatherLutRenderer,StrideTerrain
+            Id: 98a21249-0f7f-46da-a057-a5b3aaf58082
+        9cae3bea0fafa40927a5d299bc6c831f: !StrideTerrain.Rendering.ReverseZ.ReverseZRenderer,StrideTerrain
+            Id: 9052674d-ec7f-40f6-ae65-f0000f2ba281
+            Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! cc9387fc-ac31-40f8-bcfc-92e3167836d9
+        ac0f31eb81efa14be58546c9d2beda5d: !StrideTerrain.Rendering.CubeMapRenderer,StrideTerrain
+            Id: 1b0c189b-2a72-4f4b-a813-3314f4ef9d5e
+            Skybox: 575c3c85-e2af-4c18-8240-c8075fee32f1:DynamicSkyBox
+            Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
+            RenderMask: Group29, Group30
+            Resolution: 1024
 BlockPositions: {}

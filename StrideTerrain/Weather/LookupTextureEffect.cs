@@ -10,7 +10,7 @@ public class LookupTextureEffect : ComponentBase
     public Texture Texture { get; }
     public ComputeEffectShader Effect { get; }
 
-    public LookupTextureEffect(WeatherRenderFeature renderFeature, RenderContext context, string effectName, int width, int height, int depth, PixelFormat pixelFormat)
+    public LookupTextureEffect(ICollectorHolder owner, RenderContext context, string effectName, int width, int height, int depth, PixelFormat pixelFormat)
     {
         if (depth == 1)
         {
@@ -25,6 +25,6 @@ public class LookupTextureEffect : ComponentBase
         Effect = new ComputeEffectShader(context) { ShaderSourceName = effectName };
         Effect.DisposeBy(this);
 
-        this.DisposeBy(renderFeature);
+        this.DisposeBy(owner);
     }
 }

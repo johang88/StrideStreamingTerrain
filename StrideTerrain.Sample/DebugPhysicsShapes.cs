@@ -6,6 +6,7 @@ using Stride.Physics;
 using Stride.Rendering;
 using Stride.Rendering.Compositing;
 using StrideTerrain.Rendering;
+using StrideTerrain.Rendering.ReverseZ;
 
 namespace StrideTerrain.Sample
 {

@@ -3,7 +3,7 @@ using Stride.Core.Diagnostics;
 using Stride.Rendering;
 using System.Collections.Generic;
 
-namespace StrideTerrain.Rendering;
+namespace StrideTerrain.Rendering.Profiling;
 
 /// <summary>
 /// Sets a profiling key on render mesh.
@@ -17,7 +17,7 @@ public class ProfilingKeyRenderFeature : SubRenderFeature
     {
         base.Extract();
 
-        if ((Context.VisibilityGroup == null) || (!Context.VisibilityGroup.Tags.TryGetValue(ModelToProfilingKeyMap, out var modelToProfilingKeyMap)))
+        if (Context.VisibilityGroup == null || !Context.VisibilityGroup.Tags.TryGetValue(ModelToProfilingKeyMap, out var modelToProfilingKeyMap))
             return;
 
         foreach (var objectNodeReference in RootRenderFeature.ObjectNodeReferences)

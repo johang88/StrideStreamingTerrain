@@ -2,7 +2,7 @@
 using Stride.Rendering;
 using Stride.Rendering.Compositing;
 
-namespace StrideTerrain.Rendering;
+namespace StrideTerrain.Rendering.ReverseZ;
 
 public class ReverseZRenderer : SceneRendererBase
 {

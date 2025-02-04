@@ -1,7 +1,7 @@
 ﻿using Stride.Core.Mathematics;
 using Stride.Rendering;
 using Stride.Rendering.Shadows;
-namespace StrideTerrain.Rendering;
+namespace StrideTerrain.Rendering.ReverseZ;
 
 public class LightDirectionalShadowMapRendererReverseZ : LightDirectionalShadowMapRenderer
 {

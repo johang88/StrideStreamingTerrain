@@ -3,6 +3,7 @@ using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
 using StrideTerrain.Rendering;
+using StrideTerrain.Rendering.Profiling;
 using StrideTerrain.TerrainSystem;
 using System;
 using System.Collections.Generic;

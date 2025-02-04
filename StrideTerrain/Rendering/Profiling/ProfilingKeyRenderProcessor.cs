@@ -5,7 +5,7 @@ using Stride.Games;
 using Stride.Rendering;
 using System.Collections.Generic;
 
-namespace StrideTerrain.Rendering;
+namespace StrideTerrain.Rendering.Profiling;
 
 public class ProfilingKeyRenderProcessor : EntityProcessor<ProfilingKeyComponent, ProfilingKeyRenderData>, IEntityComponentRenderProcessor
 {
