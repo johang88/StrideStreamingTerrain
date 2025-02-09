@@ -12,7 +12,9 @@ struct PerFrameTerrain
     public float InvTerrainTextureSize;
     public float TerrainTextureSize;
     public float InvTerrainSize;
+    public float InvShadowMapSize;
     public float MaxHeight;
+    public float InvMaxHeight;
     public uint ChunksPerRow;
     public float InvUnitsPerTexel;
 }

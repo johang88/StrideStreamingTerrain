@@ -1,0 +1,16 @@
+﻿namespace StrideTerrain.Rendering.Effects
+{
+    params RadiancePrefilteringGGXV2Params
+    {
+        uint NbOfSamplings;
+        uint BlockSize;
+        uint ThreadOffload;
+    }
+    
+    effect RadiancePrefilteringGGXEffectV2
+    {
+        using params RadiancePrefilteringGGXV2Params;
+                
+        mixin RadiancePrefilteringGGXShaderV2<RadiancePrefilteringGGXV2Params.NbOfSamplings, RadiancePrefilteringGGXV2Params.BlockSize, RadiancePrefilteringGGXV2Params.ThreadOffload>;
+    };
+}

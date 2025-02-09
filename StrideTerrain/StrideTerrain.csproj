@@ -30,6 +30,17 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <Compile Update="Rendering\Effects\RadiancePrefilteringGGXEffectV2.sdfx.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\RadiancePrefilteringGGXShaderV2.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>RadiancePrefilteringGGXShaderV2.sdsl</DependentUpon>
+	  </Compile>
 	  <Compile Update="TerrainSystem\Effects\Material\MaterialTerrainDiffuse.sdsl.cs">
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <DependentUpon>%(Filename)</DependentUpon>
@@ -70,6 +81,11 @@
 	    <AutoGen>True</AutoGen>
 	  </Compile>
 	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainAtmosphereShadow.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
@@ -186,6 +202,17 @@
 	    <AutoGen>True</AutoGen>
 	    <DependentUpon>FogRenderFog.sdsl</DependentUpon>
 	  </Compile>
+	  <Compile Update="Weather\Effects\VolumetricLight\VolumetricLightDiretionalBase.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DependentUpon>%(Filename)</DependentUpon>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\VolumetricLight\VolumetricLightDiretional.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Weather\Effects\WeatherFordwardRenderer.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -208,6 +235,12 @@
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
+	  <None Update="Rendering\Effects\RadiancePrefilteringGGXEffectV2.sdfx">
+	    <LastGenOutput>RadiancePrefilteringGGXEffectV2.sdfx.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\RadiancePrefilteringGGXShaderV2.sdsl">
+	    <LastGenOutput>RadiancePrefilteringGGXShaderV2.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="TerrainSystem\Effects\Material\MaterialTerrainDiffuse.sdsl">
 	    <LastGenOutput>MaterialTerrainDiffuse.sdsl.cs</LastGenOutput>
 	  </None>
@@ -225,6 +258,9 @@
 	  </None>
 	  <None Update="TerrainSystem\Effects\Shadows\TerrainAtmosphereShadow.sdsl">
 	    <LastGenOutput>TerrainAtmosphereShadow.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl">
+	    <LastGenOutput>TerrainShadowBase.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="TerrainSystem\Effects\TerrainData.sdsl">
 	    <LastGenOutput>TerrainData.sdsl.cs</LastGenOutput>
@@ -294,6 +330,13 @@
 	  </None>
 	  <None Update="Weather\Effects\Fog\FogRenderFog.sdsl">
 	    <LastGenOutput>FogRenderFog.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\VolumetricLight\VolumetricLightDiretionalBase.sdsl">
+	    <LastGenOutput>VolumetricLightDiretionalBase.sdsl.cs</LastGenOutput>
+	    <Generator>StrideShaderKeyGenerator</Generator>
+	  </None>
+	  <None Update="Weather\Effects\VolumetricLight\VolumetricLightDiretional.sdsl">
+	    <LastGenOutput>VolumetricLightDiretional.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Weather\Effects\WeatherFordwardRenderer.sdsl">
 	    <LastGenOutput>WeatherFordwardRenderer.sdsl.cs</LastGenOutput>

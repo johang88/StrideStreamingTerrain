@@ -3,13 +3,12 @@ using Stride.Rendering;
 using StrideTerrain.Weather.Effects;
 using System.Runtime.InteropServices;
 using Stride.Core.Mathematics;
+using System.ComponentModel;
 
 namespace StrideTerrain.Weather;
 
 public class WeatherTransparentRenderFeature :SubRenderFeature
 {
-    private WeatherRenderFeature? _weatherRenderFeature;
-
     private ConstantBufferOffsetReference _offset;
 
     protected override void InitializeCore()
@@ -23,15 +22,7 @@ public class WeatherTransparentRenderFeature :SubRenderFeature
     {
         base.PrepareEffectPermutations(context);
 
-        // Try finding root atmosphere render feature
-        _weatherRenderFeature = null;
-        foreach (var renderFeature in ((RootEffectRenderFeature)RootRenderFeature).RenderSystem.RenderFeatures)
-        {
-            if (renderFeature is WeatherRenderFeature weatherRenderFeature)
-            {
-                _weatherRenderFeature = weatherRenderFeature;
-            }
-        }
+        var hasWeather = context.RenderContext.Tags.TryGetValue(WeatherRenderObject.Current, out var weather);
 
         var renderEffectKey = ((RootEffectRenderFeature)RootRenderFeature).RenderEffectKey;
 
@@ -46,7 +37,7 @@ public class WeatherTransparentRenderFeature :SubRenderFeature
                 continue;
 
             var material = renderMesh.MaterialPass;
-            var shouldRenderAtmosphereForRenderObject = material.HasTransparency && _weatherRenderFeature != null;
+            var shouldRenderAtmosphereForRenderObject = material.HasTransparency && hasWeather;
 
             for (int i = 0; i < effectSlotCount; ++i)
             {
@@ -57,7 +48,9 @@ public class WeatherTransparentRenderFeature :SubRenderFeature
                 if (renderEffect == null || !renderEffect.IsUsedDuringThisFrame(RenderSystem))
                     continue;
 
-                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.Enable, shouldRenderAtmosphereForRenderObject);
+                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableAerialPerspective, true);
+                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableVolumetricSunLight, shouldRenderAtmosphereForRenderObject);
+                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableHeightFog, hasWeather && weather.Fog.Density > 0);
             }
         }
     }
@@ -66,7 +59,7 @@ public class WeatherTransparentRenderFeature :SubRenderFeature
     {
         base.Prepare(context);
 
-        if (_weatherRenderFeature == null)
+        if (!context.RenderContext.Tags.TryGetValue(WeatherRenderObject.Current, out var weather))
             return;
 
         if (!context.RenderContext.Tags.TryGetValue(WeatherLutRenderer.TransmittanceLut, out var transmittanceLut))
@@ -78,10 +71,10 @@ public class WeatherTransparentRenderFeature :SubRenderFeature
         if (!context.RenderContext.Tags.TryGetValue(WeatherLutRenderer.SkyLuminanceLut, out var skyLuminanceLut))
             return;
 
-        var weather = _weatherRenderFeature.ActiveWeatherRenderObject;
-        var cameraVolumeLut = _weatherRenderFeature.CameraVolumeLut;
+        if (!context.RenderContext.Tags.TryGetValue(WeatherRenderFeature.CameraVolumeLut, out var cameraVolumeLut))
+            return;
 
-        if (weather == null || cameraVolumeLut == null)
+        if (weather == null)
             return;
 
         var logicalGroupKey = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameLogicalGroup("Weather");

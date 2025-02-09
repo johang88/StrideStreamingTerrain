@@ -1,0 +1,41 @@
+﻿namespace StrideTerrain.Weather.Effects.VolumetricLight
+{
+    shader VolumetricLightDiretional : ImageEffectShader, VolumetricLightDiretionalBase
+    {
+        stage Texture2D<float4> TransmittanceLUT;
+        stage Texture2D DepthTexture;
+
+        cbuffer Atmosphere
+        {
+			AtmosphereParameters Atmosphere;
+            FogParameters Fog;
+            float4x4 InvViewProjection;
+            float3 SunDirection;
+            [Color] float3 SunColor;
+            float3 CameraPosition;
+            float2 InvResolution;
+        }
+
+        stage override float4 Shading()
+        {
+            float2 pixelPosition = streams.ShadingPosition.xy;
+
+            float2 uv = (pixelPosition + 0.5f) * InvResolution;
+
+            float depth = DepthTexture[pixelPosition];
+            
+            float2 clipSpace = uv * float2(2.0, -2.0) - float2(1.0, -1.0);
+            
+            float4 worldPosition = mul(float4(clipSpace, depth, 1.0), InvViewProjection);
+            float3 P = worldPosition.xyz / worldPosition.w;
+
+            float3 V = P.xyz - CameraPosition;
+            float cameraDistance = length(V);
+            V /= cameraDistance;
+
+            float3 volumetricLight = RayMarchVolumetricDirectionalLight(Atmosphere, Fog, P, -V, SunDirection, SunColor, CameraPosition, cameraDistance, TransmittanceLUT);
+
+            return float4(volumetricLight, 1);
+        }
+    };
+}

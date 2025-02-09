@@ -1,7 +1,9 @@
 ﻿using Stride.Core;
 using Stride.Core.Mathematics;
+using Stride.Graphics;
 using Stride.Rendering;
 using Stride.Rendering.ComputeEffect;
+using Stride.Rendering.Images;
 using Stride.Rendering.Lights;
 using Stride.Rendering.Shadows;
 using StrideTerrain.TerrainSystem.Effects;
@@ -26,6 +28,7 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
     private static ValueParameterKey<Int4> StartXYKey = ParameterKeys.NewValue(Int4.Zero, "TerrainShadowGenerator.StartXY");
 
     private ComputeEffectShader? _terrainShadowGeneratorEffect;
+    private GaussianBlur? _gaussianBlur;
 
     internal Int4[] StartsBuffer = new Int4[4096];
     internal PerGroupDataStruct[] PerGroupDataBuffer = new PerGroupDataStruct[4096];
@@ -39,9 +42,8 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
 
     public override void Draw(RenderDrawContext drawContext)
     {
-        if (drawContext.Tags.TryGetValue(TerrainRenderFeature.TerrainList, out var terrains) && terrains.Count == 1)
+        if (drawContext.Tags.TryGetValue(TerrainRenderFeature.Current, out var terrain))
         {
-            var terrain = terrains[0];
             DrawTerrainShadowMap(drawContext, terrain);
         }
 
@@ -79,6 +81,16 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             _terrainShadowGeneratorEffect.DisposeBy(drawContext);
         }
 
+        if (_gaussianBlur == null)
+        {
+            _gaussianBlur = new()
+            {
+                Radius = 8,
+                SigmaRatio = 0.5f
+            };
+            _gaussianBlur.DisposeBy(drawContext);
+        }
+
         var lightDirection = directionalLight.Direction;
         lightDirection.Normalize();
 
@@ -89,14 +101,14 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             lightCosAngleChange = MathUtil.Clamp(lightCosAngleChange, -1.0f, 1.0f);
         }
 
-        if (lightCosAngleChange < 0.99f || terrain.GpuTextureManager!.InvalidateShadowMap)
+        if (lightCosAngleChange < 0.99f || terrain.GpuTextureManager.InvalidateShadowMap)
         {
             terrain.GpuTextureManager.InvalidateShadowMap = false;
             _previousLightDirection = lightDirection;
             var shadowMapToTerrainSize = terrain.TerrainData.Header.Size / TerrainRuntimeData.ShadowMapSize;
 
             var xzDimensions = new Vector2(terrain.TerrainData.Header.Size * terrain.UnitsPerTexel, terrain.TerrainData.Header.Size * terrain.UnitsPerTexel);
-            //var xzDimensions = new Vector2(terrain.ShadowMap.Width, terrain.ShadowMap.Height);
+            //var xzDimensions = new Vector2(TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize);
 
             var lightDir2d = new Vector2(lightDirection.X, lightDirection.Z);
             lightDir2d.Normalize();
@@ -264,11 +276,13 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             }
 
             // Set parameters and dispatch
+            var shadowMap = drawContext.RenderContext.Allocator.GetTemporaryTexture2D(terrain.GpuTextureManager.ShadowMap.Description);
+
             _terrainShadowGeneratorEffect.Parameters.Set(StartXYKey, StartsBuffer.Length, ref StartsBuffer[0]);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.PerGroupData, PerGroupDataBuffer.Length, ref PerGroupDataBuffer[0]);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMap, terrain.GpuTextureManager.ShadowMap);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMap, shadowMap);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMapToTerrainSize, (uint)shadowMapToTerrainSize);
-            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.Heightmap, terrain.GpuTextureManager!.Heightmap.AtlasTexture);
+            _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.Heightmap, terrain.GpuTextureManager.Heightmap.AtlasTexture);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.SectorToChunkMapBuffer, terrain.MeshManager!.SectorToChunkMapBuffer);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkBuffer, terrain.MeshManager!.ChunkBuffer);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainDataKeys.ChunkSize, (uint)terrain.TerrainData.Header.ChunkSize);
@@ -280,6 +294,15 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             _terrainShadowGeneratorEffect.ThreadNumbers = new Int3((int)threadsPerGroup, 1, 1);
 
             _terrainShadowGeneratorEffect.Draw(drawContext, "ShadowMapRenderer.Terrain");
+
+            using (drawContext.PushRenderTargetsAndRestore())
+            {
+                _gaussianBlur.SetInput(shadowMap);
+                _gaussianBlur.SetOutput(terrain.GpuTextureManager.ShadowMap);
+                _gaussianBlur.Draw(drawContext, "ShadowMapRenderer.GaussianBlur");
+            }
+
+            drawContext.RenderContext.Allocator.ReleaseReference(shadowMap);
         }
     }
 

@@ -1,6 +1,6 @@
 ﻿namespace StrideTerrain.Weather.Effects.Atmosphere
 {
-    shader AtmosphereRenderSky<bool RenderSun> : ImageEffectShader, AtmosphereBase, FogBase
+    shader AtmosphereRenderSky<bool RenderSun, bool EnableHeightFog> : ImageEffectShader, AtmosphereBase, FogBase
     {
         stage Texture2D<float4> TransmittanceLUT;
         stage Texture2D<float4> SkyLuminanceLUT;
@@ -90,6 +90,8 @@
             }
 
             float3 totalColor = luminance;
+
+            if (EnableHeightFog)
             {
 		        const float3 planetCenter = atmosphere.PlanetCenter * SKY_UNIT_TO_M;
 		        const float bottomRadius = atmosphere.BottomRadius * SKY_UNIT_TO_M;

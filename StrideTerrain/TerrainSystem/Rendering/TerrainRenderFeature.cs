@@ -14,11 +14,14 @@ public class TerrainRenderFeature : SubRenderFeature
     private static readonly ProfilingKey ProfilingKeyDraw = new("Terrain.Draw");
     private static readonly ProfilingKey ProflingKeyCull = new("Terrain.Cull");
 
-    [DataMemberIgnore]
-    public static readonly PropertyKey<Dictionary<RenderModel, TerrainRuntimeData>> ModelToTerrainMap = new("TerrainRenderFeature.ModelToTerrainMap", typeof(TerrainRenderFeature));
-    public static readonly PropertyKey<List<TerrainRuntimeData>> TerrainList = new("TerrainRenderFeature.Terrains", typeof(TerrainRenderFeature));
+    [DataMemberIgnore] public static readonly PropertyKey<Dictionary<RenderModel, TerrainRuntimeData>> ModelToTerrainMap = new("TerrainRenderFeature.ModelToTerrainMap", typeof(TerrainRenderFeature));
+    [DataMemberIgnore] public static readonly PropertyKey<TerrainRuntimeData> Current = new("TerrainRenderFeature.Current", typeof(TerrainRenderFeature));
+
+    [DataMember] public RenderStage? OpaqueRenderStage { get; set; }
 
     private ConstantBufferOffsetReference _chunkSizeOffset;
+
+    private RenderMesh? _renderMesh;
 
     protected override void InitializeCore()
     {
@@ -58,16 +61,13 @@ public class TerrainRenderFeature : SubRenderFeature
     {
         base.Prepare(context);
 
-        if (Context.VisibilityGroup == null || !Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap))
-            return;
+        _renderMesh = null;
 
-        // It's a bit ugly but a convenient to get data to the shadow map renderer.
-        if (!context.Tags.TryGetValue(TerrainList, out var terrains))
+        if (Context.VisibilityGroup == null || !Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap))
         {
-            terrains = new(1);
-            context.Tags.Add(TerrainList, terrains);
+            context.Tags.Remove(Current);
+            return;
         }
-        terrains.Clear();
 
         foreach (var renderNode in RootRenderFeature.RenderObjects)
         {
@@ -88,6 +88,8 @@ public class TerrainRenderFeature : SubRenderFeature
                 renderMesh.Enabled = false;
                 continue;
             }
+
+            _renderMesh = renderMesh;
 
             // Update global buffer data
             data.MeshManager!.UpdateBuffers(context.CommandList);
@@ -108,6 +110,17 @@ public class TerrainRenderFeature : SubRenderFeature
                 perFrameTerrain->InvTerrainTextureSize = TerrainRuntimeData.InvRuntimeTextureSize;
                 perFrameTerrain->TerrainTextureSize = TerrainRuntimeData.RuntimeTextureSize;
                 perFrameTerrain->InvTerrainSize = 1.0f / (data.TerrainData.Header.Size * data.UnitsPerTexel);
+
+                perFrameTerrain->InvShadowMapSize = 0.0f;
+                if (data.GpuTextureManager!.ShadowMap != null)
+                {
+                    float invUnitsPerTexel = 1.0f / data.UnitsPerTexel;
+                    float invShadowMapsSize = invUnitsPerTexel * (1.0f / data.TerrainData.Header.Size);
+
+                    perFrameTerrain->InvShadowMapSize = invShadowMapsSize;
+                    perFrameTerrain->InvMaxHeight = 1.0f / data.TerrainData.Header.MaxHeight;
+                }
+
                 perFrameTerrain->MaxHeight = data.TerrainData.Header.MaxHeight;
                 perFrameTerrain->ChunksPerRow = (uint)data.ChunksPerRowLod0;
                 perFrameTerrain->InvUnitsPerTexel = 1.0f / data.UnitsPerTexel;
@@ -119,11 +132,12 @@ public class TerrainRenderFeature : SubRenderFeature
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.GpuTextureManager!.Heightmap.AtlasTexture);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.GpuTextureManager!.NormalMap.AtlasTexture);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.GpuTextureManager!.ControlMap.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.MeshManager.ChunkBuffer);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 4, data.MeshManager.SectorToChunkMapBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.GpuTextureManager!.ShadowMap);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 4, data.MeshManager.ChunkBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 5, data.MeshManager.SectorToChunkMapBuffer);
             }
 
-            terrains.Add(data);
+            context.Tags.Set(Current, data);
             break; // Currently only support single terrain
         }
     }
@@ -135,37 +149,31 @@ public class TerrainRenderFeature : SubRenderFeature
         if (Context.VisibilityGroup == null || !Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap))
             return;
 
+        //if (renderView.Index != OpaqueRenderStage?.Index)
+        //    return;
+
+        if (_renderMesh == null)
+            return;
+
         var frustum = new BoundingFrustum(ref renderView.ViewProjection);
 
         using var profilingScope = context.QueryManager.BeginProfile(Color4.Black, ProflingKeyCull);
 
-        foreach (var renderNode in RootRenderFeature.RenderObjects)
+        var renderModel = _renderMesh.RenderModel;
+        if (renderModel == null)
+            return;
+
+        if (!modelToTerrainMap.TryGetValue(renderModel, out var data))
+            return;
+
+        if (!data.IsInitialized)
         {
-            // TODO: Check render stage index thing? It currently triggers in the debug renderer which it should not?
-            // Or just do this properly with the override for the alternative Draw(...).
-            if (renderNode is not RenderMesh renderMesh)
-                continue;
-
-            var renderModel = renderMesh.RenderModel;
-            if (renderModel == null)
-                continue;
-
-            if (!modelToTerrainMap.TryGetValue(renderModel, out var data))
-            {
-                continue;
-            }
-
-            if (!data.IsInitialized)
-            {
-                renderMesh.Enabled = false;
-                continue;
-            }
-
-            // TODO: Can this and the buffer upload be done in Prepare? Would need a buffer for each view in that case.
-
-            // Prepare and upload instancing data for the draw call.
-            data.MeshManager!.PrepareDraw(context.CommandList, renderMesh, frustum, renderView.VisiblityIgnoreDepthPlanes);
-            renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.MeshManager.ChunkInstanceDataBuffer);
+            _renderMesh.Enabled = false;
+            return;
         }
+
+        // Prepare and upload instancing data for the draw call.
+        data.MeshManager!.PrepareDraw(context.CommandList, _renderMesh, frustum, renderView.VisiblityIgnoreDepthPlanes);
+        _renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.MeshManager.ChunkInstanceDataBuffer);
     }
 }

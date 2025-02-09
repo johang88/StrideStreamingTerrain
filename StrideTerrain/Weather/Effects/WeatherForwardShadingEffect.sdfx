@@ -2,7 +2,9 @@
 {
     params WeatherForwardShadingEffectParameters
     {
-        bool Enable = false;
+        bool EnableAerialPerspective = false;
+        bool EnableVolumetricSunLight = false;
+        bool EnableHeightFog = false;
     }
 
     effect WeatherForwardShadingEffect
@@ -11,6 +13,9 @@
 
         mixin StrideForwardShadingEffect;
         
-        mixin WeatherFordwardRenderer<WeatherForwardShadingEffectParameters.Enable>;
+        mixin WeatherFordwardRenderer<
+            WeatherForwardShadingEffectParameters.EnableAerialPerspective, 
+            WeatherForwardShadingEffectParameters.EnableVolumetricSunLight, 
+            WeatherForwardShadingEffectParameters.EnableHeightFog>;
     }
 }

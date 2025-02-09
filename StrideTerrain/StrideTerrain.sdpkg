@@ -11,6 +11,7 @@ AssetFolders:
     -   Path: !dir Effects
     -   Path: !dir TerrainSystem/Effects
     -   Path: !dir Weather/Effects
+    -   Path: !dir Rendering/Effects
 ResourceFolders:
     - !dir Resources
 OutputGroupDirectories: {}

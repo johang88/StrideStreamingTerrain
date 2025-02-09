@@ -36,7 +36,7 @@ public class GpuTextureManager : IDisposable
         Heightmap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UNorm, atlasSize, chunkTextureSize, terrain.Header.ChunkTextureSize);
         NormalMap = new StreamingTextureAtlas(graphicsDevice, terrain.Header.CompressedNormalMap ? PixelFormat.BC5_UNorm : PixelFormat.R8G8_UNorm, atlasSize, chunkTextureSize, terrain.Header.NormalMapTextureSize);
         ControlMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UInt, atlasSize, chunkTextureSize, terrain.Header.ChunkTextureSize);
-        ShadowMap = Texture.New2D(graphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R10G10B10A2_UNorm, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
+        ShadowMap = Texture.New2D(graphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R10G10B10A2_UNorm, TextureFlags.UnorderedAccess | TextureFlags.RenderTarget | TextureFlags.ShaderResource);
 
         var chunksPerRow = Math.Min(Heightmap.ChunksPerRow, NormalMap.ChunksPerRow);
 

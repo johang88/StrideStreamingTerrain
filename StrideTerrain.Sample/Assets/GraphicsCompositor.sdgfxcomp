@@ -104,7 +104,8 @@ RenderFeatures:
                             ShadowCasterRenderStage: ref!! 074c3873-7517-46d8-9949-e96ba285b716
                     CacheShadowMap: true
             42be209952db58294c9f06c58809b8ca: !Stride.Rendering.InstancingRenderFeature,Stride.Rendering {}
-            9c99c0be553e2f63cd69b8507bbf6a5f*: !StrideTerrain.TerrainSystem.Rendering.TerrainRenderFeature,StrideTerrain {}
+            9c99c0be553e2f63cd69b8507bbf6a5f*: !StrideTerrain.TerrainSystem.Rendering.TerrainRenderFeature,StrideTerrain
+                OpaqueRenderStage: ref!! 36384924-9805-4c6b-a7f8-5a1aeed504f5
             6700e307d6a0f7a85b7f51dc6cdc2c66*: !StrideTerrain.Rendering.Profiling.ProfilingKeyRenderFeature,StrideTerrain {}
             ede89884d7890de51a8cc07de0f053ee*: !StrideTerrain.Weather.WeatherTransparentRenderFeature,StrideTerrain {}
     28e9bf54a5adbe063f59fb17acb2723e: !Stride.Rendering.Sprites.SpriteRenderFeature,Stride.Rendering
@@ -240,6 +241,27 @@ SharedRenderers:
     ee80a20a9bd99f2d70711114e15fe7ca: !Stride.Rendering.Compositing.DebugRenderer,Stride.Rendering
         Id: d8ec013d-d4f4-4296-8d72-91a34fc9d7b3
         DebugRenderStages: {}
+    f17d9530b765ce37d3d6b57f592005b1*: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine
+        Id: 0bf6c515-95e2-4c47-b37b-334aea979554
+        Clear:
+            Id: 2c5eefc0-c840-4927-8440-8832842737a1
+            Color: {R: 0.40392157, G: 0.4117647, B: 0.43529412, A: 1.0}
+            Depth: 0.0
+        LightProbes: false
+        OpaqueRenderStage: ref!! 36384924-9805-4c6b-a7f8-5a1aeed504f5
+        TransparentRenderStage: ref!! a0f4c837-aea2-48db-a2e6-bb8866f35fa4
+        ShadowMapRenderStages: {}
+        GBufferRenderStage: ref!! b4d1bdee-66ef-42ef-a8b1-3e6cd45d7f97
+        PostEffects: null
+        LightShafts: null
+        VRSettings:
+            Enabled: false
+            RequiredApis: {}
+            Overlays: {}
+            RequestPassthrough: false
+        SubsurfaceScatteringBlurEffect: null
+        MSAALevel: None
+        MSAAResolver: {}
 Game: !Stride.Rendering.Compositing.SceneCameraRenderer,Stride.Engine
     Id: 76fe87cf-f574-4ad6-85b8-e9a9586be0e2
     Camera: ref!! e8beb24c-7acd-4fea-ba82-a672d9225f3f
@@ -254,7 +276,9 @@ Game: !Stride.Rendering.Compositing.SceneCameraRenderer,Stride.Engine
             12487434ea264d141a6c33eed0bb1938*: !StrideTerrain.Rendering.CubeMapRenderer,StrideTerrain
                 Id: ddf153ea-1b1c-4349-9925-4eface69e84c
                 Skybox: 575c3c85-e2af-4c18-8240-c8075fee32f1:DynamicSkyBox
-                Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
+                Child: !StrideTerrain.Rendering.ReverseZ.ReverseZRenderer,StrideTerrain
+                    Id: 92829b43-d11f-4aef-9369-b95e31f54a5a
+                    Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 0bf6c515-95e2-4c47-b37b-334aea979554
                 RenderMask: Group29, Group30
                 Resolution: 1024
             bb10dc44a280d57b6755ec4af0e0bba2*: !Stride.Rendering.Compositing.DebugRenderer,Stride.Rendering ref!! d8ec013d-d4f4-4296-8d72-91a34fc9d7b3
@@ -272,7 +296,9 @@ Editor*: !Stride.Rendering.Compositing.SceneRendererCollection,Stride.Rendering
         ac0f31eb81efa14be58546c9d2beda5d: !StrideTerrain.Rendering.CubeMapRenderer,StrideTerrain
             Id: 1b0c189b-2a72-4f4b-a813-3314f4ef9d5e
             Skybox: 575c3c85-e2af-4c18-8240-c8075fee32f1:DynamicSkyBox
-            Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 4c7f05a2-d981-4f45-b138-f3e253e9f1f6
+            Child: !StrideTerrain.Rendering.ReverseZ.ReverseZRenderer,StrideTerrain
+                Id: d4a6eb9d-6824-426b-935d-267008541b83
+                Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 0bf6c515-95e2-4c47-b37b-334aea979554
             RenderMask: Group29, Group30
             Resolution: 1024
 BlockPositions: {}

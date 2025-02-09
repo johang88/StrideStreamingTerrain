@@ -5,15 +5,20 @@ using Stride.Rendering;
 using Stride.Rendering.ComputeEffect;
 using Stride.Rendering.Images;
 using StrideTerrain.Rendering;
+using StrideTerrain.TerrainSystem.Effects;
+using StrideTerrain.TerrainSystem.Rendering;
 using StrideTerrain.Weather.Effects.Atmosphere;
 using StrideTerrain.Weather.Effects.Atmosphere.LUT;
 using StrideTerrain.Weather.Effects.Fog;
+using StrideTerrain.Weather.Effects.VolumetricLight;
 using System;
 
 namespace StrideTerrain.Weather;
 
 public class WeatherRenderFeature : RootRenderFeature
 {
+    public static readonly PropertyKey<Texture> CameraVolumeLut = new("WeatherRenderFeature.CameraVolumeLut", typeof(WeatherRenderObject));
+
     [DataMember] public RenderStage? Opaque { get; set; }
     [DataMember] public RenderStage? Transparent { get; set; }
 
@@ -24,15 +29,12 @@ public class WeatherRenderFeature : RootRenderFeature
     private ImageEffectShader? _renderSkyEffect;
     private ImageEffectShader? _renderSkyEffectNoSun;
     private ImageEffectShader? _renderFogEffect;
+    private ImageEffectShader? _renderVolumetricLightDirectional;
     private ComputeEffectShader? _renderAerialPerspectiveEffect;
 
     private Texture? _depthShaderResourceView;
 
     private SpriteBatch? _spriteBatch;
-
-    public WeatherRenderObject? ActiveWeatherRenderObject { get; private set; }
-
-    public Texture? CameraVolumeLut => _cameraVolumeLut.Texture;
 
     protected override void InitializeCore()
     {
@@ -66,6 +68,10 @@ public class WeatherRenderFeature : RootRenderFeature
         };
         _renderFogEffect.BlendState = BlendStates.AlphaBlend;
 
+        _renderVolumetricLightDirectional = new ImageEffectShader("VolumetricLightDiretional");
+        _renderVolumetricLightDirectional.DisposeBy(this);
+        _renderVolumetricLightDirectional.BlendState = BlendStates.Additive;
+
         _renderAerialPerspectiveEffect = new(Context) { ShaderSourceName = "AtmosphereRenderAerialPerspective" };
         _renderAerialPerspectiveEffect.DisposeBy(this);
 
@@ -73,11 +79,23 @@ public class WeatherRenderFeature : RootRenderFeature
         _spriteBatch.DisposeBy(this);
     }
 
+    public override void Prepare(RenderDrawContext context)
+    {
+        base.Prepare(context);
+
+        if (!context.RenderContext.Tags.TryGetValue(WeatherRenderObject.Current, out var weather) || _cameraVolumeLut == null)
+        {
+            context.RenderContext.Tags.Remove(CameraVolumeLut);
+        }
+        else
+        {
+            context.RenderContext.Tags.Set(CameraVolumeLut, _cameraVolumeLut.Texture);
+        }
+    }
+
     public override void Draw(RenderDrawContext context, RenderView renderView, RenderViewStage renderViewStage, int startIndex, int endIndex)
     {
         base.Draw(context, renderView, renderViewStage, startIndex, endIndex);
-
-        ActiveWeatherRenderObject = null;
 
         // Can only ever be one weather component active so abort if empty
         if (startIndex == endIndex)
@@ -98,7 +116,6 @@ public class WeatherRenderFeature : RootRenderFeature
         var renderNodeReference = renderViewStage.SortedRenderNodes[startIndex].RenderNode;
         var renderNode = GetRenderNode(renderNodeReference);
         var renderObject = (WeatherRenderObject)renderNode.RenderObject;
-        ActiveWeatherRenderObject = renderObject;
 
         var atmosphere = renderObject.Atmosphere;
         var fog = renderObject.Fog;
@@ -129,6 +146,8 @@ public class WeatherRenderFeature : RootRenderFeature
             RenderSky(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, multiScatteredLuminanceLut, skyLuminanceLut, skyViewLut);
             //RenderAerialPerspective(context, aerialPerspectiveRenderTarget);
             //RenderFog(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize);
+
+            RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut);
 
             _depthShaderResourceView = null;
             //context.RenderContext.Allocator.ReleaseReference(aerialPerspectiveRenderTarget);
@@ -172,8 +191,8 @@ public class WeatherRenderFeature : RootRenderFeature
         _renderAerialPerspectiveEffect.Draw(context);
     }
 
-    private void RenderSky(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor, Vector3 cameraPosition, Matrix invViewProjection, Vector2 invViewSize,
-        Texture transmittanceLut, Texture mulitScatteredLuminanceLut, Texture skyLuminanceLut, Texture skyViewLut)
+    private void RenderSky(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor, Vector3 cameraPosition,
+        Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut, Texture mulitScatteredLuminanceLut, Texture skyLuminanceLut, Texture skyViewLut)
     {
         if (_depthShaderResourceView == null || _renderSkyEffect == null)
             return;
@@ -195,11 +214,11 @@ public class WeatherRenderFeature : RootRenderFeature
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.CameraPosition, cameraPosition);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.InvViewProjection, invViewProjection);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.InvResolution, invViewSize);
-        renderSkyEffect!.Draw(context, "Atmosphere.RenderSky");
+        renderSkyEffect.Draw(context, "Atmosphere.RenderSky");
     }
 
-    private void RenderFog(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor, Vector3 cameraPosition, Matrix invViewProjection, Vector2 invViewSize,
-        Texture transmittanceLut, Texture skyLuminanceLut)
+    private void RenderFog(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor, Vector3 cameraPosition,
+        Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut, Texture skyLuminanceLut)
     {
         if (_depthShaderResourceView == null || _renderFogEffect == null)
             return;
@@ -214,12 +233,48 @@ public class WeatherRenderFeature : RootRenderFeature
         _renderFogEffect.Parameters.Set(FogRenderFogKeys.CameraPosition, cameraPosition);
         _renderFogEffect.Parameters.Set(FogRenderFogKeys.InvViewProjection, invViewProjection);
         _renderFogEffect.Parameters.Set(FogRenderFogKeys.InvResolution, invViewSize);
-        _renderFogEffect!.Draw(context, "Atmosphere.RenderFog");
+        _renderFogEffect.Draw(context, "Atmosphere.RenderFog");
+    }
+
+    private void RenderVolumetricLightDirectional(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor,
+        Vector3 cameraPosition, Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut)
+    {
+        if (_depthShaderResourceView == null || _renderVolumetricLightDirectional == null)
+            return;
+
+        context.Tags.TryGetValue(TerrainRenderFeature.Current, out var terrain);
+
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.TransmittanceLUT, transmittanceLut);
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.DepthTexture, _depthShaderResourceView);
+        _renderVolumetricLightDirectional.Parameters.Set(TerrainDataKeys.TerrainShadowMap, terrain?.GpuTextureManager?.ShadowMap);
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.Atmosphere, atmosphere);
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.Fog, fog);
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.SunDirection, sunDirection);
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.SunColor, sunColor);
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.CameraPosition, cameraPosition);
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.InvViewProjection, invViewProjection);
+        _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.InvResolution, invViewSize);
+
+        if (terrain != null && terrain.GpuTextureManager != null)
+        {
+            float invUnitsPerTexel = 1.0f / terrain.UnitsPerTexel;
+            float invShadowMapsSize = invUnitsPerTexel * (1.0f / terrain.TerrainData.Header.Size);
+
+            _renderVolumetricLightDirectional.Parameters.Set(TerrainDataKeys.InvShadowMapSize, invShadowMapsSize);
+            _renderVolumetricLightDirectional.Parameters.Set(TerrainDataKeys.InvMaxHeight, 1.0f / terrain.TerrainData.Header.MaxHeight);
+        }
+        else
+        {
+            _renderVolumetricLightDirectional.Parameters.Set(TerrainDataKeys.InvShadowMapSize, 0.0f);
+        }
+
+        _renderVolumetricLightDirectional.Draw(context, "Atmosphere.RenderVolumetricLightDirectional");
     }
     #endregion
 
     #region Render Atmosphere LUT
-    void RenderCameraVolume(RenderDrawContext context, AtmosphereParameters atmosphere, Matrix invViewProjection, Vector3 cameraPosition, Vector3 sunDirection, Color3 sunColor, Texture transmittanceLut, Texture mulitScatteredLuminanceLut)
+    void RenderCameraVolume(RenderDrawContext context, AtmosphereParameters atmosphere, Matrix invViewProjection, Vector3 cameraPosition, Vector3 sunDirection, Color3 sunColor,
+        Texture transmittanceLut, Texture mulitScatteredLuminanceLut)
     {
         if (_cameraVolumeLut == null)
             return;

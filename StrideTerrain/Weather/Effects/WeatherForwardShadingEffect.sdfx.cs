@@ -18,7 +18,9 @@ namespace StrideTerrain.Weather.Effects
 {
     [DataContract]public partial class WeatherForwardShadingEffectParameters : ShaderMixinParameters
     {
-        public static readonly PermutationParameterKey<bool> Enable = ParameterKeys.NewPermutation<bool>(false);
+        public static readonly PermutationParameterKey<bool> EnableAerialPerspective = ParameterKeys.NewPermutation<bool>(false);
+        public static readonly PermutationParameterKey<bool> EnableVolumetricSunLight = ParameterKeys.NewPermutation<bool>(false);
+        public static readonly PermutationParameterKey<bool> EnableHeightFog = ParameterKeys.NewPermutation<bool>(false);
     };
     internal static partial class ShaderMixins
     {
@@ -27,7 +29,7 @@ namespace StrideTerrain.Weather.Effects
             public void Generate(ShaderMixinSource mixin, ShaderMixinContext context)
             {
                 context.Mixin(mixin, "StrideForwardShadingEffect");
-                context.Mixin(mixin, "WeatherFordwardRenderer", context.GetParam(WeatherForwardShadingEffectParameters.Enable));
+                context.Mixin(mixin, "WeatherFordwardRenderer", context.GetParam(WeatherForwardShadingEffectParameters.EnableAerialPerspective), context.GetParam(WeatherForwardShadingEffectParameters.EnableVolumetricSunLight), context.GetParam(WeatherForwardShadingEffectParameters.EnableHeightFog));
             }
 
             [System.Runtime.CompilerServices.ModuleInitializer]
