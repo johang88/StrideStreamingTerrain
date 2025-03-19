@@ -24,7 +24,7 @@ public class CubeMapRenderer : SceneRendererBase
     public RenderGroupMask RenderMask { get; set; } = RenderGroupMask.All;
     public int Resolution { get; set; } = 1024;
 
-    private int _currentFace = 0; // Render one face per frame
+    private int _currentFace =-1; // Render one face per frame
 
     private Texture? _cubeMap = null;
     public Skybox? Skybox = null;
@@ -63,8 +63,7 @@ public class CubeMapRenderer : SceneRendererBase
         _currentFace++;
         if (_currentFace >= 6)
         {
-            _currentFace = -1;
-            return;
+            _currentFace = 0;
         }
 
         var inverseViewMatrix = Matrix.Invert(context.RenderView.View);
