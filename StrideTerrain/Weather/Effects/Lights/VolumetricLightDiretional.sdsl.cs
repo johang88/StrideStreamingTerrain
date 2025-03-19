@@ -14,7 +14,7 @@ using Stride.Shaders;
 using Stride.Core.Mathematics;
 using Buffer = Stride.Graphics.Buffer;
 
-namespace StrideTerrain.Weather.Effects.VolumetricLight
+namespace StrideTerrain.Weather.Effects.Lights
 {
     public static partial class VolumetricLightDiretionalKeys
     {

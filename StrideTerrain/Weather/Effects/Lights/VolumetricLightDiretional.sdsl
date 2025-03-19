@@ -1,4 +1,4 @@
-﻿namespace StrideTerrain.Weather.Effects.VolumetricLight
+﻿namespace StrideTerrain.Weather.Effects.Lights
 {
     shader VolumetricLightDiretional : ImageEffectShader, VolumetricLightDiretionalBase
     {

@@ -30,6 +30,12 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <Compile Update="Rendering\Effects\CubeMapEnvironmentColor.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>CubeMapEnvironmentColor.sdsl</DependentUpon>
+	  </Compile>
 	  <Compile Update="Rendering\Effects\RadiancePrefilteringGGXEffectV2.sdfx.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -207,6 +213,11 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Weather\Effects\Lights\CubeMapEnvironmentColor.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Weather\Effects\Lights\VolumetricLightDiretional.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -335,8 +346,14 @@
 	  <None Update="Weather\Effects\Fog\FogRenderFog.sdsl">
 	    <LastGenOutput>FogRenderFog.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="Rendering\Effects\CubeMapEnvironmentColor.sdsl">
+	    <LastGenOutput>CubeMapEnvironmentColor.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Weather\Effects\Lights\AtmosphereCubeMapEnvironmentColor.sdsl">
 	    <LastGenOutput>AtmosphereCubeMapEnvironmentColor.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Lights\CubeMapEnvironmentColor.sdsl">
+	    <LastGenOutput>CubeMapEnvironmentColor.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl">
 	    <LastGenOutput>VolumetricLightDiretionalBase.sdsl.cs</LastGenOutput>

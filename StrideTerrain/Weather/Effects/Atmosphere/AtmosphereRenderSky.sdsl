@@ -18,6 +18,49 @@
             float2 InvResolution;
         }
 
+        float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, AtmosphereParameters atmosphere, Texture2D<float4> transmittanceLutTexture)
+		{
+			//float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
+			float sunApexAngleDegree = 2.4; // Modified sun size
+			float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
+			float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
+
+			float3 retval = 0;
+
+			float t = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.BottomRadius);
+			if (t < 0.0f) // no intersection
+			{
+				float VdotL = dot(worldDirection, normalize(sunDirection)); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
+				if (VdotL > sunCosHalfApexAngle)
+				{
+					// Edge fade
+					const float halfCosHalfApex = sunCosHalfApexAngle + (1.0f - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
+					const float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
+
+					retval = weight * sunIlluminance;
+				}
+
+				// https://www.shadertoy.com/view/NtsBzB
+				const float starsAmount = 0.6f;
+				if (starsAmount > 0.0f)
+				{
+					float starsVisibility = pow(saturate(1 - sunDirection.y), 2);
+					float3 starsDirection = normalize(worldDirection); // could be view vector for example
+					float starsThreshold = lerp(24, 12, starsAmount); // modifies the number of stars that are visible
+					float starsExposure = lerp(0, 500.0f, starsVisibility); // modifies the overall strength of the stars
+					float stars = pow(saturate(NoiseGradient3d(starsDirection * 200.0f)), starsThreshold) * starsExposure;
+					stars *= lerp(0.4, 1.4, NoiseGradient3d(starsDirection * 100.0f + Time));
+
+					retval += stars;
+				}
+
+				const float3 atmosphereTransmittance = GetAtmosphereTransmittance(worldPosition, worldDirection, atmosphere, transmittanceLutTexture);
+				retval *= atmosphereTransmittance;
+			}
+    
+			return retval;
+		}
+
         stage override float4 Shading()
         {
             float2 pixelPosition = streams.ShadingPosition.xy;

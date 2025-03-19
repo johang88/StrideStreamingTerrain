@@ -5,7 +5,7 @@ using Stride.Rendering;
 using Stride.Shaders;
 using System;
 
-namespace StrideTerrain.Weather;
+namespace StrideTerrain.Weather.Lights;
 
 /// <summary>
 /// All this just to override the mixin name ... 
@@ -26,9 +26,9 @@ public class WeatherLightDirectionalGroupRenderer : LightGroupRendererShadow
 
     private class DirectionalLightShaderGroup : LightShaderGroupDynamic
     {
-        private ValueParameterKey<int> countKey= null!;
+        private ValueParameterKey<int> countKey = null!;
         private ValueParameterKey<DirectionalLightData> lightsKey = null!;
-        private FastListStruct<DirectionalLightData> lightsData = new FastListStruct<DirectionalLightData>(8);
+        private FastListStruct<DirectionalLightData> lightsData = new(8);
 
         public DirectionalLightShaderGroup(RenderContext renderContext, ILightShadowMapShaderGroupData shadowGroupData)
             : base(renderContext, shadowGroupData)
@@ -48,9 +48,7 @@ public class WeatherLightDirectionalGroupRenderer : LightGroupRendererShadow
 
             var mixin = new ShaderMixinSource();
             mixin.Mixins.Add(new ShaderClassSource("WeatherLightDirectionalGroup", LightCurrentCount));
-            // Old fixed path kept in case we need it again later
-            //mixin.Mixins.Add(new ShaderClassSource("LightDirectionalGroup", LightCurrentCount));
-            //mixin.Mixins.Add(new ShaderClassSource("DirectLightGroupFixed", LightCurrentCount));
+
             ShadowGroup?.ApplyShader(mixin);
 
             ShaderSource = mixin;

@@ -10,7 +10,7 @@ using StrideTerrain.TerrainSystem.Rendering;
 using StrideTerrain.Weather.Effects.Atmosphere;
 using StrideTerrain.Weather.Effects.Atmosphere.LUT;
 using StrideTerrain.Weather.Effects.Fog;
-using StrideTerrain.Weather.Effects.VolumetricLight;
+using StrideTerrain.Weather.Effects.Lights;
 using System;
 
 namespace StrideTerrain.Weather;
@@ -214,6 +214,7 @@ public class WeatherRenderFeature : RootRenderFeature
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.CameraPosition, cameraPosition);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.InvViewProjection, invViewProjection);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.InvResolution, invViewSize);
+        renderSkyEffect.Parameters.Set(GlobalKeys.Time, (float)context.RenderContext.Time.Total.TotalSeconds);
         renderSkyEffect.Draw(context, "Atmosphere.RenderSky");
     }
 

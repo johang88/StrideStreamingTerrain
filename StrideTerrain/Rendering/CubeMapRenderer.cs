@@ -10,20 +10,19 @@ using Stride.Rendering.Skyboxes;
 using System;
 
 namespace StrideTerrain.Rendering;
+
 public class CubeMapRenderer : SceneRendererBase
 {
     private static readonly ProfilingKey RenderCubeMapProfilingKey = new("CubeMapRenderer.RenderCubeMap");
-    private static readonly ProfilingKey AmbientProbeProfilingKey = new("CubeMapRenderer.AmbientProbe");
     private static readonly ProfilingKey SpecularProbeProfilingKey = new("CubeMapRenderer.SpecularProbe");
 
     public static readonly PropertyKey<bool> IsRenderingCubemap = new("CubeMapRenderer.IsRenderingCubemap", typeof(RenderContext));
 
-    private RenderView _renderView = new();
+    private readonly RenderView _renderView = new();
 
     public ISceneRenderer? Child { get; set; }
     public RenderGroupMask RenderMask { get; set; } = RenderGroupMask.All;
     public int Resolution { get; set; } = 1024;
-    public float UpdateRateInSeconds { get; set; } = 1.0f;
 
     private int _currentFace = 0; // Render one face per frame
 
@@ -34,9 +33,6 @@ public class CubeMapRenderer : SceneRendererBase
     private RadiancePrefilteringGGX? _specularRadiancePrefilterGGX;
 
     private Texture? _cubeMapSpecular;
-
-    private float _time = 0.0f;
-    private bool _render = true;
 
     protected override void InitializeCore()
     {
@@ -64,85 +60,67 @@ public class CubeMapRenderer : SceneRendererBase
     {
         base.CollectCore(context);
 
-        if (!_render)
+        _currentFace++;
+        if (_currentFace >= 6)
         {
-            _time += (float)context.Time.Elapsed.TotalSeconds;
-            if (_time >= UpdateRateInSeconds)
-            {
-                _render = true;
-            }
+            _currentFace = -1;
+            return;
         }
 
-        if (_render)
+        var inverseViewMatrix = Matrix.Invert(context.RenderView.View);
+        var eye = inverseViewMatrix.Row4;
+        var cameraPosition = new Vector3(eye.X, eye.Y + 2.0f, eye.Z); // Random offset :)
+
+        var near = context.RenderView.NearClipPlane;
+        var far = context.RenderView.FarClipPlane;
+
+        var projection = Matrix.PerspectiveFovRH(MathUtil.DegreesToRadians(90.0f), 1.0f, near, far);
+
+        context.RenderSystem.Views.Add(_renderView);
+
+        var view = (CubeMapFace)_currentFace switch
         {
-            _currentFace++;
-            if (_currentFace >= 6)
-            {
-                _currentFace = -1;
-                _render = false;
-                _time = 0;
-                return;
-            }
+            CubeMapFace.PositiveX => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitX, Vector3.UnitY),
+            CubeMapFace.NegativeX => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitX, Vector3.UnitY),
+            CubeMapFace.PositiveY => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitY, Vector3.UnitZ),
+            CubeMapFace.NegativeY => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitY, -Vector3.UnitZ),
+            CubeMapFace.PositiveZ => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitZ, Vector3.UnitY),
+            CubeMapFace.NegativeZ => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitZ, Vector3.UnitY),
+            _ => throw new ArgumentOutOfRangeException(),
+        };
 
-            var inverseViewMatrix = Matrix.Invert(context.RenderView.View);
-            var eye = inverseViewMatrix.Row4;
-            var cameraPosition = new Vector3(eye.X, eye.Y + 2.0f, eye.Z); // Random offset :)
+        var viewProjection = view * projection;
 
-            var near = context.RenderView.NearClipPlane;
-            var far = context.RenderView.FarClipPlane;
+        _renderView.ViewSize = new(Resolution, Resolution);
+        _renderView.View = view;
+        _renderView.Projection = projection;
+        _renderView.NearClipPlane = near;
+        _renderView.FarClipPlane = far;
+        _renderView.Frustum = new(ref viewProjection);
 
-            var projection = Matrix.PerspectiveFovRH(MathUtil.DegreesToRadians(90.0f), 1.0f, near, far);
+        Matrix.Multiply(ref _renderView.View, ref _renderView.Projection, out _renderView.ViewProjection);
 
-            context.RenderSystem.Views.Add(_renderView);
+        // Assume culling won't be needed. 
+        _renderView.CullingMode = CameraCullingMode.None;
 
-            var view = (CubeMapFace)_currentFace switch
-            {
-                CubeMapFace.PositiveX => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitX, Vector3.UnitY),
-                CubeMapFace.NegativeX => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitX, Vector3.UnitY),
-                CubeMapFace.PositiveY => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitY, Vector3.UnitZ),
-                CubeMapFace.NegativeY => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitY, -Vector3.UnitZ),
-                CubeMapFace.PositiveZ => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitZ, Vector3.UnitY),
-                CubeMapFace.NegativeZ => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitZ, Vector3.UnitY),
-                _ => throw new ArgumentOutOfRangeException(),
-            };
+        using (context.PushRenderViewAndRestore(_renderView))
+        using (context.PushTagAndRestore(IsRenderingCubemap, true))
+        using (context.SaveRenderOutputAndRestore())
+        using (context.SaveViewportAndRestore())
+        using (context.PushTagAndRestore(CameraComponentRendererExtensions.Current, null))
+        {
+            _renderView.CullingMask = RenderMask;
 
-            var viewProjection = view * projection;
+            context.RenderOutput.RenderTargetFormat0 = PixelFormat.R16G16B16A16_Float;
+            context.RenderOutput.RenderTargetCount = 1;
+            context.ViewportState.Viewport0 = new Viewport(0, 0, Resolution, Resolution);
 
-            _renderView.ViewSize = new(Resolution, Resolution);
-            _renderView.View = view;
-            _renderView.Projection = projection;
-            _renderView.NearClipPlane = near;
-            _renderView.FarClipPlane = far;
-            _renderView.Frustum = new(ref viewProjection);
-
-            Matrix.Multiply(ref _renderView.View, ref _renderView.Projection, out _renderView.ViewProjection);
-
-            // Assume culling won't be needed. 
-            _renderView.CullingMode = CameraCullingMode.None;
-
-            using (context.PushRenderViewAndRestore(_renderView))
-            using (context.PushTagAndRestore(IsRenderingCubemap, true))
-            using (context.SaveRenderOutputAndRestore())
-            using (context.SaveViewportAndRestore())
-            using (context.PushTagAndRestore(CameraComponentRendererExtensions.Current, null))
-            {
-                _renderView.CullingMask = RenderMask;
-
-                context.RenderOutput.RenderTargetFormat0 = PixelFormat.R16G16B16A16_Float;
-                context.RenderOutput.RenderTargetCount = 1;
-                context.ViewportState.Viewport0 = new Viewport(0, 0, Resolution, Resolution);
-
-                Child?.Collect(context);
-            }
+            Child?.Collect(context);
         }
     }
 
     protected override void DrawCore(RenderContext context, RenderDrawContext drawContext)
     {
-        if (!_render)
-            return;
-
-        // TODO: Set render target!
         using (context.PushRenderViewAndRestore(_renderView))
         using (context.PushTagAndRestore(IsRenderingCubemap, true))
         using (context.PushTagAndRestore(CameraComponentRendererExtensions.Current, null))
@@ -159,29 +137,12 @@ public class CubeMapRenderer : SceneRendererBase
 
                 Child?.Draw(drawContext);
 
-                // TODO: Copy to correct face
                 drawContext.CommandList.CopyRegion(renderTexture, 0, null, _cubeMap, _currentFace);
             }
         }
 
         if (Skybox != null && _specularRadiancePrefilterGGX != null && _lamberFiltering != null)
         {
-            using (drawContext.QueryManager.BeginProfile(Color4.Black, AmbientProbeProfilingKey))
-            {
-                using (drawContext.PushRenderTargetsAndRestore())
-                {
-                    _lamberFiltering.Draw(drawContext);
-                }
-
-                var coefficients = _lamberFiltering.PrefilteredLambertianSH.Coefficients;
-                for (int i = 0; i < coefficients.Length; i++)
-                {
-                    coefficients[i] = coefficients[i] * SphericalHarmonics.BaseCoefficients[i];
-                }
-
-                Skybox.DiffuseLightingParameters.Set(SphericalHarmonicsEnvironmentColorKeys.SphericalColors, coefficients);
-            }
-
             using (drawContext.QueryManager.BeginProfile(Color4.Black, SpecularProbeProfilingKey))
             {
                 using (drawContext.PushRenderTargetsAndRestore())
