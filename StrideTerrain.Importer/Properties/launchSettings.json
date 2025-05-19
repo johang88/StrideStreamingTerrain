@@ -2,11 +2,7 @@
   "profiles": {
     "StrideTerrain.Importer": {
       "commandName": "Project",
-      "commandLineArgs": "--input \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Rugged Terrain with Rocky Peaks Height Map PNG.png\" --output \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\" --name \"TestMap\" --chunk-size 64 --max-height 1024"
-    },
-    "StrideTerrain.Importer - Skellige": {
-      "commandName": "Project",
-      "commandLineArgs": "--input \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Skellige.png\" --control-map \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Skellige_ControlMap.png\" --output \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\" --name \"Skellige\" --chunk-size 128 --max-height 385 --units-per-texel=0.45"
+      "commandLineArgs": "--input \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Terrain\\Island.png\" --control-map \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Terrain\\Island.png\" --output \"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Terrain\" --name \"Island\" --chunk-size 128 --max-height 385 --units-per-texel=0.5"
     }
   }
 }

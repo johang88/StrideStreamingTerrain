@@ -19,6 +19,7 @@ public class MeshManager : IDisposable
     private readonly GpuTextureManager _gpuTextureManager;
 
     private readonly ChunkData[] _chunkData;
+    private readonly BoundingBoxExt[] _bounds;
     private int _chunkCount = 0;
     private readonly int[] _sectorToChunkMap;
 
@@ -44,6 +45,7 @@ public class MeshManager : IDisposable
         var maxChunks = _terrain.ChunksPerRowLod0 * _terrain.ChunksPerRowLod0;
 
         _chunkData = new ChunkData[maxChunks];
+        _bounds = new BoundingBoxExt[maxChunks];
         _sectorToChunkMap = new int[maxChunks];
 
         ChunkBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, Marshal.SizeOf<ChunkData>(), true);
@@ -187,7 +189,7 @@ public class MeshManager : IDisposable
                     _chunkData[_chunkCount].ChunkZ = (byte)positionZ;
                     _chunkData[_chunkCount].Scale = scale * _terrain.UnitsPerTexel;
                     _chunkData[_chunkCount].Position = new(positionX * chunkOffset * _terrain.UnitsPerTexel, 0, positionZ * chunkOffset * _terrain.UnitsPerTexel);
-                    _chunkData[_chunkCount].Bounds = bounds;
+                    _bounds[_chunkCount] = bounds;
                     _chunkCount++;
                 }
             }
@@ -231,18 +233,24 @@ public class MeshManager : IDisposable
 
     public void UpdateBuffers(CommandList commandList)
     {
+        var eo = (int)Marshal.OffsetOf<ChunkData>(nameof(ChunkData.East));
+        var so = (int)Marshal.OffsetOf<ChunkData>(nameof(ChunkData.Scale));
+        var po = (int)Marshal.OffsetOf<ChunkData>(nameof(ChunkData.Position));
+        var uvx = (int)Marshal.OffsetOf<ChunkData>(nameof(ChunkData.UvX));
+        var size = (int)Marshal.SizeOf<ChunkData>();
+
         ChunkBuffer.SetData(commandList, (ReadOnlySpan<ChunkData>)_chunkData.AsSpan(0, _chunkCount));
         SectorToChunkMapBuffer.SetData(commandList, (ReadOnlySpan<int>)_sectorToChunkMap.AsSpan());
     }
 
-    public void PrepareDraw(CommandList commandList, RenderMesh renderMesh, BoundingFrustum frustum, bool VisiblityIgnoreDepthPlanes)
+    public void PrepareDraw(CommandList commandList, RenderMesh renderMesh, BoundingFrustum frustum, bool visiblityIgnoreDepthPlanes)
     {
         var maxChunks = _terrain.ChunksPerRowLod0 * _terrain.ChunksPerRowLod0;
         renderMesh.InstanceCount = 0;
         var chunkInstanceData = ArrayPool<int>.Shared.Rent(maxChunks);
         for (var i = 0; i < _chunkCount; i++)
         {
-            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _chunkData[i].Bounds, VisiblityIgnoreDepthPlanes))
+            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _bounds[i], visiblityIgnoreDepthPlanes))
                 continue;
 
             chunkInstanceData[renderMesh.InstanceCount++] = i;

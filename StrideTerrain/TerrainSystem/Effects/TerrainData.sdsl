@@ -7,10 +7,12 @@
             int Data0; // byte LodLevel, byte Noth, byte South, byte West
             int Data1; // byte East, byte ChunkX, byte ChunkZ, byte Padding0
             float Scale;
+            float Padding1;
             float3 Position;
+            float Padding2;
             int2 Uv;
-            float3 BoundsCenter;
-            float3 BoundsExtent;
+            float Padding3; // And some extra padding for correct array alignment
+            float Padding4;
         };
 
         rgroup PerFrame.Terrain

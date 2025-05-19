@@ -74,7 +74,8 @@ namespace TR.Stride.Ocean
                 var entity = component.Entity;
 
                 var renderDrawContext = context.GetThreadContext();
-                var commandList = renderDrawContext.CommandList;
+
+                renderDrawContext.CommandList.Reset();
 
                 // Update shader parameters for wave settings
                 component.WavesSettings.UpdateShaderParameters();
@@ -122,8 +123,6 @@ namespace TR.Stride.Ocean
                     calculateInitials = true;
                 }
 
-                using var profileContext = renderDrawContext.QueryManager.BeginProfile(Color4.White, ProfilingKeys.Ocean);
-
                 // Calculate initial spectrums
                 if (calculateInitials)
                 {
@@ -140,21 +139,6 @@ namespace TR.Stride.Ocean
                 {
                     cascade.CalculateWavesAtTime(renderDrawContext, _timeDependantSpectrumShader, _fillResultTexturesShader, _generateMipsShader, time, deltaTime);
                 }
-
-                // Read back wave data
-                //if (data.Readback == null)
-                //{
-                //    data.Readback = new();
-                //}
-
-                //data.Readback.FrameDelayCount = component.DisplacmentReadBackFrameDelay;
-                //data.Readback.SetInput(data.Cascades[0].Displacement);
-                //data.Readback.Draw(renderDrawContext);
-
-                //if (data.Readback.IsResultAvailable)
-                //{
-                //    component.Displacement = data.Readback.Result;
-                //}
 
                 // Create materials
                 var materialsDirty = false;
@@ -176,7 +160,7 @@ namespace TR.Stride.Ocean
                         if (materialLod0 == null || materialLod1 == null || materialLod2 == null)
                             data.Materials = null;
                         else
-                            data.Materials = [materialLod0, materialLod1, materialLod2];
+                            data.Materials = new Material[] { materialLod0, materialLod1, materialLod2 };
                     }
                 }
 
@@ -198,10 +182,7 @@ namespace TR.Stride.Ocean
 
                     data.Mesh = component.Mesh;
 
-                    if (data.Mesh != null)
-                    {
-                        data.Mesh.SetOcean(component, data.Materials);
-                    }
+                    data.Mesh?.SetOcean(component, data.Materials);
                 }
 
                 // We kinda need a mesh
@@ -236,8 +217,6 @@ namespace TR.Stride.Ocean
 
         public FastFourierTransform FFT { get; set; }
 
-        //public ImageReadback<Vector4> Readback { get; set; }
-
         public void DestroyMesh()
         {
             if (Mesh is IDisposable disposable)
@@ -264,7 +243,6 @@ namespace TR.Stride.Ocean
             DestroyMesh();
             DestroyCascades();
             GaussianNoise?.Dispose();
-            //Readback?.Dispose();
         }
     }
 

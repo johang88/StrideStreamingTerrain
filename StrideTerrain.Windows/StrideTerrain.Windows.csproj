@@ -21,4 +21,7 @@
 		<ProjectReference Include="..\TR.Stride.Ocean\TR.Stride.Ocean.csproj" />
 	</ItemGroup>
 
+	<PropertyGroup>
+		<StrideGraphicsApi>Vulkan</StrideGraphicsApi>
+	</PropertyGroup>
 </Project>

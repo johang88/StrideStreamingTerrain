@@ -5,6 +5,7 @@ using Stride.Rendering;
 using Stride.Rendering.ComputeEffect;
 using Stride.Rendering.Images;
 using StrideTerrain.Rendering;
+using StrideTerrain.TerrainSystem;
 using StrideTerrain.TerrainSystem.Effects;
 using StrideTerrain.TerrainSystem.Rendering;
 using StrideTerrain.Weather.Effects.Atmosphere;
@@ -26,10 +27,10 @@ public class WeatherRenderFeature : RootRenderFeature
 
     private LookupTextureEffect? _cameraVolumeLut;
 
-    private ImageEffectShader? _renderSkyEffect;
-    private ImageEffectShader? _renderSkyEffectNoSun;
-    private ImageEffectShader? _renderFogEffect;
-    private ImageEffectShader? _renderVolumetricLightDirectional;
+    private CustomImageEffect? _renderSkyEffect;
+    private CustomImageEffect? _renderSkyEffectNoSun;
+    private CustomImageEffect? _renderFogEffect;
+    private CustomImageEffect? _renderVolumetricLightDirectional;
     private ComputeEffectShader? _renderAerialPerspectiveEffect;
 
     private Texture? _depthShaderResourceView;
@@ -49,7 +50,8 @@ public class WeatherRenderFeature : RootRenderFeature
         _renderSkyEffect.Parameters.Set(AtmosphereEffectParameters.RenderSun, true);
         _renderSkyEffect.DepthStencilState = new DepthStencilStateDescription(true, false)
         {
-            DepthBufferFunction = CompareFunction.Equal
+            DepthBufferFunction = CompareFunction.Equal,
+            DepthBufferWriteEnable = false
         };
 
         _renderSkyEffectNoSun = new("AtmosphereRenderSkyEffect");
@@ -57,20 +59,23 @@ public class WeatherRenderFeature : RootRenderFeature
         _renderSkyEffectNoSun.Parameters.Set(AtmosphereEffectParameters.RenderSun, false);
         _renderSkyEffectNoSun.DepthStencilState = new DepthStencilStateDescription(true, false)
         {
-            DepthBufferFunction = CompareFunction.Equal
+            DepthBufferFunction = CompareFunction.Equal,
+            DepthBufferWriteEnable = false
         };
 
         _renderFogEffect = new("FogRenderFog");
         _renderFogEffect.DisposeBy(this);
         _renderFogEffect.DepthStencilState = new DepthStencilStateDescription(true, false)
         {
-            DepthBufferFunction = CompareFunction.Less
+            DepthBufferFunction = CompareFunction.Less,
+            DepthBufferWriteEnable = false
         };
         _renderFogEffect.BlendState = BlendStates.AlphaBlend;
 
-        _renderVolumetricLightDirectional = new ImageEffectShader("VolumetricLightDiretional");
+        _renderVolumetricLightDirectional = new("VolumetricLightDiretional");
         _renderVolumetricLightDirectional.DisposeBy(this);
         _renderVolumetricLightDirectional.BlendState = BlendStates.Additive;
+        _renderVolumetricLightDirectional.DepthStencilState = new DepthStencilStateDescription(false, false);
 
         _renderAerialPerspectiveEffect = new(Context) { ShaderSourceName = "AtmosphereRenderAerialPerspective" };
         _renderAerialPerspectiveEffect.DisposeBy(this);
@@ -192,19 +197,21 @@ public class WeatherRenderFeature : RootRenderFeature
     }
 
     private void RenderSky(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor, Vector3 cameraPosition,
-        Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut, Texture mulitScatteredLuminanceLut, Texture skyLuminanceLut, Texture skyViewLut)
+        Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut, Texture multiScatteredLuminanceLut, Texture skyLuminanceLut, Texture skyViewLut)
     {
-        if (_depthShaderResourceView == null || _renderSkyEffect == null)
-            return;
-
         context.RenderContext.Tags.TryGetValue(CubeMapRenderer.IsRenderingCubemap, out var isRenderingCubeMap);
 
         var renderSkyEffect = isRenderingCubeMap ? _renderSkyEffectNoSun : _renderSkyEffect;
         if (renderSkyEffect == null)
             return;
 
+        context.CommandList.ResourceBarrierTransition(transmittanceLut, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(multiScatteredLuminanceLut, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(skyViewLut, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(skyLuminanceLut, GraphicsResourceState.PixelShaderResource);
+
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.TransmittanceLUT, transmittanceLut);
-        renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.MultiScatteringLUT, mulitScatteredLuminanceLut);
+        renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.MultiScatteringLUT, multiScatteredLuminanceLut);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.SkyViewLUT, skyViewLut);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.SkyLuminanceLUT, skyLuminanceLut);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.Atmosphere, atmosphere);
@@ -245,6 +252,10 @@ public class WeatherRenderFeature : RootRenderFeature
 
         context.Tags.TryGetValue(TerrainRenderFeature.Current, out var terrain);
 
+        context.CommandList.ResourceBarrierTransition(transmittanceLut, GraphicsResourceState.PixelShaderResource);
+        if (terrain?.GpuTextureManager?.ShadowMap != null)
+            context.CommandList.ResourceBarrierTransition(terrain?.GpuTextureManager?.ShadowMap, GraphicsResourceState.PixelShaderResource);
+
         _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.TransmittanceLUT, transmittanceLut);
         _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.DepthTexture, _depthShaderResourceView);
         _renderVolumetricLightDirectional.Parameters.Set(TerrainDataKeys.TerrainShadowMap, terrain?.GpuTextureManager?.ShadowMap);
@@ -279,6 +290,10 @@ public class WeatherRenderFeature : RootRenderFeature
     {
         if (_cameraVolumeLut == null)
             return;
+
+        context.CommandList.ResourceBarrierTransition(transmittanceLut, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(mulitScatteredLuminanceLut, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(_cameraVolumeLut.Texture, GraphicsResourceState.UnorderedAccess);
 
         _cameraVolumeLut.Effect.Parameters.Set(AtmosphereCameraVolumeLutKeys.TransmittanceLUT, transmittanceLut);
         _cameraVolumeLut.Effect.Parameters.Set(AtmosphereCameraVolumeLutKeys.MultiScatteringLUT, mulitScatteredLuminanceLut);

@@ -278,6 +278,9 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             // Set parameters and dispatch
             var shadowMap = drawContext.RenderContext.Allocator.GetTemporaryTexture2D(terrain.GpuTextureManager.ShadowMap.Description);
 
+            drawContext.CommandList.ResourceBarrierTransition(terrain.GpuTextureManager.Heightmap.AtlasTexture, GraphicsResourceState.PixelShaderResource);
+            drawContext.CommandList.ResourceBarrierTransition(shadowMap, GraphicsResourceState.UnorderedAccess);
+
             _terrainShadowGeneratorEffect.Parameters.Set(StartXYKey, StartsBuffer.Length, ref StartsBuffer[0]);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.PerGroupData, PerGroupDataBuffer.Length, ref PerGroupDataBuffer[0]);
             _terrainShadowGeneratorEffect.Parameters.Set(TerrainShadowGeneratorKeys.ShadowMap, shadowMap);

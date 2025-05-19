@@ -22,7 +22,7 @@
 
             float2 uv = (pixelPosition + 0.5f) * InvResolution;
 
-            float depth = DepthTexture[pixelPosition];
+            float depth = DepthTexture.Load(int3(pixelPosition, 0)).x;
             
             float2 clipSpace = uv * float2(2.0, -2.0) - float2(1.0, -1.0);
             

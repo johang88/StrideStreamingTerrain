@@ -4,7 +4,7 @@
     {
         override void Compute()
         {
-			float4 data = PrecomputedData[uint2(Step, streams.DispatchThreadId.x)];
+			float4 data = PrecomputedData.Load(int3(Step, streams.DispatchThreadId.x, 0));
 			uint2 inputsIndices = (uint2)data.ba;
 			if (PingPong)
 			{

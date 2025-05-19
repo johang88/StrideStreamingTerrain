@@ -73,7 +73,7 @@ namespace TR.Stride.Ocean
 
             commandList.ResourceBarrierTransition(_buffer, GraphicsResourceState.UnorderedAccess);
             commandList.ResourceBarrierTransition(PrecomputedData, GraphicsResourceState.UnorderedAccess);
-            commandList.ResourceBarrierTransition(GaussianNoise, GraphicsResourceState.UnorderedAccess);
+            commandList.ResourceBarrierTransition(GaussianNoise, GraphicsResourceState.PixelShaderResource);
 
             initialSpectrumShader.Parameters.Set(OceanInitialSpectrumCommonKeys.Size, (uint)_size);
             initialSpectrumShader.Parameters.Set(OceanInitialSpectrumCommonKeys.LengthScale, lengthScale);
@@ -92,6 +92,9 @@ namespace TR.Stride.Ocean
             initialSpectrumShader.ThreadNumbers = new Int3(LOCAL_WORK_GROUPS_X, LOCAL_WORK_GROUPS_Y, 1);
             initialSpectrumShader.Draw(context);
 
+            commandList.ResourceBarrierTransition(_buffer, GraphicsResourceState.GenericRead);
+            commandList.ResourceBarrierTransition(InitialSpectrum, GraphicsResourceState.UnorderedAccess);
+
             conjugatedSpectrumShader.Parameters.Set(OceanInitialSpectrumCommonKeys.H0, InitialSpectrum);
             conjugatedSpectrumShader.Parameters.Set(OceanInitialSpectrumCommonKeys.H0K, _buffer);
             conjugatedSpectrumShader.Parameters.Set(OceanInitialSpectrumCommonKeys.Size, (uint)_size);
@@ -107,13 +110,12 @@ namespace TR.Stride.Ocean
 
             var commandList = context.CommandList;
 
+            commandList.ResourceBarrierTransition(PrecomputedData, GraphicsResourceState.PixelShaderResource);
+            commandList.ResourceBarrierTransition(InitialSpectrum, GraphicsResourceState.PixelShaderResource);
             commandList.ResourceBarrierTransition(_dxDz, GraphicsResourceState.UnorderedAccess);
             commandList.ResourceBarrierTransition(_dyDxz, GraphicsResourceState.UnorderedAccess);
             commandList.ResourceBarrierTransition(_dyxDyz, GraphicsResourceState.UnorderedAccess);
             commandList.ResourceBarrierTransition(_dxxDzz, GraphicsResourceState.UnorderedAccess);
-            commandList.ResourceBarrierTransition(Displacement, GraphicsResourceState.UnorderedAccess);
-            commandList.ResourceBarrierTransition(Derivatives, GraphicsResourceState.UnorderedAccess);
-            commandList.ResourceBarrierTransition(Turbulence, GraphicsResourceState.UnorderedAccess);
 
             // Calculating complex amplitudes
             timeDependantSpectrumShader.Parameters.Set(OceanTimeDependentSpectrumKeys.Dx_Dz, _dxDz);
@@ -136,6 +138,14 @@ namespace TR.Stride.Ocean
             _fft.IFFT2D(context, _dxxDzz, _buffer, true, false, true);
 
             // Filling displacement and normals textures
+            commandList.ResourceBarrierTransition(Displacement, GraphicsResourceState.UnorderedAccess);
+            commandList.ResourceBarrierTransition(Derivatives, GraphicsResourceState.UnorderedAccess);
+            commandList.ResourceBarrierTransition(Turbulence, GraphicsResourceState.UnorderedAccess);
+            commandList.ResourceBarrierTransition(_dxDz, GraphicsResourceState.PixelShaderResource);
+            commandList.ResourceBarrierTransition(_dyDxz, GraphicsResourceState.PixelShaderResource);
+            commandList.ResourceBarrierTransition(_dyxDyz, GraphicsResourceState.PixelShaderResource);
+            commandList.ResourceBarrierTransition(_dxxDzz, GraphicsResourceState.PixelShaderResource);
+
             fillResultTexturesShader.Parameters.Set(OceanFillResultTexturesKeys.DeltaTime, deltaTime);
             fillResultTexturesShader.Parameters.Set(OceanFillResultTexturesKeys.Lambda, _lambda);
 
@@ -180,6 +190,12 @@ namespace TR.Stride.Ocean
                     if (topMip + numMips > mipLevels)
                         numMips = mipLevels - topMip;
 
+                    commandList.ResourceBarrierTransition(texture.Mips[0], GraphicsResourceState.PixelShaderResource);
+                    commandList.ResourceBarrierTransition(texture.Mips[topMip + 1], GraphicsResourceState.UnorderedAccess);
+                    commandList.ResourceBarrierTransition(texture.Mips[topMip + 2], GraphicsResourceState.UnorderedAccess);
+                    commandList.ResourceBarrierTransition(texture.Mips[topMip + 3], GraphicsResourceState.UnorderedAccess);
+                    commandList.ResourceBarrierTransition(texture.Mips[topMip + 4], GraphicsResourceState.UnorderedAccess);
+
                     generateMipsShader.Parameters.Set(OceanGenerateMipsKeys.SrcMip, texture.Mips[0]);
                     generateMipsShader.Parameters.Set(OceanGenerateMipsKeys.OutMip1, texture.Mips[topMip + 1]);
                     generateMipsShader.Parameters.Set(OceanGenerateMipsKeys.OutMip2, texture.Mips[topMip + 2]);
@@ -193,6 +209,11 @@ namespace TR.Stride.Ocean
                     generateMipsShader.ThreadGroupCounts = new Int3(DstWidth, DstHeight, 1);
                     generateMipsShader.ThreadNumbers = new Int3(LOCAL_WORK_GROUPS_X, LOCAL_WORK_GROUPS_Y, 1);
                     generateMipsShader.Draw(context);
+
+                    commandList.ResourceBarrierTransition(texture.Mips[topMip + 1], GraphicsResourceState.PixelShaderResource);
+                    commandList.ResourceBarrierTransition(texture.Mips[topMip + 2], GraphicsResourceState.PixelShaderResource);
+                    commandList.ResourceBarrierTransition(texture.Mips[topMip + 3], GraphicsResourceState.PixelShaderResource);
+                    commandList.ResourceBarrierTransition(texture.Mips[topMip + 4], GraphicsResourceState.PixelShaderResource);
 
                     topMip += numMips;
                 }

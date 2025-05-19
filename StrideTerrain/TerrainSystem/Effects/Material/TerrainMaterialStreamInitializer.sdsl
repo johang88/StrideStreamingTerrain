@@ -16,7 +16,8 @@
             float Roughness;
         };
 
-        struct TextureParam {
+        struct TexData
+        {
             float BlendSharpness;
             float SlopeBasedDamp;
             float NormalBasedDamp;
@@ -27,38 +28,7 @@
             base.ResetStream();
 
             // Should this be hard coded? No it should not.
-            const TextureParam TextureParams[31] = {
-                //{317, 211, 268},
-                //{252, 903, 536},
-                //{270, 0, 0},
-                //{300, 0, 0},
-                //{300, 0, 0},
-                //{300, 0, 0},
-                //{205, 0, 0},
-                //{341, 0, 0},
-                //{300, 883, 867},
-                //{300, 451, 0},
-                //{300, 400, 0},
-                //{300, 0, 0},
-                //{247, 0, 434},
-                //{300, 233, 1000},
-                //{300, 585, 0},
-                //{300, 0, 0},
-                //{300, 408, 0},
-                //{300, 0, 0},
-                //{254, 0, 0},
-                //{300, 400, 0},
-                //{283, 339, 0},
-                //{187, 0, 0},
-                //{300, 400, 0},
-                //{196, 0, 0},
-                //{373, 71, 0},
-                //{300, 772, 848},
-                //{300, 867, 246},
-                //{324, 208, 266},
-                //{300, 400, 32},
-                //{300, 400, 0},
-                //{121, 0, 1000}
+           /* const TexData TextureParams[31] = {
                 {0.3650000095, 0.5, 0.5},
                 {0.163635999, 0.5, 0.5},
                 {0.2060610056, 0.5, 0.0121210003},
@@ -90,7 +60,7 @@
                 {0.5, 0.5, 0.5},
                 {0.5, 0.5, 0.5},
                 {0.5, 0.5, 0.5}
-            };
+            };*/
 
             float2 positionFract = frac(streams.TerrainAtlasCoord);
             positionFract = streams.TerrainFract;
@@ -144,7 +114,12 @@
                 + fractionalWeights.y * slopeThresholdsMap[slopeThresholds.y]
                 + fractionalWeights.z * slopeThresholdsMap[slopeThresholds.z]
                 + fractionalWeights.w * slopeThresholdsMap[slopeThresholds.w];
-
+				
+			float3 normal = float3(0, 0, 0);
+            normal.xz = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord, 0).xy * 2.0f - 1.0f;
+            normal.y = sqrt(max(0.0f, 1.0f - (normal.x * normal.x + normal.z * normal.z)));
+			//streams.meshNormal = normal;
+			
             float tighten = 0.576f;
             streams.meshNormal = normalize(streams.meshNormal);
             float3 triPlanarWeights = saturate(abs(streams.meshNormal) - tighten);
@@ -160,15 +135,25 @@
             MaterialSample background = SampleBackground(backgroundTextureIndices, backgroundUvScaling, triPlanarWeights, streams.meshNormal, streams.PositionWS.xyz, fractionalWeights, ddx_xy, ddy_xy, ddx_xz, ddy_xz, ddx_yz, ddy_yz);
             MaterialSample overlay = SampleOverlay(streams.PositionWS.xz, overlayTextureIndices, fractionalWeights, ddx_xz, ddy_xz);
 
-            TextureParam backgroundTextureParamsA = TextureParams[backgroundTextureIndices.x];
-            TextureParam backgroundTextureParamsB = TextureParams[backgroundTextureIndices.y];
-            TextureParam backgroundTextureParamsC = TextureParams[backgroundTextureIndices.z];
-            TextureParam backgroundTextureParamsD = TextureParams[backgroundTextureIndices.w];
+            TexData backgroundTextureParamsA = { 0.5, 0.5, 0.5 };
+            TexData backgroundTextureParamsB = { 0.5, 0.5, 0.5 };
+            TexData backgroundTextureParamsC = { 0.5, 0.5, 0.5 };
+            TexData backgroundTextureParamsD = { 0.5, 0.5, 0.5 };
 
-            TextureParam overlayTextureParamsA = TextureParams[overlayTextureIndices.x];
-            TextureParam overlayTextureParamsB = TextureParams[overlayTextureIndices.y];
-            TextureParam overlayTextureParamsC = TextureParams[overlayTextureIndices.z];
-            TextureParam overlayTextureParamsD = TextureParams[overlayTextureIndices.w];
+            TexData overlayTextureParamsA = { 0.5, 0.5, 0.5 };
+            TexData overlayTextureParamsB = { 0.5, 0.5, 0.5 };
+            TexData overlayTextureParamsC = { 0.5, 0.5, 0.5 };
+            TexData overlayTextureParamsD = { 0.5, 0.5, 0.5 };
+
+            /*TexData backgroundTextureParamsA = TextureParams[backgroundTextureIndices.x];
+            TexData backgroundTextureParamsB = TextureParams[backgroundTextureIndices.y];
+            TexData backgroundTextureParamsC = TextureParams[backgroundTextureIndices.z];
+            TexData backgroundTextureParamsD = TextureParams[backgroundTextureIndices.w];
+
+            TexData overlayTextureParamsA = TextureParams[overlayTextureIndices.x];
+            TexData overlayTextureParamsB = TextureParams[overlayTextureIndices.y];
+            TexData overlayTextureParamsC = TextureParams[overlayTextureIndices.z];
+            TexData overlayTextureParamsD = TextureParams[overlayTextureIndices.w];*/
 
             float baseDampening = 
                   fractionalWeights.x * backgroundTextureParamsA.SlopeBasedDamp

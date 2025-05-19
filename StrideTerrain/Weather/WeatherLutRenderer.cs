@@ -15,7 +15,7 @@ public class WeatherLutRenderer : SceneRendererBase
     public static readonly PropertyKey<Texture> SkyViewLut = new("WeatherLutRenderer.SkyViewLut", typeof(WeatherRenderObject));
 
     private LookupTextureEffect? _transmittanceLut;
-    private LookupTextureEffect? _mulitScatteredLuminanceLut;
+    private LookupTextureEffect? _multiScatteredLuminanceLut;
     private LookupTextureEffect? _skyLuminanceLut;
     private LookupTextureEffect? _skyViewLut;
 
@@ -24,7 +24,7 @@ public class WeatherLutRenderer : SceneRendererBase
         base.InitializeCore();
 
         _transmittanceLut = new(this, Context, "AtmosphereTransmittanceLut", 256, 64, 1, PixelFormat.R16G16B16A16_Float);
-        _mulitScatteredLuminanceLut = new(this, Context, "AtmosphereMultiScatteredLuminanceLut", 32, 32, 1, PixelFormat.R16G16B16A16_Float);
+        _multiScatteredLuminanceLut = new(this, Context, "AtmosphereMultiScatteredLuminanceLut", 32, 32, 1, PixelFormat.R16G16B16A16_Float);
         _skyLuminanceLut = new(this, Context, "AtmosphereSkyLuminanceLut", 1, 1, 1, PixelFormat.R16G16B16A16_Float);
         _skyViewLut = new(this, Context, "AtmosphereSkyViewLut", 192, 104, 1, PixelFormat.R16G16B16A16_Float);
     }
@@ -40,7 +40,7 @@ public class WeatherLutRenderer : SceneRendererBase
             return;
         }
 
-        if (_transmittanceLut == null || _mulitScatteredLuminanceLut == null || _skyLuminanceLut == null || _skyViewLut == null)
+        if (_transmittanceLut == null || _multiScatteredLuminanceLut == null || _skyLuminanceLut == null || _skyViewLut == null)
             return;
 
         var atmosphere = weather.Atmosphere;
@@ -52,12 +52,17 @@ public class WeatherLutRenderer : SceneRendererBase
         var cameraPosition = new Vector3(eye.X, eye.Y, eye.Z);
 
         RenderTransmittanceLut(drawContext, atmosphere, sunDirection, sunColor);
-        RenderMulitScatteredLuminanceLut(drawContext, atmosphere);
+        RenderMultiScatteredLuminanceLut(drawContext, atmosphere);
         RenderSkyLuminanceLut(drawContext, atmosphere, sunDirection, sunColor);
         RenderSkyViewLut(drawContext, atmosphere, cameraPosition, sunDirection, sunColor);
 
+        drawContext.CommandList.ResourceBarrierTransition(_transmittanceLut.Texture, GraphicsResourceState.PixelShaderResource);
+        drawContext.CommandList.ResourceBarrierTransition(_multiScatteredLuminanceLut.Texture, GraphicsResourceState.PixelShaderResource);
+        drawContext.CommandList.ResourceBarrierTransition(_transmittanceLut.Texture, GraphicsResourceState.PixelShaderResource);
+        drawContext.CommandList.ResourceBarrierTransition(_skyViewLut.Texture, GraphicsResourceState.PixelShaderResource);
+
         context.Tags.Set(TransmittanceLut, _transmittanceLut.Texture);
-        context.Tags.Set(MultiScatteredLuminanceLut, _mulitScatteredLuminanceLut.Texture);
+        context.Tags.Set(MultiScatteredLuminanceLut, _multiScatteredLuminanceLut.Texture);
         context.Tags.Set(SkyLuminanceLut, _skyLuminanceLut.Texture);
         context.Tags.Set(SkyViewLut, _skyViewLut.Texture);
     }
@@ -66,6 +71,8 @@ public class WeatherLutRenderer : SceneRendererBase
     {
         if (_transmittanceLut == null)
             return;
+
+        context.CommandList.ResourceBarrierTransition(_transmittanceLut.Texture, GraphicsResourceState.UnorderedAccess);
 
         _transmittanceLut.Effect.Parameters.Set(AtmosphereTransmittanceLutKeys.OutputTexture, _transmittanceLut.Texture);
         _transmittanceLut.Effect.Parameters.Set(AtmosphereTransmittanceLutKeys.Atmosphere, atmosphere);
@@ -77,27 +84,34 @@ public class WeatherLutRenderer : SceneRendererBase
         _transmittanceLut.Effect.Draw(context, "Atmosphere.LUT.Transmittance");
     }
 
-    void RenderMulitScatteredLuminanceLut(RenderDrawContext context, AtmosphereParameters atmosphere)
+    void RenderMultiScatteredLuminanceLut(RenderDrawContext context, AtmosphereParameters atmosphere)
     {
-        if (_transmittanceLut == null || _mulitScatteredLuminanceLut == null)
+        if (_transmittanceLut == null || _multiScatteredLuminanceLut == null)
             return;
 
-        _mulitScatteredLuminanceLut.Effect.Parameters.Set(AtmosphereMultiScatteredLuminanceLutKeys.TransmittanceLUT, _transmittanceLut.Texture);
-        _mulitScatteredLuminanceLut.Effect.Parameters.Set(AtmosphereMultiScatteredLuminanceLutKeys.OutputTexture, _mulitScatteredLuminanceLut.Texture);
-        _mulitScatteredLuminanceLut.Effect.Parameters.Set(AtmosphereMultiScatteredLuminanceLutKeys.Atmosphere, atmosphere);
+        context.CommandList.ResourceBarrierTransition(_transmittanceLut.Texture, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(_multiScatteredLuminanceLut.Texture, GraphicsResourceState.UnorderedAccess);
 
-        _mulitScatteredLuminanceLut.Effect.ThreadNumbers = new(1, 1, 64);
-        _mulitScatteredLuminanceLut.Effect.ThreadGroupCounts = new(_mulitScatteredLuminanceLut.Texture.Width, _mulitScatteredLuminanceLut.Texture.Height, 1);
-        _mulitScatteredLuminanceLut.Effect.Draw(context, "Atmosphere.LUT.MultiScatteredLuminance");
+        _multiScatteredLuminanceLut.Effect.Parameters.Set(AtmosphereMultiScatteredLuminanceLutKeys.TransmittanceLUT, _transmittanceLut.Texture);
+        _multiScatteredLuminanceLut.Effect.Parameters.Set(AtmosphereMultiScatteredLuminanceLutKeys.OutputTexture, _multiScatteredLuminanceLut.Texture);
+        _multiScatteredLuminanceLut.Effect.Parameters.Set(AtmosphereMultiScatteredLuminanceLutKeys.Atmosphere, atmosphere);
+
+        _multiScatteredLuminanceLut.Effect.ThreadNumbers = new(1, 1, 64);
+        _multiScatteredLuminanceLut.Effect.ThreadGroupCounts = new(_multiScatteredLuminanceLut.Texture.Width, _multiScatteredLuminanceLut.Texture.Height, 1);
+        _multiScatteredLuminanceLut.Effect.Draw(context, "Atmosphere.LUT.MultiScatteredLuminance");
     }
 
     void RenderSkyLuminanceLut(RenderDrawContext context, AtmosphereParameters atmosphere, Vector3 sunDirection, Color3 sunColor)
     {
-        if (_transmittanceLut == null || _mulitScatteredLuminanceLut == null || _skyLuminanceLut == null)
+        if (_transmittanceLut == null || _multiScatteredLuminanceLut == null || _skyLuminanceLut == null)
             return;
 
+        context.CommandList.ResourceBarrierTransition(_transmittanceLut.Texture, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(_multiScatteredLuminanceLut.Texture, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(_skyLuminanceLut.Texture, GraphicsResourceState.UnorderedAccess);
+
         _skyLuminanceLut.Effect.Parameters.Set(AtmosphereSkyLuminanceLutKeys.TransmittanceLUT, _transmittanceLut.Texture);
-        _skyLuminanceLut.Effect.Parameters.Set(AtmosphereSkyLuminanceLutKeys.MultiScatteringLUT, _mulitScatteredLuminanceLut.Texture);
+        _skyLuminanceLut.Effect.Parameters.Set(AtmosphereSkyLuminanceLutKeys.MultiScatteringLUT, _multiScatteredLuminanceLut.Texture);
         _skyLuminanceLut.Effect.Parameters.Set(AtmosphereSkyLuminanceLutKeys.OutputTexture, _skyLuminanceLut.Texture);
         _skyLuminanceLut.Effect.Parameters.Set(AtmosphereSkyLuminanceLutKeys.Atmosphere, atmosphere);
         _skyLuminanceLut.Effect.Parameters.Set(AtmosphereSkyLuminanceLutKeys.SunDirection, sunDirection);
@@ -110,11 +124,15 @@ public class WeatherLutRenderer : SceneRendererBase
 
     void RenderSkyViewLut(RenderDrawContext context, AtmosphereParameters atmosphere, Vector3 cameraPosition, Vector3 sunDirection, Color3 sunColor)
     {
-        if (_skyViewLut == null || _transmittanceLut == null || _mulitScatteredLuminanceLut == null)
+        if (_skyViewLut == null || _transmittanceLut == null || _multiScatteredLuminanceLut == null)
             return;
 
+        context.CommandList.ResourceBarrierTransition(_transmittanceLut.Texture, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(_multiScatteredLuminanceLut.Texture, GraphicsResourceState.PixelShaderResource);
+        context.CommandList.ResourceBarrierTransition(_skyViewLut.Texture, GraphicsResourceState.UnorderedAccess);
+
         _skyViewLut.Effect.Parameters.Set(AtmosphereSkyViewLutKeys.TransmittanceLUT, _transmittanceLut.Texture);
-        _skyViewLut.Effect.Parameters.Set(AtmosphereSkyViewLutKeys.MultiScatteringLUT, _mulitScatteredLuminanceLut.Texture);
+        _skyViewLut.Effect.Parameters.Set(AtmosphereSkyViewLutKeys.MultiScatteringLUT, _multiScatteredLuminanceLut.Texture);
         _skyViewLut.Effect.Parameters.Set(AtmosphereSkyViewLutKeys.OutputTexture, _skyViewLut.Texture);
         _skyViewLut.Effect.Parameters.Set(AtmosphereSkyViewLutKeys.Atmosphere, atmosphere);
         _skyViewLut.Effect.Parameters.Set(AtmosphereSkyViewLutKeys.SunDirection, sunDirection);

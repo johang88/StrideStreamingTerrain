@@ -9,7 +9,7 @@ public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFo
     public readonly int ChunksPerRow = size / chunkSize;
 
     public Texture AtlasTexture = Texture.New2D(graphicsDevice, size, size, pixelFormat);
-    public Texture StagingTexutre = Texture.New2D(graphicsDevice, chunkTextureSize, chunkTextureSize, pixelFormat, usage: GraphicsResourceUsage.Dynamic);
+    public Texture StagingTexture = Texture.New2D(graphicsDevice, chunkTextureSize, chunkTextureSize, pixelFormat, usage: GraphicsResourceUsage.Default);
 
     public (int tx, int ty) GetCoordinates(int textureIndex)
     {
@@ -23,13 +23,13 @@ public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFo
     {
         var (tx, ty) = GetCoordinates(textureIndex);
 
-        StagingTexutre.SetData(graphicsContext.CommandList, data, 0, 0);
-        graphicsContext.CommandList.CopyRegion(StagingTexutre, 0, null, AtlasTexture, 0, tx, ty);
+        StagingTexture.SetData(graphicsContext.CommandList, data, 0, 0);
+        graphicsContext.CommandList.CopyRegion(StagingTexture, 0, null, AtlasTexture, 0, tx, ty);
     }
 
     public void Dispose()
     {
         AtlasTexture.Dispose();
-        StagingTexutre.Dispose();
+        StagingTexture.Dispose();
     }
 }

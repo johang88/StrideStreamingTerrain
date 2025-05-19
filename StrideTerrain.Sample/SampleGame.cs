@@ -31,7 +31,8 @@ public class SampleGame : Game
         base.ConfirmRenderingSettings(gameCreation);
 
         var deviceManager = (GraphicsDeviceManager)graphicsDeviceManager;
-        deviceManager.PreferredDepthStencilFormat = PixelFormat.D32_Float_S8X24_UInt;
+        deviceManager.PreferredDepthStencilFormat = PixelFormat.D32_Float;
+        //deviceManager.PreferredDepthStencilFormat = PixelFormat.D32_Float_S8X24_UInt;
 
         //Profiler.EnableAll();
         //GraphicsDeviceManager.DeviceCreationFlags |= DeviceCreationFlags.Debug;

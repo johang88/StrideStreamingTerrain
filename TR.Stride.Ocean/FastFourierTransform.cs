@@ -69,12 +69,16 @@ namespace TR.Stride.Ocean
             var logSize = (int)MathF.Log(_size, 2);
             var texture = Texture.New2D(context.GraphicsDevice, logSize, _size, PixelFormat.R32G32B32A32_Float, TextureFlags.ShaderResource | TextureFlags.UnorderedAccess);
 
+            context.CommandList.ResourceBarrierTransition(texture, GraphicsResourceState.UnorderedAccess);
+
             _shaders.PrecomputeTwiddleFactorsAndInputIndices.Parameters.Set(OceanFastFourierTransformBaseKeys.Size, (uint)_size);
             _shaders.PrecomputeTwiddleFactorsAndInputIndices.Parameters.Set(OceanPrecomputeTwiddleFactorsAndInputIndicesKeys.PrecomputeBuffer, texture);
 
             _shaders.PrecomputeTwiddleFactorsAndInputIndices.ThreadGroupCounts = new Int3(logSize, _size / 2 / LOCAL_WORK_GROUPS_Y, 1);
             _shaders.PrecomputeTwiddleFactorsAndInputIndices.ThreadNumbers = new Int3(1, LOCAL_WORK_GROUPS_Y, 1);
             _shaders.PrecomputeTwiddleFactorsAndInputIndices.Draw(context);
+
+            context.CommandList.ResourceBarrierTransition(texture, GraphicsResourceState.PixelShaderResource);
 
             return texture;
         }
@@ -93,6 +97,17 @@ namespace TR.Stride.Ocean
             {
                 pingPong = !pingPong;
 
+                if (pingPong)
+                {
+                    context.CommandList.ResourceBarrierTransition(input, GraphicsResourceState.GenericRead);
+                    context.CommandList.ResourceBarrierTransition(buffer, GraphicsResourceState.UnorderedAccess);
+                }
+                else
+                {
+                    context.CommandList.ResourceBarrierTransition(input, GraphicsResourceState.UnorderedAccess);
+                    context.CommandList.ResourceBarrierTransition(buffer, GraphicsResourceState.GenericRead);
+                }
+
                 _shaders.HorizontalStepInverseFFT.Parameters.Set(OceanFastFourierTransformBaseKeys.Step, (uint)i);
                 _shaders.HorizontalStepInverseFFT.Parameters.Set(OceanFastFourierTransformBaseKeys.PingPong, pingPong);
 
@@ -109,6 +124,17 @@ namespace TR.Stride.Ocean
             for (var i = 0; i < logSize; i++)
             {
                 pingPong = !pingPong;
+
+                if (pingPong)
+                {
+                    context.CommandList.ResourceBarrierTransition(input, GraphicsResourceState.GenericRead);
+                    context.CommandList.ResourceBarrierTransition(buffer, GraphicsResourceState.UnorderedAccess);
+                }
+                else
+                {
+                    context.CommandList.ResourceBarrierTransition(input, GraphicsResourceState.UnorderedAccess);
+                    context.CommandList.ResourceBarrierTransition(buffer, GraphicsResourceState.GenericRead);
+                }
 
                 _shaders.VerticalStepInverseFFT.Parameters.Set(OceanFastFourierTransformBaseKeys.Step, (uint)i);
                 _shaders.VerticalStepInverseFFT.Parameters.Set(OceanFastFourierTransformBaseKeys.PingPong, pingPong);
@@ -130,6 +156,9 @@ namespace TR.Stride.Ocean
 
             if (permute)
             {
+                context.CommandList.ResourceBarrierTransition(outputToInput ? input : buffer, GraphicsResourceState.PixelShaderResource);
+                context.CommandList.ResourceBarrierTransition(outputToInput ? input : buffer, GraphicsResourceState.UnorderedAccess);
+
                 _shaders.Permute.Parameters.Set(OceanFastFourierTransformBaseKeys.Size, (uint)_size);
                 _shaders.Permute.Parameters.Set(OceanFastFourierTransformBaseKeys.Buffer0, outputToInput ? input : buffer);
 
@@ -140,6 +169,9 @@ namespace TR.Stride.Ocean
 
             if (scale)
             {
+                context.CommandList.ResourceBarrierTransition(outputToInput ? input : buffer, GraphicsResourceState.PixelShaderResource);
+                context.CommandList.ResourceBarrierTransition(outputToInput ? input : buffer, GraphicsResourceState.UnorderedAccess);
+
                 _shaders.Scale.Parameters.Set(OceanFastFourierTransformBaseKeys.Size, (uint)_size);
                 _shaders.Scale.Parameters.Set(OceanFastFourierTransformBaseKeys.Buffer0, outputToInput ? input : buffer);
 

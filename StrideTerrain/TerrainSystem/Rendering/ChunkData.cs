@@ -17,12 +17,15 @@ public struct ChunkData
     public byte Padding0;
 
     public float Scale;
+    public float Padding1;
     public Vector3 Position;
+    public float Padding2;
 
     public int UvX;
     public int UvY;
 
-    public BoundingBoxExt Bounds;
+    public float Padding3;
+    public float Padding4;
 
     public override readonly string ToString()
         => $"n:{North}, s:{South}, w:{West}, e:{East}";

@@ -18,11 +18,11 @@
 
 		override void Compute()
 		{
-			float4 wave = WavesData[streams.DispatchThreadId.xy];
+			float4 wave = WavesData.Load(int3(streams.DispatchThreadId.xy, 0));
 			float phase = wave.w * Time;
 			float2 exponent = float2(cos(phase), sin(phase));
-			float2 h = ComplexMult(H0[streams.DispatchThreadId.xy].xy, exponent)
-				+ ComplexMult(H0[streams.DispatchThreadId.xy].zw, float2(exponent.x, -exponent.y));
+			float2 h = ComplexMult(H0.Load(int3(streams.DispatchThreadId.xy, 0)).xy, exponent)
+				+ ComplexMult(H0.Load(int3(streams.DispatchThreadId.xy, 0)).zw, float2(exponent.x, -exponent.y));
 			float2 ih = float2(-h.y, h.x);
 	
 			float2 displacementX = ih * wave.x * wave.y;

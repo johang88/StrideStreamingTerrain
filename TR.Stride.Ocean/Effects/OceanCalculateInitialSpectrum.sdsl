@@ -26,12 +26,13 @@ namespace TR.Stride.Ocean
 		        float spectrum = JONSWAP(omega, GravityAcceleration, Depth, Spectrums[0]) * DirectionSpectrum(kAngle, omega, Spectrums[0]) * ShortWavesFade(kLength, Spectrums[0]);
 		        if (Spectrums[1].scale > 0)
 			        spectrum += JONSWAP(omega, GravityAcceleration, Depth, Spectrums[1]) * DirectionSpectrum(kAngle, omega, Spectrums[1]) * ShortWavesFade(kLength, Spectrums[1]);
-		        
-                H0K[streams.DispatchThreadId.xy] = float2(NoiseTexture[streams.DispatchThreadId.xy].x, NoiseTexture[streams.DispatchThreadId.xy].y) * sqrt(2 * spectrum * abs(dOmegadk) / kLength * deltaK * deltaK);
+
+                float2 n = NoiseTexture.Load(int3(streams.DispatchThreadId.xy, 0)).xy;
+		        H0K[streams.DispatchThreadId.xy] = n * sqrt(2 * spectrum * abs(dOmegadk) / kLength * deltaK * deltaK);
             }
             else
             {
-                H0K[streams.DispatchThreadId.xy] = float2(0, 0);
+                H0K[streams.DispatchThreadId.xy] = 0;
 		        WavesData[streams.DispatchThreadId.xy] = float4(k.x, 1, k.y, 0);
             }
         }

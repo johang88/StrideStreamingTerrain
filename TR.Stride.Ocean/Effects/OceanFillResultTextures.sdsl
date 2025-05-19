@@ -16,10 +16,10 @@
 
         override void Compute()
         {
-            float2 DxDz = Dx_Dz[streams.DispatchThreadId.xy];
-	        float2 DyDxz = Dy_Dxz[streams.DispatchThreadId.xy];
-	        float2 DyxDyz = Dyx_Dyz[streams.DispatchThreadId.xy];
-	        float2 DxxDzz = Dxx_Dzz[streams.DispatchThreadId.xy];
+            float2 DxDz = Dx_Dz.Load(int3(streams.DispatchThreadId.xy, 0));
+	        float2 DyDxz = Dy_Dxz.Load(int3(streams.DispatchThreadId.xy, 0));
+	        float2 DyxDyz = Dyx_Dyz.Load(int3(streams.DispatchThreadId.xy, 0));
+	        float2 DxxDzz = Dxx_Dzz.Load(int3(streams.DispatchThreadId.xy, 0));
 	
 	        Displacement[streams.DispatchThreadId.xy] = float3(Lambda * DxDz.x, DyDxz.x, Lambda * DxDz.y);
 	        Derivatives[streams.DispatchThreadId.xy] = float4(DyxDyz, DxxDzz * Lambda);

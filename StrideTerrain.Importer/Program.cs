@@ -69,7 +69,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
     if (heightmap.Format != PixelFormat.R16_UNorm && heightmap.Format != PixelFormat.R16G16B16A16_UNorm)
     {
-        Console.WriteLine("Heightmap must be R16_UNorm  .");
+        Console.WriteLine("Heightmap must be R16_UNorm.");
         return;
     }
 

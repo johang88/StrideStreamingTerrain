@@ -22,5 +22,6 @@
   <ItemGroup>
     <PackageVersion Include="Stride.Editor" Version="4.2.0.1" />
     <PackageVersion Include="Stride.Core.BuildEngine.Common" Version="4.2.0.1" />
+	<PackageVersion Include="Stride.Shaders.Compiler" Version="4.2.0.1" />
   </ItemGroup>
 </Project>

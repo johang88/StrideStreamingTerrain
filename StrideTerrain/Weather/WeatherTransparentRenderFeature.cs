@@ -3,7 +3,6 @@ using Stride.Rendering;
 using StrideTerrain.Weather.Effects;
 using System.Runtime.InteropServices;
 using Stride.Core.Mathematics;
-using System.ComponentModel;
 
 namespace StrideTerrain.Weather;
 
@@ -48,9 +47,9 @@ public class WeatherTransparentRenderFeature :SubRenderFeature
                 if (renderEffect == null || !renderEffect.IsUsedDuringThisFrame(RenderSystem))
                     continue;
 
-                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableAerialPerspective, true);
+                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableAerialPerspective, hasWeather);
                 renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableVolumetricSunLight, shouldRenderAtmosphereForRenderObject);
-                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableHeightFog, hasWeather && weather.Fog.Density > 0);
+                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableHeightFog, hasWeather && weather?.Fog.Density > 0);
             }
         }
     }

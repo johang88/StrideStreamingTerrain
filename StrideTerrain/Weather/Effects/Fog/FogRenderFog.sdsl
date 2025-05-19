@@ -21,7 +21,7 @@
         {
             float2 pixelPosition = streams.ShadingPosition.xy;
 
-            float depth = DepthTexture[pixelPosition.xy].x;
+            float depth = DepthTexture.Load(int3(pixelPosition.xy, 0)).x;
 
             float2 uv = pixelPosition * InvResolution;
 

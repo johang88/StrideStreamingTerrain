@@ -29,7 +29,6 @@ public class CubeMapRenderer : SceneRendererBase
     private Texture? _cubeMap = null;
     public Skybox? Skybox = null;
 
-    private LambertianPrefilteringSH? _lamberFiltering;
     private RadiancePrefilteringGGX? _specularRadiancePrefilterGGX;
 
     private Texture? _cubeMapSpecular;
@@ -44,10 +43,6 @@ public class CubeMapRenderer : SceneRendererBase
         _cubeMapSpecular = Texture.NewCube(Context.GraphicsDevice, Resolution, MipMapCount.Auto, PixelFormat.R16G16B16A16_Float, TextureFlags.ShaderResource | TextureFlags.UnorderedAccess);
         _cubeMapSpecular.DisposeBy(this);
 
-        _lamberFiltering = new LambertianPrefilteringSH(Context);
-        _lamberFiltering.DisposeBy(this);
-        _lamberFiltering.RadianceMap = _cubeMap;
-
         _specularRadiancePrefilterGGX = new(Context);
         _specularRadiancePrefilterGGX.DisposeBy(this);
 
@@ -60,98 +55,108 @@ public class CubeMapRenderer : SceneRendererBase
     {
         base.CollectCore(context);
 
-        _currentFace++;
-        if (_currentFace >= 6)
-        {
-            _currentFace = 0;
-        }
+        //_currentFace++;
+        //if (_currentFace >= 6)
+        //{
+        //    _currentFace = 0;
+        //}
 
-        var inverseViewMatrix = Matrix.Invert(context.RenderView.View);
-        var eye = inverseViewMatrix.Row4;
-        var cameraPosition = new Vector3(eye.X, eye.Y + 2.0f, eye.Z); // Random offset :)
+        //var inverseViewMatrix = Matrix.Invert(context.RenderView.View);
+        //var eye = inverseViewMatrix.Row4;
+        //var cameraPosition = new Vector3(eye.X, eye.Y + 2.0f, eye.Z); // Random offset :)
 
-        var near = context.RenderView.NearClipPlane;
-        var far = context.RenderView.FarClipPlane;
+        //var near = context.RenderView.NearClipPlane;
+        //var far = context.RenderView.FarClipPlane;
 
-        var projection = Matrix.PerspectiveFovRH(MathUtil.DegreesToRadians(90.0f), 1.0f, near, far);
+        //var projection = Matrix.PerspectiveFovRH(MathUtil.DegreesToRadians(90.0f), 1.0f, near, far);
 
-        context.RenderSystem.Views.Add(_renderView);
+        //context.RenderSystem.Views.Add(_renderView);
 
-        var view = (CubeMapFace)_currentFace switch
-        {
-            CubeMapFace.PositiveX => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitX, Vector3.UnitY),
-            CubeMapFace.NegativeX => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitX, Vector3.UnitY),
-            CubeMapFace.PositiveY => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitY, Vector3.UnitZ),
-            CubeMapFace.NegativeY => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitY, -Vector3.UnitZ),
-            CubeMapFace.PositiveZ => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitZ, Vector3.UnitY),
-            CubeMapFace.NegativeZ => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitZ, Vector3.UnitY),
-            _ => throw new ArgumentOutOfRangeException(),
-        };
+        //var view = (CubeMapFace)_currentFace switch
+        //{
+        //    CubeMapFace.PositiveX => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitX, Vector3.UnitY),
+        //    CubeMapFace.NegativeX => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitX, Vector3.UnitY),
+        //    CubeMapFace.PositiveY => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitY, Vector3.UnitZ),
+        //    CubeMapFace.NegativeY => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitY, -Vector3.UnitZ),
+        //    CubeMapFace.PositiveZ => Matrix.LookAtRH(cameraPosition, cameraPosition - Vector3.UnitZ, Vector3.UnitY),
+        //    CubeMapFace.NegativeZ => Matrix.LookAtRH(cameraPosition, cameraPosition + Vector3.UnitZ, Vector3.UnitY),
+        //    _ => throw new ArgumentOutOfRangeException(),
+        //};
 
-        var viewProjection = view * projection;
+        //var viewProjection = view * projection;
 
-        _renderView.ViewSize = new(Resolution, Resolution);
-        _renderView.View = view;
-        _renderView.Projection = projection;
-        _renderView.NearClipPlane = near;
-        _renderView.FarClipPlane = far;
-        _renderView.Frustum = new(ref viewProjection);
+        //_renderView.ViewSize = new(Resolution, Resolution);
+        //_renderView.View = view;
+        //_renderView.Projection = projection;
+        //_renderView.NearClipPlane = near;
+        //_renderView.FarClipPlane = far;
+        //_renderView.Frustum = new(ref viewProjection);
 
-        Matrix.Multiply(ref _renderView.View, ref _renderView.Projection, out _renderView.ViewProjection);
+        //Matrix.Multiply(ref _renderView.View, ref _renderView.Projection, out _renderView.ViewProjection);
 
-        // Assume culling won't be needed. 
-        _renderView.CullingMode = CameraCullingMode.None;
+        //// Assume culling won't be needed. 
+        //_renderView.CullingMode = CameraCullingMode.None;
 
-        using (context.PushRenderViewAndRestore(_renderView))
-        using (context.PushTagAndRestore(IsRenderingCubemap, true))
-        using (context.SaveRenderOutputAndRestore())
-        using (context.SaveViewportAndRestore())
-        using (context.PushTagAndRestore(CameraComponentRendererExtensions.Current, null))
-        {
-            _renderView.CullingMask = RenderMask;
+        //using (context.PushRenderViewAndRestore(_renderView))
+        //using (context.PushTagAndRestore(IsRenderingCubemap, true))
+        //using (context.SaveRenderOutputAndRestore())
+        //using (context.SaveViewportAndRestore())
+        //using (context.PushTagAndRestore(CameraComponentRendererExtensions.Current, null))
+        //{
+        //    _renderView.CullingMask = RenderMask;
 
-            context.RenderOutput.RenderTargetFormat0 = PixelFormat.R16G16B16A16_Float;
-            context.RenderOutput.RenderTargetCount = 1;
-            context.ViewportState.Viewport0 = new Viewport(0, 0, Resolution, Resolution);
+        //    context.RenderOutput.RenderTargetFormat0 = PixelFormat.R16G16B16A16_Float;
+        //    context.RenderOutput.RenderTargetCount = 1;
+        //    context.ViewportState.Viewport0 = new Viewport(0, 0, Resolution, Resolution);
 
-            Child?.Collect(context);
-        }
+        //    Child?.Collect(context);
+        //}
     }
 
     protected override void DrawCore(RenderContext context, RenderDrawContext drawContext)
     {
-        using (context.PushRenderViewAndRestore(_renderView))
-        using (context.PushTagAndRestore(IsRenderingCubemap, true))
-        using (context.PushTagAndRestore(CameraComponentRendererExtensions.Current, null))
-        using (drawContext.PushRenderTargetsAndRestore())
-        {
-            using (drawContext.QueryManager.BeginProfile(Color4.Black, RenderCubeMapProfilingKey))
-            {
-                _renderView.CullingMask = RenderMask;
+        //var depthBuffer = PushScopedResource(context.Allocator.GetTemporaryTexture2D(Resolution, Resolution, drawContext.CommandList.DepthStencilBuffer.ViewFormat, TextureFlags.DepthStencil | TextureFlags.ShaderResource));
+        //var renderTexture = PushScopedResource(context.Allocator.GetTemporaryTexture2D(Resolution, Resolution, PixelFormat.R16G16B16A16_Float));
 
-                var depthBuffer = PushScopedResource(context.Allocator.GetTemporaryTexture2D(Resolution, Resolution, drawContext.CommandList.DepthStencilBuffer.ViewFormat, TextureFlags.DepthStencil | TextureFlags.ShaderResource));
-                var renderTexture = PushScopedResource(context.Allocator.GetTemporaryTexture2D(Resolution, Resolution, PixelFormat.R16G16B16A16_Float));
+        //using (context.PushRenderViewAndRestore(_renderView))
+        //using (context.PushTagAndRestore(IsRenderingCubemap, true))
+        //using (context.PushTagAndRestore(CameraComponentRendererExtensions.Current, null))
+        //using (drawContext.PushRenderTargetsAndRestore())
+        //{
+        //    using (drawContext.QueryManager.BeginProfile(Color4.Black, RenderCubeMapProfilingKey))
+        //    {
+        //        _renderView.CullingMask = RenderMask;
 
-                drawContext.CommandList.SetRenderTargetAndViewport(depthBuffer, renderTexture);
+        //        drawContext.CommandList.SetRenderTargetAndViewport(depthBuffer, renderTexture);
+        //        Child?.Draw(drawContext);
+        //    }
+        //}
 
-                Child?.Draw(drawContext);
+        //if (GraphicsDevice.Platform == GraphicsPlatform.Vulkan)
+        //{
+        //    drawContext.CommandList.ResourceBarrierTransition(_cubeMap, GraphicsResourceState.CopySource);
+        //    drawContext.CommandList.CopyRegion(renderTexture, 0, null, _cubeMap.ToTextureView(ViewType.Single, _currentFace, 0), 0);
+        //}
+        //else
+        //{
+        //    drawContext.CommandList.CopyRegion(renderTexture, 0, null, _cubeMap, _currentFace);
+        //}
 
-                drawContext.CommandList.CopyRegion(renderTexture, 0, null, _cubeMap, _currentFace);
-            }
-        }
+        //if (Skybox != null && _specularRadiancePrefilterGGX != null)
+        //{
+        //    using (drawContext.QueryManager.BeginProfile(Color4.Black, SpecularProbeProfilingKey))
+        //    {
+        //        drawContext.CommandList.ResourceBarrierTransition(_cubeMap, GraphicsResourceState.PixelShaderResource);
 
-        if (Skybox != null && _specularRadiancePrefilterGGX != null && _lamberFiltering != null)
-        {
-            using (drawContext.QueryManager.BeginProfile(Color4.Black, SpecularProbeProfilingKey))
-            {
-                using (drawContext.PushRenderTargetsAndRestore())
-                {
-                    _specularRadiancePrefilterGGX.Draw(drawContext);
-                    drawContext.CommandList.ClearState();
-                }
+        //        using (drawContext.PushRenderTargetsAndRestore())
+        //        {
+        //            _specularRadiancePrefilterGGX.Draw(drawContext);
+        //            drawContext.CommandList.ClearState();
+        //        }
 
-                Skybox.SpecularLightingParameters.Set(SkyboxKeys.CubeMap, _cubeMapSpecular);
-            }
-        }
+        //        drawContext.CommandList.ResourceBarrierTransition(_cubeMapSpecular, GraphicsResourceState.PixelShaderResource);
+        //        Skybox.SpecularLightingParameters.Set(SkyboxKeys.CubeMap, _cubeMapSpecular);
+        //    }
+        //}
     }
 }
