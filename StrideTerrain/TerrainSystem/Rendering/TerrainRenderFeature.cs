@@ -124,6 +124,7 @@ public class TerrainRenderFeature : SubRenderFeature
                 perFrameTerrain->MaxHeight = data.TerrainData.Header.MaxHeight;
                 perFrameTerrain->ChunksPerRow = (uint)data.ChunksPerRowLod0;
                 perFrameTerrain->InvUnitsPerTexel = 1.0f / data.UnitsPerTexel;
+                perFrameTerrain->UnitsPerTexel = data.UnitsPerTexel;
 
                 var logicalGroup = frameLayout.GetLogicalGroup(terrainLogicalGroupKey);
                 if (logicalGroup.Hash == ObjectId.Empty)

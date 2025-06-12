@@ -160,11 +160,15 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             var cameraPosition = camera.GetWorldPosition();
             data.PhysicsManager?.Update(cameraPosition.X, cameraPosition.Z);
             data.GpuTextureManager?.Update(graphicsContext);
-            data.StreamingManager?.ProcessPendingCompletions(6);
+            data.StreamingManager?.ProcessPendingCompletions(1);
             data.MeshManager?.Update(cameraPosition, component.Lod0Distance);
 
             //var maxLoadedChunks = (TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize) * TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize;
-            //debugTextSystem.Print($"Terrain chunk count: {data.ChunkCount}", new(10, 240), new Color4(1, 0, 0, 1));
+            if (data.StreamingManager != null)
+            {
+                debugTextSystem.Print($"Pending streaming requests: {data.StreamingManager.PendingStreamingRequests}", new(10, 240), new Color4(1, 0, 0, 1));
+                debugTextSystem.Print($"Pending streaming completions: {data.StreamingManager.PendingCompletions}", new(10, 260), new Color4(1, 0, 0, 1));
+            }
             //debugTextSystem.Print($"Resident chunks: {data.ResidentChunksCount}", new(10, 260), new Color4(1, 0, 0, 1));
             //debugTextSystem.Print($"Active chunks: {data.ActiveChunks.Count}", new(10, 280), new Color4(1, 0, 0, 1));
             //debugTextSystem.Print($"Pending chunks: {data.PendingChunks.Count}", new(10, 300), new Color4(1, 0, 0, 1));

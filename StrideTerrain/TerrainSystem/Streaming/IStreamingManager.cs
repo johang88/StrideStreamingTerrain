@@ -8,4 +8,7 @@ public interface IStreamingManager : IDisposable
 {
     void ProcessPendingCompletions(int maxCompletionsToProcess = -1);
     void Request(ChunksToLoad chunksToLoad, int chunkIndex, StreamingRequestCompletedCallback completionCallback, object? callbackData = null);
+
+    public int PendingStreamingRequests { get; }
+    public int PendingCompletions { get; }
 }

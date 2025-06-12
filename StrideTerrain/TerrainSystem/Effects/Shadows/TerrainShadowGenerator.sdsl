@@ -57,7 +57,7 @@ namespace StrideTerrain.TerrainSystem.Effects.Shadows
 			pos /= scale;
 
 			int2 chunkPosition = int2(pos.x % ChunkSize, pos.y % ChunkSize);
-			int2 uv = ChunkBuffer[chunkIndex].Uv + chunkPosition;
+			int2 uv = UnpackUv(ChunkBuffer[chunkIndex]) + chunkPosition;
 
 			float height = Heightmap.Load(int3(uv, 0)).x;
 			return height;

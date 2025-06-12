@@ -22,7 +22,7 @@ public class CubeMapRenderer : SceneRendererBase
 
     public ISceneRenderer? Child { get; set; }
     public RenderGroupMask RenderMask { get; set; } = RenderGroupMask.All;
-    public int Resolution { get; set; } = 1024;
+    public int Resolution { get; set; } = 128;
 
     private int _currentFace =-1; // Render one face per frame
 
@@ -48,7 +48,7 @@ public class CubeMapRenderer : SceneRendererBase
 
         _specularRadiancePrefilterGGX.RadianceMap = _cubeMap;
         _specularRadiancePrefilterGGX.PrefilteredRadiance = _cubeMapSpecular;
-        _specularRadiancePrefilterGGX.SamplingsCount = 64;
+        _specularRadiancePrefilterGGX.SamplingsCount = 512;
     }
 
     protected override void CollectCore(RenderContext context)

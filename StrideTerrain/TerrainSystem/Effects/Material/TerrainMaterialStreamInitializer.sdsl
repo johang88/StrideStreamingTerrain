@@ -26,9 +26,15 @@
         override void ResetStream()
         {
             base.ResetStream();
+			
+			float3 normal = float3(0, 0, 0);
+            normal.xz = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord, 0).xy * 2.0f - 1.0f;
+            normal.y = sqrt(max(0.0f, 1.0f - (normal.x * normal.x + normal.z * normal.z)));
+
+            streams.meshNormal = normal;
 
             // Should this be hard coded? No it should not.
-           /* const TexData TextureParams[31] = {
+            const TexData TextureParams[31] = {
                 {0.3650000095, 0.5, 0.5},
                 {0.163635999, 0.5, 0.5},
                 {0.2060610056, 0.5, 0.0121210003},
@@ -105,6 +111,11 @@
                 (uint)((controlValueC >> 13) & 0x07),
                 (uint)((controlValueD >> 13) & 0x07)
             );
+
+            overlayTextureIndices = uint4(4,4,4,4);
+            backgroundTextureIndices = uint4(9,9,9,9);
+            slopeThresholds = uint4(1,1,1,1);
+            backgroundUvScaling = uint4(1,1,1,1);
 
             //backgroundTextureIndices.x = backgroundTextureIndices.y = backgroundTextureIndices.z = backgroundTextureIndices.w = 1;
 
@@ -191,6 +202,11 @@
             overlayNormal = mul(overlayNormal, tangentMatrix);
 
             float surfaceSlopeBlend = ComputeSlopeBlend(streams.meshNormal, backgroundNormal, baseDampening, slopeThreshold, blendSharpness);
+
+            //streams.TerrainDiffuse = float3(1, 1, 1);
+            //streams.TerrainNormal = float3(0, 1, 0);
+            //streams.TerrainRoughness = 0;
+
             streams.TerrainDiffuse = lerp(overlay.Diffuse, background.Diffuse, surfaceSlopeBlend);
             streams.TerrainRoughness = lerp(overlay.Roughness, background.Roughness, surfaceSlopeBlend);
             streams.TerrainNormal = normalize(lerp(overlayNormal, backgroundNormal, surfaceSlopeBlend));
