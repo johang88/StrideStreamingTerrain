@@ -5,6 +5,7 @@ using Stride.TextureConverter;
 using StrideTerrain.Common;
 using System.CommandLine;
 using System.Runtime.InteropServices;
+using System.Text.Json;
 
 var inputOption = new Option<FileInfo>(
     name: "--input",
@@ -39,6 +40,10 @@ var unitsPerTexelOption = new Option<float>(
     name: "--units-per-texel",
     description: "Units per texel");
 
+var treesOptions = new Option<bool>(
+    name: "--trees",
+    description: "Generate tree location");
+
 var rootCommand = new RootCommand("StrideTerrain Importer");
 rootCommand.AddOption(inputOption);
 rootCommand.AddOption(controlMapOption);
@@ -48,6 +53,7 @@ rootCommand.AddOption(unitsPerTexelOption);
 rootCommand.AddOption(maxHeightOption);
 rootCommand.AddOption(maxLodOption);
 rootCommand.AddOption(nameOption);
+rootCommand.AddOption(treesOptions);
 
 const bool CompressNormals = true;
 
@@ -162,6 +168,43 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
         var index = (y * terrainSize + x) * 2;
         return (normals[index + 0], normals[index + 1]);
+    }
+
+    bool genereateTrees = true;
+    if  (genereateTrees)
+    {
+        var trees = new List<TreeInstance>(terrainSize * terrainSize);
+        for (var y = 0; y < terrainSize; y += 32)
+        {
+            for (var x = 0; x < terrainSize; x += 32)
+            {
+                var ox = Random.Shared.Next(0, 31);
+                var oy = Random.Shared.Next(0, 32);
+                var height = HeightAt(x + ox, y + oy);
+                if (height >= 2 && height < 200)
+                {
+                    var normal = NormalAt(x + ox, y + oy);
+                    if (Math.Abs(normal.Z) < 0.05f)
+                    {
+                        trees.Add(new()
+                        {
+                            X = (x + ox) * unitsPerTexel,
+                            Y = height,
+                            Z = (y + oy) * unitsPerTexel
+                        });
+                    }
+                }
+            }
+        }
+
+        var outputPathTreeData = Path.Combine(outputPath, $"{name}_Trees.json");
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.General)
+        {
+            IncludeFields = true
+        };
+        File.WriteAllText(outputPathTreeData, JsonSerializer.Serialize(trees, options));
+
+        return;
     }
 
     var actualMaxLod = (int)Math.Log2(terrainSize / chunkSize); // Max lod = single chunk
@@ -342,3 +385,10 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 }, inputOption, controlMapOption, outputPathOption, nameOption, chunkSizeOption, maxHeightOption, unitsPerTexelOption, maxLodOption);
 
 await rootCommand.InvokeAsync(args);
+
+class TreeInstance
+{
+    public float X;
+    public float Y;
+    public float Z;
+}

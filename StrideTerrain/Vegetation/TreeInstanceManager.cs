@@ -3,7 +3,6 @@ using Stride.Core.Mathematics;
 using Stride.Core.Serialization;
 using Stride.Engine;
 using Stride.Graphics;
-using StrideTerrain.Common;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
@@ -11,7 +10,6 @@ using System.Runtime.InteropServices;
 using System;
 using Buffer = Stride.Graphics.Buffer;
 using Stride.Core.Diagnostics;
-using StrideTerrain.Rendering;
 using StrideTerrain.Rendering.Profiling;
 
 namespace StrideTerrain.Vegetation;
@@ -55,7 +53,7 @@ public class TreeInstanceManager : StartupScript
 
         foreach (var model in Models)
         {
-            model.Entity.Get<ModelComponent>().IsShadowCaster = false;
+            model.Entity.Get<ModelComponent>().IsShadowCaster = true;
             model.Entity.Add(new ProfilingKeyComponent
             {
                 ProfilingKey = ProfilingKeyDraw
@@ -68,10 +66,6 @@ public class TreeInstanceManager : StartupScript
 
         foreach (var tree in trees)
         {
-            // TMP: As everything else in this class ...
-            if (tree.X < 3000 || tree.Z < 3000 || tree.X > 5000 || tree.Z > 5000)
-                continue;
-
             var i = Random.Shared.Next(0, Models.Count);
             var scale = 1.3f + Random.Shared.NextSingle() * 2.6f;
             var rotation = Random.Shared.NextSingle() * 3.14f * 2.0f;

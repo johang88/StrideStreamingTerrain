@@ -25,40 +25,15 @@
         override void ResetStream()
         {
             base.ResetStream();
+			
+			float3 normal = float3(0, 0, 0);
+            normal.xz = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord, 0).xy * 2.0f - 1.0f;
+            normal.y = sqrt(max(0.0f, 1.0f - (normal.x * normal.x + normal.z * normal.z)));
+
+            streams.meshNormal = normal;
 
             // Should this be hard coded? No it should not.
             const TextureParam TextureParams[31] = {
-                //{317, 211, 268},
-                //{252, 903, 536},
-                //{270, 0, 0},
-                //{300, 0, 0},
-                //{300, 0, 0},
-                //{300, 0, 0},
-                //{205, 0, 0},
-                //{341, 0, 0},
-                //{300, 883, 867},
-                //{300, 451, 0},
-                //{300, 400, 0},
-                //{300, 0, 0},
-                //{247, 0, 434},
-                //{300, 233, 1000},
-                //{300, 585, 0},
-                //{300, 0, 0},
-                //{300, 408, 0},
-                //{300, 0, 0},
-                //{254, 0, 0},
-                //{300, 400, 0},
-                //{283, 339, 0},
-                //{187, 0, 0},
-                //{300, 400, 0},
-                //{196, 0, 0},
-                //{373, 71, 0},
-                //{300, 772, 848},
-                //{300, 867, 246},
-                //{324, 208, 266},
-                //{300, 400, 32},
-                //{300, 400, 0},
-                //{121, 0, 1000}
                 {0.3650000095, 0.5, 0.5},
                 {0.163635999, 0.5, 0.5},
                 {0.2060610056, 0.5, 0.0121210003},
@@ -136,6 +111,11 @@
                 (uint)((controlValueD >> 13) & 0x07)
             );
 
+            overlayTextureIndices = uint4(4,4,4,4);
+            backgroundTextureIndices = uint4(9,9,9,9);
+            slopeThresholds = uint4(1,1,1,1);
+            backgroundUvScaling = uint4(1,1,1,1);
+
             //backgroundTextureIndices.x = backgroundTextureIndices.y = backgroundTextureIndices.z = backgroundTextureIndices.w = 1;
 
             const float slopeThresholdsMap[8] = { 0.0f, 0.125f, 0.25f, 0.375f, 0.5f, 0.625f, 0.75f, 0.98f };
@@ -206,6 +186,11 @@
             overlayNormal = mul(overlayNormal, tangentMatrix);
 
             float surfaceSlopeBlend = ComputeSlopeBlend(streams.meshNormal, backgroundNormal, baseDampening, slopeThreshold, blendSharpness);
+
+            //streams.TerrainDiffuse = float3(1, 1, 1);
+            //streams.TerrainNormal = float3(0, 1, 0);
+            //streams.TerrainRoughness = 0;
+
             streams.TerrainDiffuse = lerp(overlay.Diffuse, background.Diffuse, surfaceSlopeBlend);
             streams.TerrainRoughness = lerp(overlay.Roughness, background.Roughness, surfaceSlopeBlend);
             streams.TerrainNormal = normalize(lerp(overlayNormal, backgroundNormal, surfaceSlopeBlend));

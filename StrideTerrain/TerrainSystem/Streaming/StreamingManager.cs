@@ -2,6 +2,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Threading;
 
@@ -31,6 +32,11 @@ public sealed class StreamingManager : IDisposable, IStreamingManager
     private readonly ConcurrentQueue<StreamingRequest> _completionQueue = [];
     private readonly Stack<StreamingRequest> _requestPool = new(256);
 
+    public int PendingStreamingRequests => _pendingRequests.Count;
+    public int PendingCompletions => _completionQueue.Count;
+
+    private readonly Stopwatch _timer = new();
+
     public StreamingManager(TerrainData terrain, ITerrainDataProvider terrainDataProvider)
     {
         _terrain = terrain;
@@ -38,6 +44,7 @@ public sealed class StreamingManager : IDisposable, IStreamingManager
         var (stream, baseOffset) = terrainDataProvider.OpenStreamingData();
         _stream = stream;
         _baseOffset = baseOffset;
+        _timer.Start();
     }
 
     public void Dispose()
@@ -52,8 +59,8 @@ public sealed class StreamingManager : IDisposable, IStreamingManager
     /// <summary>
     /// Should be called each frame on the main thread in order for the completion callbacks to be invoked.
     /// </summary>
-    /// <param name="maxCompletionsToProcess">Maximum number of completions to process during a single frame. Set to -1 for unlimited.</param>
-    public void ProcessPendingCompletions(int maxCompletionsToProcess = -1)
+    /// <param name="maxTimeMilliseconds">Maximum time for processing in ms. Set to -1 for unlimited.</param>
+    public void ProcessPendingCompletions(int maxTimeMilliseconds = -1)
     {
         if (_ioThread == null)
         {
@@ -61,10 +68,9 @@ public sealed class StreamingManager : IDisposable, IStreamingManager
             _ioThread.Start();
         }
 
-        while (maxCompletionsToProcess > 0 || maxCompletionsToProcess == -1)
+        var now = _timer.ElapsedMilliseconds;
+        while ((_timer.ElapsedMilliseconds - now) < maxTimeMilliseconds || maxTimeMilliseconds == -1)
         {
-            maxCompletionsToProcess--;
-
             if (!_completionQueue.TryDequeue(out var streamingRequest))
                 break;
 

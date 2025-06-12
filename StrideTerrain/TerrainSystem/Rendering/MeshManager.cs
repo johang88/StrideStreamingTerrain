@@ -19,6 +19,7 @@ public class MeshManager : IDisposable
     private readonly GpuTextureManager _gpuTextureManager;
 
     private readonly ChunkData[] _chunkData;
+    private readonly BoundingBoxExt[] _chunkBounds;
     private int _chunkCount = 0;
     private readonly int[] _sectorToChunkMap;
 
@@ -44,6 +45,7 @@ public class MeshManager : IDisposable
         var maxChunks = _terrain.ChunksPerRowLod0 * _terrain.ChunksPerRowLod0;
 
         _chunkData = new ChunkData[maxChunks];
+        _chunkBounds = new BoundingBoxExt[maxChunks];
         _sectorToChunkMap = new int[maxChunks];
 
         ChunkBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, Marshal.SizeOf<ChunkData>(), true);
@@ -179,15 +181,15 @@ public class MeshManager : IDisposable
 
                     var (tx, ty) = _gpuTextureManager!.Heightmap!.GetCoordinates(textureIndex);
 
-                    _chunkData[_chunkCount].UvX = tx;
-                    _chunkData[_chunkCount].UvY = ty;
+                    _chunkData[_chunkCount].UvX = (ushort)tx;
+                    _chunkData[_chunkCount].UvY = (ushort)ty;
 
                     _chunkData[_chunkCount].LodLevel = (byte)lod;
                     _chunkData[_chunkCount].ChunkX = (byte)positionX;
                     _chunkData[_chunkCount].ChunkZ = (byte)positionZ;
-                    _chunkData[_chunkCount].Scale = scale * _terrain.UnitsPerTexel;
-                    _chunkData[_chunkCount].Position = new(positionX * chunkOffset * _terrain.UnitsPerTexel, 0, positionZ * chunkOffset * _terrain.UnitsPerTexel);
-                    _chunkData[_chunkCount].Bounds = bounds;
+                    _chunkData[_chunkCount].PositionX = (ushort)(positionX * chunkOffset);
+                    _chunkData[_chunkCount].PositionZ = (ushort)(positionZ * chunkOffset);
+                    _chunkBounds[_chunkCount] = bounds;
                     _chunkCount++;
                 }
             }
@@ -242,7 +244,7 @@ public class MeshManager : IDisposable
         var chunkInstanceData = ArrayPool<int>.Shared.Rent(maxChunks);
         for (var i = 0; i < _chunkCount; i++)
         {
-            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _chunkData[i].Bounds, VisiblityIgnoreDepthPlanes))
+            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _chunkBounds[i], VisiblityIgnoreDepthPlanes))
                 continue;
 
             chunkInstanceData[renderMesh.InstanceCount++] = i;

@@ -6,11 +6,8 @@
         {
             int Data0; // byte LodLevel, byte Noth, byte South, byte West
             int Data1; // byte East, byte ChunkX, byte ChunkZ, byte Padding0
-            float Scale;
-            float3 Position;
-            int2 Uv;
-            float3 BoundsCenter;
-            float3 BoundsExtent;
+            int PackedUv;
+            int PackedPositionXZ;
         };
 
         rgroup PerFrame.Terrain
@@ -34,6 +31,25 @@
             stage float InvMaxHeight;
             stage uint ChunksPerRow;
             stage float InvUnitsPerTexel;
+            stage float UnitsPerTexel;
+        }
+
+        int2 UnpackUv(ChunkData chunk)
+        {
+            return UnpackInt2(chunk.PackedUv);
+        }
+
+        int2 UnpackPosition(ChunkData chunk)
+        {
+            return UnpackInt2(chunk.PackedPositionXZ);
+        }
+
+        int2 UnpackInt2(int2 v)
+        {
+            int2 r;
+            r.x = v & 0xFFFF;
+            r.y = (v >> 16) & 0xFFFF;
+            return r;
         }
     };
 }

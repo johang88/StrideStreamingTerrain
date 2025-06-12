@@ -17,4 +17,5 @@ struct PerFrameTerrain
     public float InvMaxHeight;
     public uint ChunksPerRow;
     public float InvUnitsPerTexel;
+    public float UnitsPerTexel;
 }
