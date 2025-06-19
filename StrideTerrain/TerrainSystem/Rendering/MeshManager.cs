@@ -233,12 +233,6 @@ public class MeshManager : IDisposable
 
     public void UpdateBuffers(CommandList commandList)
     {
-        var eo = (int)Marshal.OffsetOf<ChunkData>(nameof(ChunkData.East));
-        var so = (int)Marshal.OffsetOf<ChunkData>(nameof(ChunkData.Scale));
-        var po = (int)Marshal.OffsetOf<ChunkData>(nameof(ChunkData.Position));
-        var uvx = (int)Marshal.OffsetOf<ChunkData>(nameof(ChunkData.UvX));
-        var size = (int)Marshal.SizeOf<ChunkData>();
-
         ChunkBuffer.SetData(commandList, (ReadOnlySpan<ChunkData>)_chunkData.AsSpan(0, _chunkCount));
         SectorToChunkMapBuffer.SetData(commandList, (ReadOnlySpan<int>)_sectorToChunkMap.AsSpan());
     }
@@ -250,7 +244,7 @@ public class MeshManager : IDisposable
         var chunkInstanceData = ArrayPool<int>.Shared.Rent(maxChunks);
         for (var i = 0; i < _chunkCount; i++)
         {
-            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _chunkBounds[i], VisiblityIgnoreDepthPlanes))
+            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _chunkBounds[i], visiblityIgnoreDepthPlanes))
                 continue;
 
             chunkInstanceData[renderMesh.InstanceCount++] = i;

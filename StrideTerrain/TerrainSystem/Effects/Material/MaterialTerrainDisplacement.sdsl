@@ -14,10 +14,11 @@
         {
             int chunkIndex = ChunkInstanceData[streams.InstanceID];
 
-            int data0 = ChunkBuffer[chunkIndex].Data0;
-            int data1 = ChunkBuffer[chunkIndex].Data1;
-            float2 worldPosition = float2(UnpackPosition(ChunkBuffer[chunkIndex])) * UnitsPerTexel;
-            int2 uv = UnpackUv(ChunkBuffer[chunkIndex]);
+            ChunkData chunk = ChunkBuffer[chunkIndex];
+            int data0 = chunk.Data0;
+            int data1 = chunk.Data1;
+            float2 worldPosition = float2(UnpackPosition(chunk)) * UnitsPerTexel;
+            int2 uv = UnpackUv(chunk);
 
             streams.LodLevel = data0 & 0xFF;
 

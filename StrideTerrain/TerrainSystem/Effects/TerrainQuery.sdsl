@@ -14,7 +14,10 @@
 
             uint lodLevel = ChunkBuffer[chunkIndex].Data0 & 0xFF;
 			uint scale = 1 << lodLevel;
-            float2 uv = UnpackUv(ChunkBuffer[chunkIndex]);
+
+            ChunkData chunk = ChunkBuffer[chunkIndex];
+            int2 tmp = UnpackUv(chunk);
+            float2 uv = (float2)tmp;
 
             float positionInChunkX = ((float)wx / scale) % ChunkSize;
             float positionInChunkZ = ((float)wz / scale) % ChunkSize;

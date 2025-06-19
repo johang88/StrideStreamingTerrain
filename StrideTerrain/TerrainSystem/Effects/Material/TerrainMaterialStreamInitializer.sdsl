@@ -34,7 +34,7 @@
             streams.meshNormal = normal;
 
             // Should this be hard coded? No it should not.
-            const TexData TextureParams[31] = {
+            /*const TexData TextureParams[31] = {
                 {0.3650000095, 0.5, 0.5},
                 {0.163635999, 0.5, 0.5},
                 {0.2060610056, 0.5, 0.0121210003},
@@ -125,11 +125,6 @@
                 + fractionalWeights.y * slopeThresholdsMap[slopeThresholds.y]
                 + fractionalWeights.z * slopeThresholdsMap[slopeThresholds.z]
                 + fractionalWeights.w * slopeThresholdsMap[slopeThresholds.w];
-				
-			float3 normal = float3(0, 0, 0);
-            normal.xz = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord, 0).xy * 2.0f - 1.0f;
-            normal.y = sqrt(max(0.0f, 1.0f - (normal.x * normal.x + normal.z * normal.z)));
-			//streams.meshNormal = normal;
 			
             float tighten = 0.576f;
             streams.meshNormal = normalize(streams.meshNormal);
