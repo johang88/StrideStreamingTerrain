@@ -1,12 +1,25 @@
 # Stride streaming terrain
-NOTE: Don't use, it's not production ready, does not work in editor, performance is not great, no real material support, hardcoded values in some places etc ... 
 
+
+![Streaming Terrain](screenshot.jpg?raw=true "Streaming Terrain Screenshot")
+
+Would not recommend for production use as there are some hardcoded paths to get it to work in the editor. It's works fine though and is stable but it does require some manual steps. The project mostly serves as a guide on how you could make your own custom implementation, mainly the control map / material will most likely have to be customized for the intended use case. The material can easily be modified with some shader knowledege. 
+
+The project also contains a custom fork of my TR.Stride.Atmosphere/Ocean projects (https://github.com/johang88/TR.Stride/) with some extra fun stuff volumetric fog rendering with terrain shadow sampling. The atmosphere has been mostly remade and might event perform a bit better than the original, it does lack some of the features that were not needed for this project.
+
+There is also some setup for enabling reverse Z rendering in stride (custom scene renderer), my custom fork (https://github.com/johang88/stride) has some additional changes to get post effect like SSAO working as well as in editor scene picking.
+
+## Project overview
+* StrideTerrain - Main Project
+* - Rendering - Dynamic Cubemap renderer and reverse z rendering
+* - TerrainSystem - All terrain related logic
+* - Weather - Atmosphere and volumetric fog rendering, based on https://github.com/sebh/UnrealEngineSkyAtmosphere
 
 ## How to use
-If you insist ... 
 
-* It wont compile without changes to the stride source code, available here https://github.com/johang88/stride if it's been kept up to date.
-* Get a big heightmap (something like 8k+ it's got to be really big or it would make no sense to stream it now would it). It currently must be power of 2 (or power of 2 + 1), square and be 16bit single channel png (other formats might work but not tested).
+* NOTE: The sample program is incomplete as I cannot distribute the assets.
+* It wont compile without changes to the stride source code, available here https://github.com/johang88/stride. The changes mostly expose some internal stride logic for light / shadow handling that is has custom implementations.
+* Get a big heightmap (8k+ for the streaming to make snse). It currently must be power of 2 (or power of 2 + 1), square and be 16bit single channel png (other formats might work but has been not tested).
 * Fix stride versions in 
 * Compile `StrideTerrain.Importer.sln`
 * From root folder of the project run something like this `"StrideTerrain.Importer\bin\debug\net8.0\StrideTerrain.Importer.exe --input "<PathToHeightMap>" --output "StrideTerrain.Sample\Resources" --name "<MapName>" --chunk-size 128 --max-height <MaxHeight>`

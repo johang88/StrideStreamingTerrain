@@ -41,7 +41,7 @@ public class GrassComponent : SyncScript
     {
         base.Start();
 
-        if (Model == null || Instancing == null || true)
+        if (Model == null || Instancing == null)
             return;
 
         // Setup instancing data
@@ -106,7 +106,7 @@ public class GrassComponent : SyncScript
 
     public override void Update()
     {
-        if (Instancing == null || Model == null || true)
+        if (Instancing == null || Model == null)
             return;
 
         var camera = SceneSystem.TryGetMainCamera();

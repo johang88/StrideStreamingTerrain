@@ -49,7 +49,7 @@ public class EditorTerrainDataProvider : ITerrainDataProvider
     public void LoadTerrainData(ref TerrainData terrainData)
     {
         // TODO ...
-        using var terrainDataStream = File.OpenRead($"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Maps\\Valley");
+        using var terrainDataStream = File.OpenRead($"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Maps\\Skellige");
         using var terrainDataReader = new BinaryReader(terrainDataStream);
         terrainData.Read(terrainDataReader);
     }
@@ -57,6 +57,6 @@ public class EditorTerrainDataProvider : ITerrainDataProvider
     public (Stream stream, long baseOffset) OpenStreamingData()
     {
         // TODO ...
-        return (File.OpenRead($"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Maps\\Valley_StreamingData"), 0);
+        return (File.OpenRead($"C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources\\Maps\\Skellige_StreamingData"), 0);
     }
 }

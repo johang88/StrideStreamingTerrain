@@ -63,11 +63,12 @@
 
             float3 vertexPosition;
             vertexPosition.xz = baseVerts[triangleVertex] + mergeOffset;
-            vertexPosition.x += offsetX;
-            vertexPosition.z += offsetZ;
             vertexPosition.y = 0;
    
             streams.TerrainFract = vertexPosition.xz;
+
+            vertexPosition.x += offsetX;
+            vertexPosition.z += offsetZ;
 
             // Compute final UV
             int2 fullUV = uv + int2(vertexPosition.xz);

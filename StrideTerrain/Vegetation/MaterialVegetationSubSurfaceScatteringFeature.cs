@@ -30,14 +30,13 @@ public class MaterialVegetationSubSurfaceScatteringFeature : MaterialFeature, IM
     [NotNull]
     [DataMember(20)]
     [Display("Extinction")]
-    public IComputeScalar Extinction { get; set; } = new ComputeTextureScalar();
+    public IComputeColor Extinction { get; set; } = new ComputeTextureColor();
 
     public override void GenerateShader(MaterialGeneratorContext context)
     {
         ClampFloat(SubsurfaceLightingAmount, 0.0f, 1.0f);
         var subsurfaceLightingAmountSource = SubsurfaceLightingAmount.GenerateShaderSource(context, new MaterialComputeColorKeys(SubSurfaceScatteringKeys.SubsurfaceLightingAmount, SubSurfaceScatteringKeys.SubsurfaceLightingAmountValue, Color.White));
 
-        ClampFloat(Extinction, 0.0f, 1.0f);
         var extinctionSource = Extinction.GenerateShaderSource(context, new MaterialComputeColorKeys(SubSurfaceScatteringKeys.Extinction, SubSurfaceScatteringKeys.ExtinctionValue, Color.White));
 
         var shaderSource = new ShaderMixinSource();

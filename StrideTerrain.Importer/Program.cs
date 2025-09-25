@@ -170,7 +170,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
         return (normals[index + 0], normals[index + 1]);
     }
 
-    bool genereateTrees = true;
+    bool genereateTrees = false;
     if  (genereateTrees)
     {
         var trees = new List<TreeInstance>(terrainSize * terrainSize);

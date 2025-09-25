@@ -2,7 +2,7 @@
   "profiles": {
     "StrideTerrain.Importer": {
       "commandName": "Project",
-      "commandLineArgs": "--input \"Maps\\Valley.png\" --control-map \"Maps\\Valley.png\" --output \"Maps\" --name \"Valley\" --chunk-size 128 --max-height 256 --units-per-texel=0.5",
+      "commandLineArgs": "--input \"Skellige.png\" --control-map \"Skellige_ControlMap.png\" --output \"\" --name \"Skellige\" --chunk-size 128 --max-height 385 --units-per-texel=0.45",
       "workingDirectory": "C:\\Users\\johan\\Documents\\Stride Projects\\StrideTerrain\\StrideTerrain.Sample\\Resources"
     }
   }

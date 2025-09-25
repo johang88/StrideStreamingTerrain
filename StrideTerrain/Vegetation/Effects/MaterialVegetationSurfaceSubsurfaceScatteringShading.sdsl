@@ -1,6 +1,6 @@
 ﻿namespace StrideTerrain.Vegetation.Effects
 {
-	shader MaterialVegetationSurfaceSubsurfaceScatteringShading : IMaterialSurfaceShading, Math
+	shader MaterialVegetationSurfaceSubsurfaceScatteringShading : IMaterialSurfaceShading, Math, ShaderBaseStream
 	{
 		compose ComputeColor SubsurfaceLightingAmount;
 		compose ComputeColor Extinction;
@@ -21,6 +21,7 @@
 
 		override void PrepareForLightingAndShading()
 		{
+			streams.IsFrontFace = true;
 			base.PrepareForLightingAndShading();
 			streams.subsurfaceLightingAmount = SubsurfaceLightingAmount.Compute().x ;
 			streams.extinction = Extinction.Compute().xyz;

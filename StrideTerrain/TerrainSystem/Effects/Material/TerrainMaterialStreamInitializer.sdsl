@@ -30,6 +30,8 @@
             normal.xz = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord, 0).xy * 2.0f - 1.0f;
             normal.y = sqrt(max(0.0f, 1.0f - (normal.x * normal.x + normal.z * normal.z)));
 
+            normal = normalize(normal);
+
             streams.meshNormal = normal;
 
             // Should this be hard coded? No it should not.
@@ -111,10 +113,10 @@
                 (uint)((controlValueD >> 13) & 0x07)
             );
 
-            overlayTextureIndices = uint4(4,4,4,4);
-            backgroundTextureIndices = uint4(9,9,9,9);
-            slopeThresholds = uint4(1,1,1,1);
-            backgroundUvScaling = uint4(1,1,1,1);
+            //overlayTextureIndices = uint4(4,4,4,4);
+            //backgroundTextureIndices = uint4(9,9,9,9);
+            //slopeThresholds = uint4(1,1,1,1);
+            //backgroundUvScaling = uint4(1,1,1,1);
 
             //backgroundTextureIndices.x = backgroundTextureIndices.y = backgroundTextureIndices.z = backgroundTextureIndices.w = 1;
 

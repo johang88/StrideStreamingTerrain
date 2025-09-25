@@ -53,7 +53,7 @@ public class CubeMapRenderer : SceneRendererBase
 
         _specularRadiancePrefilterGGX.RadianceMap = _cubeMap;
         _specularRadiancePrefilterGGX.PrefilteredRadiance = _cubeMapSpecular;
-        _specularRadiancePrefilterGGX.SamplingsCount = 512;
+        _specularRadiancePrefilterGGX.SamplingsCount = 32;
     }
 
     protected override void CollectCore(RenderContext context)

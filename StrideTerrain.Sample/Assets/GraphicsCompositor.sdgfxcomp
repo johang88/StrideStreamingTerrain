@@ -281,7 +281,8 @@ Game: !Stride.Rendering.Compositing.SceneCameraRenderer,Stride.Engine
                     Id: 92829b43-d11f-4aef-9369-b95e31f54a5a
                     Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 0bf6c515-95e2-4c47-b37b-334aea979554
                 RenderMask: Group29, Group30
-                Resolution: 128
+                Resolution: 1024
+                UpdateRateInSeconds: 1.0
             bb10dc44a280d57b6755ec4af0e0bba2*: !Stride.Rendering.Compositing.DebugRenderer,Stride.Rendering ref!! d8ec013d-d4f4-4296-8d72-91a34fc9d7b3
             01d338078e9b21121ead0868932613dd: ~(Deleted)
     RenderMask: All
@@ -301,5 +302,6 @@ Editor*: !Stride.Rendering.Compositing.SceneRendererCollection,Stride.Rendering
                 Id: d4a6eb9d-6824-426b-935d-267008541b83
                 Child: !Stride.Rendering.Compositing.ForwardRenderer,Stride.Engine ref!! 0bf6c515-95e2-4c47-b37b-334aea979554
             RenderMask: Group29, Group30
-            Resolution: 128
+            Resolution: 1024
+            UpdateRateInSeconds: 1.0
 BlockPositions: {}

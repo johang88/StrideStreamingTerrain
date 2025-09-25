@@ -53,7 +53,7 @@ public class TreeInstanceManager : StartupScript
 
         foreach (var model in Models)
         {
-            model.Entity.Get<ModelComponent>().IsShadowCaster = true;
+            model.Entity.Get<ModelComponent>().IsShadowCaster = false;
             model.Entity.Add(new ProfilingKeyComponent
             {
                 ProfilingKey = ProfilingKeyDraw
@@ -79,7 +79,7 @@ public class TreeInstanceManager : StartupScript
         for (var i = 0; i < Models.Count; i++)
         {
             ReadOnlySpan<Matrix> worldMatrices = CollectionsMarshal.AsSpan(matrices[i]);
-            ReadOnlySpan<Matrix>  inverseWorldMatrices = CollectionsMarshal.AsSpan(inverseMatrices[i]);
+            ReadOnlySpan<Matrix> inverseWorldMatrices = CollectionsMarshal.AsSpan(inverseMatrices[i]);
 
             var instancingBuffer = new InstancingUserBuffer
             {

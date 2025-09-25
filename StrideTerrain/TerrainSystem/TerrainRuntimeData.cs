@@ -12,7 +12,7 @@ namespace StrideTerrain.TerrainSystem;
 [DataContract]
 public sealed class TerrainRuntimeData : IDisposable
 {
-    public const int RuntimeTextureSize = 2048;
+    public const int RuntimeTextureSize = 4096;
     public const float InvRuntimeTextureSize = 1.0f / RuntimeTextureSize;
     public const int ShadowMapSize = 4096;
 
