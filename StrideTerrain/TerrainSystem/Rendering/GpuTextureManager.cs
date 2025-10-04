@@ -27,6 +27,8 @@ public class GpuTextureManager : IDisposable
 
     public bool InvalidateShadowMap { get; set; }
 
+    public int FreeSlots => _freeList.Count;
+
     public GpuTextureManager(TerrainData terrain, GraphicsDevice graphicsDevice, int atlasSize, IStreamingManager streamingManager)
     {
         _streamingManager = streamingManager;
@@ -155,7 +157,8 @@ public class GpuTextureManager : IDisposable
         if (!_chunkToTextureIndex.TryGetValue(chunkIndex, out var textureIndex))
         {
             // Mark for loading
-            _pendingChunks.Push(chunkIndex);
+            if (!_pendingChunks.Contains(chunkIndex))
+                _pendingChunks.Push(chunkIndex);
             return false;
         }
 

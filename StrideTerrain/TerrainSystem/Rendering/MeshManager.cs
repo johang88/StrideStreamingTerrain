@@ -1,4 +1,5 @@
-﻿using Stride.Core.Mathematics;
+﻿using ServiceWire;
+using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.Rendering;
 using System;
@@ -62,7 +63,7 @@ public class MeshManager : IDisposable
         ChunkInstanceDataBuffer.Dispose();
     }
 
-    public void Update(Vector3 cameraPosition, float lod0Distance)
+    public void Update(Vector3 cameraPosition, Span<float> lodLevels)
     {
         var terrainSize = _terrain.TerrainData.Header.Size;
         var chunkSize = _terrain.TerrainData.Header.ChunkSize;
@@ -115,9 +116,6 @@ public class MeshManager : IDisposable
 
                 var chunkWorldPosition = new Vector3(positionX * chunkOffset + (chunkOffset * 0.5f), 0, positionZ * chunkOffset + (chunkOffset * 0.5f)) * _terrain.UnitsPerTexel;
 
-                // Check lod distance
-                var lodDistance = lod0Distance * (1 << lod);
-
                 var extent = scale * _terrain.UnitsPerTexel * chunkSize * 0.5f;
                 var maxHeight = _terrain.TerrainData.Header.MaxHeight; // TODO: Should use max height for chunk but there is some issue with it ...
                 var heightRange = maxHeight;
@@ -128,6 +126,8 @@ public class MeshManager : IDisposable
                     Center = chunkWorldPosition + new Vector3(0, halfHeightRange, 0),
                     Extent = new(extent, heightRange, extent)
                 };
+
+                var lodDistance = lodLevels.Length == 0 ? 50 : (lod < lodLevels.Length ? lodLevels[lod] : (lodLevels[^1] * (1 << lod)));
 
                 var rect = new RectangleF(chunkWorldPosition.X - extent, chunkWorldPosition.Z - extent, extent * 2.0f, extent * 2.0f);
                 var cameraRect = new RectangleF(cameraPosition.X - lodDistance, cameraPosition.Z - lodDistance, lodDistance * 2.0f, lodDistance * 2.0f);

@@ -85,8 +85,8 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
         {
             _gaussianBlur = new()
             {
-                Radius = 8,
-                SigmaRatio = 0.5f
+                Radius = terrain.ShadowBlurRadius,
+                SigmaRatio = terrain.ShadowBlurSigmaRatio
             };
             _gaussianBlur.DisposeBy(drawContext);
         }
@@ -101,7 +101,15 @@ public class TerrainShadowMapRenderer : ShadowMapRenderer
             lightCosAngleChange = MathUtil.Clamp(lightCosAngleChange, -1.0f, 1.0f);
         }
 
-        if (lightCosAngleChange < 0.99f || terrain.GpuTextureManager.InvalidateShadowMap)
+        var invalidateShadowMap = lightCosAngleChange < 0.99f || terrain.GpuTextureManager.InvalidateShadowMap;
+        if (_gaussianBlur.Radius != terrain.ShadowBlurRadius || _gaussianBlur.SigmaRatio != terrain.ShadowBlurSigmaRatio)
+        {
+            _gaussianBlur.Radius = terrain.ShadowBlurRadius;
+            _gaussianBlur.SigmaRatio = terrain.ShadowBlurSigmaRatio;
+            invalidateShadowMap = true;
+        }
+
+        if (invalidateShadowMap)
         {
             terrain.GpuTextureManager.InvalidateShadowMap = false;
             _previousLightDirection = lightDirection;

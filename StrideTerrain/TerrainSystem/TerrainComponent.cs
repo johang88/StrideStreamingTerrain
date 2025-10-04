@@ -2,9 +2,8 @@
 using Stride.Core.Serialization;
 using Stride.Engine;
 using Stride.Engine.Design;
-using Stride.Graphics;
 using Stride.Rendering;
-using System;
+using System.Collections.Generic;
 using System.ComponentModel;
 
 namespace StrideTerrain.TerrainSystem;
@@ -25,8 +24,7 @@ public class TerrainComponent : EntityComponent
     /// <summary>
     /// Distance at which the highest resolution lod will be active
     /// </summary>
-    [DataMember(10), DefaultValue(64.0f)] public float Lod0Distance { get; set; } = 64.0f;
-
+    [DataMember(10)] public List<float> LodDistances { get; set; } = [];
     /// <summary>
     /// Maximum lod level
     /// -1 = autmatically calculated for single visible chunk
@@ -36,4 +34,8 @@ public class TerrainComponent : EntityComponent
     [DataMember(12), DefaultValue(0)] public int MinimumLod { get; set; } = 0;
 
     [DataMember(15)] public RenderGroup RenderGroup { get; set; } = RenderGroup.Group29;
+
+    [DataMember(16)] public int ShadowBlurRadius { get; set; } = 8;
+
+    [DataMember(17)] public float ShadowBlurSigmaRatio { get; set; } = 0.5f;
 }

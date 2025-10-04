@@ -1,4 +1,5 @@
-﻿using Stride.Core.Annotations;
+﻿using Stride.Core;
+using Stride.Core.Annotations;
 using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
 using Stride.Core.Serialization.Contents;
@@ -10,6 +11,7 @@ using Stride.Rendering;
 using StrideTerrain.TerrainSystem.Rendering;
 using System;
 using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace StrideTerrain.TerrainSystem;
 
@@ -19,6 +21,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
     private static readonly ProfilingKey ProfilingKeyChunk = new("Terrain.Chunk");
 
     private readonly Dictionary<RenderModel, TerrainRuntimeData> _modelToTerrainMap = [];
+    private SpriteBatch? _spriteBatch;
 
     public VisibilityGroup VisibilityGroup { get; set; } = null!;
 
@@ -39,9 +42,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
     {
         base.Update(time);
 
-        var graphicsDevice = Services.GetService<IGraphicsDeviceService>().GraphicsDevice;
-        var graphicsContext = Services.GetService<GraphicsContext>();
-        var contentManager = Services.GetService<ContentManager>();
+        var graphicsDevice = Services.GetSafeServiceAs<IGraphicsDeviceService>().GraphicsDevice;
+        var graphicsContext = Services.GetSafeServiceAs<GraphicsContext>();
+        var contentManager = Services.GetSafeServiceAs<ContentManager>();
 
         using var profilingScope = Profiler.Begin(ProfilingKeyUpdate);
 
@@ -63,9 +66,10 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             }
 
             // Sync component settings
-            data.Lod0Distance = component.Lod0Distance;
             data.MaximumLod = component.MaximumLod;
             data.MinimumLod = component.MinimumLod;
+            data.ShadowBlurRadius = component.ShadowBlurRadius;
+            data.ShadowBlurSigmaRatio = component.ShadowBlurSigmaRatio;
 
             // Load initial data.
             if (data.TerrainDataUrl != component.TerrainData.Url)
@@ -115,7 +119,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
     {
         base.Draw(context);
 
-        var camera = Services.GetService<SceneSystem>().TryGetMainCamera();
+        var camera = Services.GetService<SceneSystem>()?.TryGetMainCamera();
         if (camera == null)
             return;
 
@@ -123,10 +127,10 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         if (modelRenderProcessor == null)
             return; // Just wait until it's available.
 
-        var graphicsDevice = Services.GetService<IGraphicsDeviceService>().GraphicsDevice;
-        var debugTextSystem = Services.GetService<DebugTextSystem>();
-        var graphicsContext = Services.GetService<GraphicsContext>();
-        var contentManager = Services.GetService<ContentManager>();
+        var graphicsDevice = Services.GetSafeServiceAs<IGraphicsDeviceService>().GraphicsDevice;
+        var debugTextSystem = Services.GetSafeServiceAs<DebugTextSystem>();
+        var graphicsContext = Services.GetSafeServiceAs<GraphicsContext>();
+        var contentManager = Services.GetSafeServiceAs<ContentManager>();
 
         using var profilingScope = Profiler.Begin(ProfilingKeyChunk);
 
@@ -161,13 +165,20 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             data.PhysicsManager?.Update(cameraPosition.X, cameraPosition.Z);
             data.GpuTextureManager?.Update(graphicsContext);
             data.StreamingManager?.ProcessPendingCompletions(1);
-            data.MeshManager?.Update(cameraPosition, component.Lod0Distance);
+            data.MeshManager?.Update(cameraPosition, CollectionsMarshal.AsSpan(component.LodDistances));
 
             //var maxLoadedChunks = (TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize) * TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize;
-            if (data.StreamingManager != null)
+            if (data.StreamingManager != null && data.GpuTextureManager != null)
             {
-                debugTextSystem.Print($"Pending streaming requests: {data.StreamingManager.PendingStreamingRequests}", new(10, 240), new Color4(1, 0, 0, 1));
-                debugTextSystem.Print($"Pending streaming completions: {data.StreamingManager.PendingCompletions}", new(10, 260), new Color4(1, 0, 0, 1));
+                //_spriteBatch ??= new(graphicsDevice);
+
+                //_spriteBatch.Begin(graphicsContext);
+                //_spriteBatch.Draw(data.GpuTextureManager.Heightmap.AtlasTexture, new RectangleF(512, 512, 512, 512), Color4.White);
+                //_spriteBatch.End();
+
+                //debugTextSystem.Print($"Pending streaming requests: {data.StreamingManager.PendingStreamingRequests}", new(10, 240), new Color4(1, 0, 0, 1));
+                //debugTextSystem.Print($"Pending streaming completions: {data.StreamingManager.PendingCompletions}", new(10, 260), new Color4(1, 0, 0, 1));
+                //debugTextSystem.Print($"Texture Atlas Free Slots: {data.GpuTextureManager.FreeSlots}", new(10, 280), new Color4(1, 0, 0, 1));
             }
             //debugTextSystem.Print($"Resident chunks: {data.ResidentChunksCount}", new(10, 260), new Color4(1, 0, 0, 1));
             //debugTextSystem.Print($"Active chunks: {data.ActiveChunks.Count}", new(10, 280), new Color4(1, 0, 0, 1));

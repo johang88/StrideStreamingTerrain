@@ -30,6 +30,12 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <Compile Update="Vegetation\Effects\MaterialImpostorDisplacementFeature.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>MaterialImpostorDisplacementFeature.sdsl</DependentUpon>
+	  </Compile>
 	  <Compile Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -37,6 +43,9 @@
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
+	  <None Update="Vegetation\Effects\MaterialImpostorDisplacementFeature.sdsl">
+	    <LastGenOutput>MaterialImpostorDisplacementFeature.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl">
 	    <LastGenOutput>VolumetricLightDiretionalBase.sdsl.cs</LastGenOutput>
 	    <Generator>StrideShaderKeyGenerator</Generator>

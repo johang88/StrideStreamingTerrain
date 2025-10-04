@@ -23,7 +23,6 @@ public sealed class TerrainRuntimeData : IDisposable
     public MeshManager? MeshManager;
 
     public float UnitsPerTexel => TerrainData.Header.UnitsPerTexel;
-    public float Lod0Distance;
     public int MaximumLod;
     public int MinimumLod;
     public int ChunksPerRowLod0;
@@ -34,6 +33,9 @@ public sealed class TerrainRuntimeData : IDisposable
     public string? TerrainDataUrl;
     public TerrainData TerrainData;
     public bool IsInitialized;
+
+    public int ShadowBlurRadius;
+    public float ShadowBlurSigmaRatio;
 
     public void Dispose()
     {

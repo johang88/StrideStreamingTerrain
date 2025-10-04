@@ -170,21 +170,21 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
         return (normals[index + 0], normals[index + 1]);
     }
 
-    bool genereateTrees = false;
+    bool genereateTrees = true;
     if  (genereateTrees)
     {
         var trees = new List<TreeInstance>(terrainSize * terrainSize);
-        for (var y = 0; y < terrainSize; y += 32)
+        for (var y = 0; y < terrainSize; y += 16)
         {
-            for (var x = 0; x < terrainSize; x += 32)
+            for (var x = 0; x < terrainSize; x += 16)
             {
-                var ox = Random.Shared.Next(0, 31);
-                var oy = Random.Shared.Next(0, 32);
+                var ox = Random.Shared.Next(0, 15);
+                var oy = Random.Shared.Next(0, 16);
                 var height = HeightAt(x + ox, y + oy);
-                if (height >= 2 && height < 200)
+                if (height >= 90 && height < 200)
                 {
                     var normal = NormalAt(x + ox, y + oy);
-                    if (Math.Abs(normal.Z) < 0.05f)
+                    if (Math.Abs(normal.Y) > 0.9f)
                     {
                         trees.Add(new()
                         {

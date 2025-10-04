@@ -4,17 +4,28 @@ using Stride.Core.Serialization;
 using Stride.Engine;
 using Stride.Graphics;
 using System.Collections.Generic;
-using System.Linq;
 using System.Text.Json;
-using System.Runtime.InteropServices;
 using System;
 using Buffer = Stride.Graphics.Buffer;
 using Stride.Core.Diagnostics;
-using StrideTerrain.Rendering.Profiling;
+using Stride.Rendering;
+using StrideTerrain.Vegetation.Effects;
+using Half = System.Half;
+using System.Linq;
+using Stride.Core;
+using System.Reflection.Metadata;
+using System.Runtime.InteropServices;
 
 namespace StrideTerrain.Vegetation;
 
-public class TreeInstanceManager : StartupScript
+[DataContract]
+public class TreeData
+{ 
+    public required Material Material { get; set; }
+    public Vector2 Size { get; set; }
+}
+
+public class TreeInstanceManager : SyncScript
 {
     private static readonly ProfilingKey ProfilingKeyDraw = new("Trees.Draw");
 
@@ -23,74 +34,88 @@ public class TreeInstanceManager : StartupScript
         IncludeFields = true
     };
 
-    public List<InstancingComponent> Models { get; set; } = [];
     public UrlReference? TreeData { get; set; }
+    public List<TreeData> TreeTypes { get; set; } = [];
 
-    private readonly List<InstancingUserBuffer> _instancingBuffers = [];
+    private List<Buffer> _buffers = [];
+    private List<ModelComponent> _models = [];
 
     public override void Cancel()
     {
         base.Cancel();
-
-        foreach (var buffer in _instancingBuffers)
-        {
-            buffer.InstanceWorldBuffer?.Dispose();
-            buffer.InstanceWorldInverseBuffer?.Dispose();
-        }
-        _instancingBuffers.Clear();
     }
 
     public override void Start()
     {
         base.Start();
 
-        if (TreeData == null)
+        if (TreeData == null || TreeTypes.Count == 0)
             return;
 
         using var stream = Content.OpenAsStream(TreeData.Url, StreamFlags.None);
 
         var trees = JsonSerializer.Deserialize<List<TreeInstance>>(stream, _jsonOptions)!;
 
-        foreach (var model in Models)
+        List<List<Vector4>> treeInstances = [.. TreeTypes.Select(x => new List<Vector4>(trees.Count))];
+        for (var i = 0; i < trees.Count; i++)
         {
-            model.Entity.Get<ModelComponent>().IsShadowCaster = false;
-            model.Entity.Add(new ProfilingKeyComponent
-            {
-                ProfilingKey = ProfilingKeyDraw
-            });
+            var tree = trees[i];
+            var scale = 1.3f + Random.Shared.NextSingle() * 3.6f;
+
+            var treeType = Random.Shared.Next(TreeTypes.Count);
+            float scaleX = TreeTypes[treeType].Size.X * scale;
+            float scaleY = TreeTypes[treeType].Size.Y * scale;
+            
+            treeInstances[treeType].Add(new(tree.X, tree.Y, tree.Z, PackScale(scaleX, scaleY)));
         }
 
-        // Not very nice now is it ...but it will work ...
-        var matrices = Models.Select(x => new List<Matrix>(trees.Count)).ToList();
-        var inverseMatrices = Models.Select(x => new List<Matrix>(trees.Count)).ToList();
-
-        foreach (var tree in trees)
+        for (var i = 0; i < treeInstances.Count; i++)
         {
-            var i = Random.Shared.Next(0, Models.Count);
-            var scale = 1.3f + Random.Shared.NextSingle() * 2.6f;
-            var rotation = Random.Shared.NextSingle() * 3.14f * 2.0f;
-            var matrix = Matrix.Scaling(scale) * Matrix.RotationY(rotation) * Matrix.Translation(tree.X, tree.Y, tree.Z);
-            matrices[i].Add(matrix);
-            inverseMatrices[i].Add(Matrix.Invert(matrix));
+            var entity = new Entity();
+
+            var model = entity.GetOrCreate<ModelComponent>();
+            model.Model ??= [new Mesh()
+            {
+                Draw = new MeshDraw
+                {
+                    PrimitiveType = PrimitiveType.TriangleList,
+                    VertexBuffers = [],
+                    DrawCount = treeInstances[i].Count * 6
+                },
+                BoundingBox = new BoundingBox(new Vector3(-100000, -100000, -100000), new Vector3(100000, 100000, 100000)),
+            }];
+            model.Model.BoundingSphere = new(Vector3.Zero, 10000);
+            model.Model.BoundingBox = BoundingBox.FromSphere(model.BoundingSphere);
+            model.IsShadowCaster = false;
+            model.Materials[0] = TreeTypes[i].Material;
+
+            var buffer = Buffer.Structured.New(GraphicsDevice, treeInstances[i].ToArray(), true);
+
+            _buffers.Add(buffer);
+            _models.Add(model);
+
+            Entity.AddChild(entity);
         }
 
-        var totalCount = matrices.Select(x => x.Count).Sum();
-
-        for (var i = 0; i < Models.Count; i++)
+        static float PackScale(float scaleX, float scaleY)
         {
-            ReadOnlySpan<Matrix> worldMatrices = CollectionsMarshal.AsSpan(matrices[i]);
-            ReadOnlySpan<Matrix> inverseWorldMatrices = CollectionsMarshal.AsSpan(inverseMatrices[i]);
+            // convert to half-floats
+            Half hx = (Half)scaleX;
+            Half hy = (Half)scaleY;
 
-            var instancingBuffer = new InstancingUserBuffer
-            {
-                InstanceWorldBuffer = Buffer.New(GraphicsDevice, worldMatrices, BufferFlags.ShaderResource | BufferFlags.StructuredBuffer),
-                InstanceWorldInverseBuffer = Buffer.New(GraphicsDevice, inverseWorldMatrices, BufferFlags.ShaderResource | BufferFlags.StructuredBuffer),
-                InstanceCount = worldMatrices.Length,
-                BoundingBox = new BoundingBox(new(-8000, -400, -8000), new(8000, 400, 8000)) // TODO I guess
-            };
+            // pack into a 32-bit uint: low 16 bits = X, high 16 bits = Y
+            uint packed = ((uint)BitConverter.HalfToUInt16Bits(hy) << 16) | BitConverter.HalfToUInt16Bits(hx);
 
-            _instancingBuffers.Add(instancingBuffer);
-            Models[i].Type = instancingBuffer;
+            // reinterpret as float
+            return BitConverter.Int32BitsToSingle((int)packed);
+        }
+    }
+
+    public override void Update()
+    {
+        for (var i = 0 ; i < _models.Count; i++)
+        {
+            _models[i].Materials[0].Passes[0].Parameters.Set(MaterialImpostorDisplacementFeatureKeys.Positions, _buffers[i]);
         }
     }
 

@@ -1,6 +1,6 @@
 ﻿namespace StrideTerrain.TerrainSystem.Effects.Shadows
 {
-    shader TerrainShadowBase : Texturing, TerrainData
+    shader TerrainShadowBase : Texturing, TerrainData, TerrainQuery
     {
         float GetTerrainShadow(float3 worldPosition)
         {
