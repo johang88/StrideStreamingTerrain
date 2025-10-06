@@ -28,6 +28,11 @@ public class MeshManager : IDisposable
     public readonly Buffer SectorToChunkMapBuffer;
     public readonly Buffer ChunkInstanceDataBuffer;
 
+    public Span<int> SectorToChunkMap => _sectorToChunkMap.AsSpan();
+    public Span<ChunkData> ChunkData => _chunkData.AsSpan();
+
+    public bool IsReady => _chunkCount > 0;
+
     public readonly Mesh Mesh = new()
     {
         Draw = new MeshDraw

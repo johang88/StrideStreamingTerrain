@@ -1,4 +1,5 @@
 ﻿using Stride.Core;
+using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Rendering;
 using StrideTerrain.Common;
@@ -37,6 +38,75 @@ public sealed class TerrainRuntimeData : IDisposable
     public int ShadowBlurRadius;
     public float ShadowBlurSigmaRatio;
 
+    public (Vector2 Uv, int Lod) GetAtlasUv(float wx, float wz)
+    {
+        var invUnitsPerTexel = 1.0f / TerrainData.Header.UnitsPerTexel;
+
+        wx = wx * invUnitsPerTexel;
+        wz = wz * invUnitsPerTexel;
+
+        var chunkSize = TerrainData.Header.ChunkSize;
+
+        var sectorX = Math.Min(ChunksPerRowLod0, (int)Math.Floor(wx / chunkSize));
+        var sectorZ = Math.Min(ChunksPerRowLod0, (int)Math.Floor(wz / chunkSize));
+        var sectorIndex = sectorZ * ChunksPerRowLod0 + sectorX;
+
+        var chunkIndex = MeshManager!.SectorToChunkMap[sectorIndex];
+
+        var lodLevel = MeshManager.ChunkData[chunkIndex].Data0 & 0xFF;
+        var scale = 1 << lodLevel;
+
+        var uv = UnpackInt2(MeshManager.ChunkData[chunkIndex].PackedUv);
+
+        var positionInChunkX = ((float)wx / scale) % chunkSize;
+        var positionInChunkZ = ((float)wz / scale) % chunkSize;
+
+        uv.X += positionInChunkX + 0.5f;
+        uv.Y += positionInChunkZ + 0.5f;
+
+        uv *= InvRuntimeTextureSize;
+
+        return (uv, lodLevel);
+
+        static Vector2 UnpackInt2(int v)
+            => new(v & 0xFFFF, (v >> 16) & 0xFFFF);
+    }
+
+    public float GetHeightAt(Vector2 uv)
+    {
+        uv.X = Math.Clamp(uv.X, 0.0f, 0.999999f);
+        uv.Y = Math.Clamp(uv.Y, 0.0f, 0.999999f);
+
+        var fx = uv.X * (RuntimeTextureSize - 1);
+        var fy = uv.Y * (RuntimeTextureSize - 1);
+
+        var x0 = (int)MathF.Floor(fx);
+        var y0 = (int)MathF.Floor(fy);
+        var x1 = Math.Min(x0 + 1, RuntimeTextureSize - 1);
+        var y1 = Math.Min(y0 + 1, RuntimeTextureSize - 1);
+
+        var tx = fx - x0;
+        var ty = fy - y0;
+
+        var h00 = GetHeightAt(x0, y0);
+        var h10 = GetHeightAt(x1, y0);
+        var h01 = GetHeightAt(x0, y1);
+        var h11 = GetHeightAt(x1, y1);
+
+        var hx0 = MathUtil.Lerp(h00, h10, tx);
+        var hx1 = MathUtil.Lerp(h01, h11, tx);
+        return MathUtil.Lerp(hx0, hx1, ty);
+    }
+
+    public float GetHeightAt(int x, int y)
+    {
+        var height = GpuTextureManager!.ReadHeight(x, y);
+        return height * TerrainData.Header.MaxHeight;
+    }
+
+    public uint GetControlMapAt(Vector2 uv)
+        => GpuTextureManager!.ReadControlMap((int)(uv.X * RuntimeTextureSize - 0.5f), (int)(uv.Y * RuntimeTextureSize - 0.5f));
+    
     public void Dispose()
     {
         RenderModel = null;

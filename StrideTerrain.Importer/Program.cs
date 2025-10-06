@@ -174,12 +174,12 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
     if  (genereateTrees)
     {
         var trees = new List<TreeInstance>(terrainSize * terrainSize);
-        for (var y = 0; y < terrainSize; y += 16)
+        for (var y = 0; y < terrainSize; y += 24)
         {
-            for (var x = 0; x < terrainSize; x += 16)
+            for (var x = 0; x < terrainSize; x += 24)
             {
-                var ox = Random.Shared.Next(0, 15);
-                var oy = Random.Shared.Next(0, 16);
+                var ox = Random.Shared.Next(1, 23);
+                var oy = Random.Shared.Next(1, 23);
                 var height = HeightAt(x + ox, y + oy);
                 if (height >= 90 && height < 200)
                 {

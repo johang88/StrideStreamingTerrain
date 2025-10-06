@@ -19,5 +19,6 @@ namespace StrideTerrain.Vegetation.Effects
     public static partial class MaterialImpostorDisplacementFeatureKeys
     {
         public static readonly ObjectParameterKey<Buffer> Positions = ParameterKeys.NewObject<Buffer>();
+        public static readonly ValueParameterKey<float> LodDistance = ParameterKeys.NewValue<float>();
     }
 }

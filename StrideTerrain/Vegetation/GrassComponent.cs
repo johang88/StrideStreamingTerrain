@@ -1,67 +1,50 @@
-﻿using Stride.Core.Diagnostics;
+﻿using Stride.Core;
+using Stride.Core.Collections;
+using Stride.Core.Diagnostics;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
-using StrideTerrain.Rendering;
+using StrideTerrain.Common;
 using StrideTerrain.Rendering.Profiling;
 using StrideTerrain.TerrainSystem;
+using StrideTerrain.Vegetation.Effects;
 using System;
 using System.Collections.Generic;
+using System.Windows.Media.Imaging;
 using Buffer = Stride.Graphics.Buffer;
 
 namespace StrideTerrain.Vegetation;
 
+#pragma warning disable CS0618 // Type or member is obsolete
 public class GrassComponent : SyncScript
 {
     private static readonly ProfilingKey ProfilingKeyDraw = new("Grass.Draw");
 
     const int ChunkCount = 6;
     const int ChunkSize = 32;
-    const int InstancesPerRow = 32;
 
     public InstancingComponent? Instancing { get; set; }
     public ModelComponent? Model { get; set; }
+    public int InstanceCount { get; set; } = 32 * 32;
 
-    private Buffer? _worldBuffer;
-    private Buffer? _invWorldBuffer;
-
-    private List<Chunk> _chunks = [];
+    private List<Chunk> _chunks = new(ChunkCount * ChunkCount);
+    private Point _centerChunkCoord;
 
     public override void Cancel()
     {
         base.Cancel();
 
         _chunks.Clear();
-
-        _worldBuffer?.Dispose();
-        _invWorldBuffer?.Dispose();
     }
 
     public override void Start()
     {
         base.Start();
 
-        if (Model == null || Instancing == null || true)
+        if (Model == null || Instancing == null)
             return;
 
         // Setup instancing data
-        float s = ChunkSize / (float)InstancesPerRow;
-        var worldMatrices = new Matrix[InstancesPerRow * InstancesPerRow];
-        var invWorldMatrix = new Matrix[InstancesPerRow * InstancesPerRow];
-        for (var z = 0; z < InstancesPerRow; z++)
-        {
-            for (var x = 0; x < InstancesPerRow; x++)
-            {
-                var position = new Vector3(x * s - ChunkSize / 2, 0, z * s - ChunkSize / 2);
-                var index = z * InstancesPerRow + x;
-                worldMatrices[index] = Matrix.Translation(position);
-                Matrix.Invert(ref worldMatrices[index], out invWorldMatrix[index]);
-            }
-        }
-
-        _worldBuffer = Buffer.New(GraphicsDevice, (ReadOnlySpan<Matrix>)worldMatrices.AsSpan(), BufferFlags.ShaderResource | BufferFlags.StructuredBuffer);
-        _invWorldBuffer = Buffer.New(GraphicsDevice, (ReadOnlySpan<Matrix>)invWorldMatrix.AsSpan(), BufferFlags.ShaderResource | BufferFlags.StructuredBuffer);
-
         Model.Enabled = false;
         Instancing.Enabled = false;
 
@@ -70,6 +53,11 @@ public class GrassComponent : SyncScript
         {
             for (var x = 0; x < ChunkCount; x++)
             {
+                var instances = new Matrix[InstanceCount];
+                var invInstances = new Matrix[InstanceCount];
+                var worldBuffer = Buffer.New(GraphicsDevice, (ReadOnlySpan<Matrix>)instances.AsSpan(), BufferFlags.ShaderResource | BufferFlags.StructuredBuffer);
+                var invWorldBuffer = Buffer.New(GraphicsDevice, (ReadOnlySpan<Matrix>)invInstances.AsSpan(), BufferFlags.ShaderResource | BufferFlags.StructuredBuffer);
+
                 var entity = new Entity()
                 {
                     new ModelComponent
@@ -81,9 +69,9 @@ public class GrassComponent : SyncScript
                     {
                         Type = new InstancingUserBuffer
                         {
-                            InstanceWorldBuffer = _worldBuffer,
-                            InstanceWorldInverseBuffer = _invWorldBuffer,
-                            InstanceCount = worldMatrices.Length,
+                            InstanceWorldBuffer = worldBuffer,
+                            InstanceWorldInverseBuffer = invWorldBuffer,
+                            InstanceCount = 0,
                             BoundingBox = new BoundingBox(new(-8000, -400, -8000), new(8000, 400, 8000)) // TODO I guess
                         }
                     },
@@ -96,9 +84,12 @@ public class GrassComponent : SyncScript
                 Entity.AddChild(entity);
                 _chunks.Add(new()
                 {
-                    Transform = entity.Transform,
                     Model = entity.Get<ModelComponent>(),
-                    Instancing = entity.Get<InstancingComponent>()
+                    Instancing = entity.Get<InstancingComponent>(),
+                    World = instances,
+                    InvWorld = invInstances,
+                    WorldBuffer = worldBuffer,
+                    InvWorldBuffer = invWorldBuffer
                 });
             }
         }
@@ -106,7 +97,7 @@ public class GrassComponent : SyncScript
 
     public override void Update()
     {
-        if (Instancing == null || Model == null || true)
+        if (Instancing == null || Model == null)
             return;
 
         var camera = SceneSystem.TryGetMainCamera();
@@ -117,33 +108,100 @@ public class GrassComponent : SyncScript
         if (terrainProcessor == null)
             return;
 
-        var position = camera.GetWorldPosition();
-        position.Y = 0;
+        var terrainData = terrainProcessor.TerrainData;
+        if (terrainData?.MeshManager?.IsReady != true)
+            return;
 
-        var px = (int)position.X;
-        var pz = (int)position.Z;
+        var cameraPosition = camera.GetWorldPosition();
 
-        position.X = px - (px % ChunkSize) + ChunkSize / 2;
-        position.Z = pz - (pz % ChunkSize) + ChunkSize / 2;
+        var (_, lodLevalAtCamera) = terrainData.GetAtlasUv(cameraPosition.X, cameraPosition.Z);
+        if (lodLevalAtCamera != 0)
+            return;
 
-        position.X -= ChunkSize * ChunkCount / 2;
-        position.Z -= ChunkSize * ChunkCount / 2;
+        var camChunkX = (int)MathF.Floor(cameraPosition.X / ChunkSize);
+        var camChunkZ = (int)MathF.Floor(cameraPosition.Z / ChunkSize);
 
-        for (var z = 0; z < ChunkCount; z++)
+        if (_centerChunkCoord.X != camChunkX || _centerChunkCoord.Y != camChunkZ)
         {
-            for (var x = 0; x < ChunkCount; x++)
+            _centerChunkCoord = new Point(camChunkX, camChunkZ);
+            RefreshChunks(terrainData);
+        }
+    }
+
+    private void RefreshChunks(TerrainRuntimeData terrainData)
+    {
+        int half = ChunkCount / 2;
+
+        for (int z = 0; z < ChunkCount; z++)
+        {
+            for (int x = 0; x < ChunkCount; x++)
             {
-                var chunkIndex = z * ChunkCount + x;
-                _chunks[chunkIndex].Transform.Position = position + new Vector3(x * ChunkSize, 0, z * ChunkSize);
-                _chunks[chunkIndex].Transform.UpdateWorldMatrix();
+                int worldChunkX = _centerChunkCoord.X + (x - half);
+                int worldChunkZ = _centerChunkCoord.Y + (z - half);
+
+                var chunk = _chunks[z * ChunkCount + x];
+
+                // If this chunk’s coords are different, regenerate
+                if (chunk.WorldCoord.X != worldChunkX || chunk.WorldCoord.Y != worldChunkZ)
+                {
+                    chunk.WorldCoord = new Point(worldChunkX, worldChunkZ);
+
+                    FillGrassInstances(chunk, worldChunkX, worldChunkZ, terrainData);
+                }
             }
         }
     }
 
+    private void FillGrassInstances(Chunk chunk, int chunkX, int chunkZ, TerrainRuntimeData terrainData)
+    {
+        var rng = new Random(HashCode.Combine(chunkX, chunkZ, Model!.GetHashCode()));
+        var instanceCount = 0;
+        for (var i = 0; i < InstanceCount; i++)
+        {
+            float lx = (float)rng.NextDouble() * ChunkSize;
+            float lz = (float)rng.NextDouble() * ChunkSize;
+            float wx = chunkX * ChunkSize + lx;
+            float wz = chunkZ * ChunkSize + lz;
+
+            float scaleFactor = 0.8f + (float)rng.NextDouble() * 0.3f;
+            var scale = new Vector3(scaleFactor, scaleFactor, scaleFactor);
+            var rotation = Quaternion.RotationY((float)rng.NextDouble() * MathF.PI * 2.0f);
+            var position = new Vector3(wx, 0, wz);
+
+            var (uv, _) = terrainData.GetAtlasUv(position.X, position.Z);
+            position.Y = terrainData.GetHeightAt(uv);
+
+            var controlValue = terrainData.GetControlMapAt(uv);
+            var backgroundTextureIndex = ((controlValue >> 5) & 0x1F) - 1;
+
+            var isGrass = (backgroundTextureIndex == 0 || backgroundTextureIndex == 4 || backgroundTextureIndex == 22 || backgroundTextureIndex == 27 || backgroundTextureIndex == 28);
+
+            if (!isGrass)
+                continue;
+
+            // TODO: We could actually compute bounds here ...
+
+            Matrix.Transformation(ref scale, ref rotation, ref position, out chunk.World[i]);
+            chunk.InvWorld[i] = Matrix.Invert(chunk.World[i]);
+            instanceCount++;
+        }
+
+        var graphicsContext = Services.GetSafeServiceAs<GraphicsContext>();
+        chunk.WorldBuffer.SetData(graphicsContext.CommandList, (ReadOnlySpan<Matrix>)chunk.World);
+        chunk.InvWorldBuffer.SetData(graphicsContext.CommandList, (ReadOnlySpan<Matrix>)chunk.InvWorld);
+
+        ((InstancingUserBuffer)chunk.Instancing.Type).InstanceCount = instanceCount;
+    }
+
     private class Chunk
     {
-        public required TransformComponent Transform;
+        public Point WorldCoord;
         public required ModelComponent Model;
         public required InstancingComponent Instancing;
+        public required Matrix[] World;
+        public required Matrix[] InvWorld;
+        public required Buffer WorldBuffer;
+        public required Buffer InvWorldBuffer;
     }
 }
+#pragma warning restore CS0618 // Type or member is obsolete

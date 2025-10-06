@@ -17,9 +17,9 @@ public class SampleGame : Game
         base.BeginRun();
         _ = new ImGuiSystem(Services, GraphicsDeviceManager);
 
-        //new PerfMonitor(Services);
-        //new HierarchyView(Services);
-        //Inspector.FindFreeInspector(Services).Target = SceneSystem.SceneInstance.RootScene.Entities.FirstOrDefault(x => x.Name == "Terrain")?.Get<TerrainComponent>();
+        new PerfMonitor(Services);
+        new HierarchyView(Services);
+        Inspector.FindFreeInspector(Services).Target = SceneSystem.SceneInstance.RootScene.Entities.FirstOrDefault(x => x.Name == "Terrain")?.Get<TerrainComponent>();
 
         //var reverseZRenderer = (ReverseZRenderer)((SceneRendererCollection)((SceneCameraRenderer)SceneSystem.GraphicsCompositor.Game).Child).Children.First();
         //var forwardRenderer = (ForwardRenderer)reverseZRenderer.Child;

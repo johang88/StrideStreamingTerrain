@@ -3,60 +3,42 @@
     shader MaterialGrassDisplacementFeature 
         : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, TerrainQuery, Math, TransformationInstancing, Global, NormalUpdate
     {
-        float3x3 RotateY(float theta) {
-            float c = cos(theta);
-            float s = sin(theta);
-            return float3x3(
-                float3(c, 0, s),
-                float3(0, 1, 0),
-                float3(-s, 0, c)
-            );
-        }
-
         override void Compute()
         {
         }
 
         stage override void TransformPosition()
         {
-            float4x4 instanceWorld = GetInstanceWorld(streams.InstanceID);
+            //float4x4 instanceWorld = GetInstanceWorld(streams.InstanceID);
 
-            float2 grassPosition = float2(World._m30 + instanceWorld._m30, World._m32 + instanceWorld._m32);
+            //float2 grassPosition = instanceWorld._m30_m32;
 
-            float3x3 rot = RotateY(FastRandom(streams.InstanceID * PI * 2.0f));
-            streams.Position.xyz = mul(streams.Position.xyz, rot);
-            streams.Position.xyz *= 0.8f + max(1.0f, FastRandom(streams.InstanceID)) * 1.0f;
-            streams.Position.y *= 2;
-            streams.Position.x += sin(Time * 1.5f + grassPosition.x * 0.1f) * streams.Position.y * 0.2f;
-            streams.Position.z += cos(Time * 1.5f + grassPosition.y * 0.1f) * streams.Position.y * 0.2f;
+            //// Wind
+            //float windSpeed = 0.5f;
+            //float windFrequency = 0.8f;
 
-            float fadeOutDistance = 50.0f;
-            float fadeOutRange = 16.0f;
-            float distanceToCamera = saturate((length(Eye.xz - grassPosition) - fadeOutDistance) / fadeOutRange);
-            streams.Position.xyz *= 1.0f - distanceToCamera;
+            //// Instance variation to avoid everything moving identically
+            //float instanceSeed = float(streams.InstanceID) * 12.345; 
 
-            streams.PositionWS.y = streams.Position.y;
-            streams.PositionWS.xz = streams.Position.xz + grassPosition;
+            //// Compute a nice waving offset
+            //float windOffsetX = sin(Time * windSpeed + grassPosition.x * 0.1 + instanceSeed) * 0.1;
+            //float windOffsetZ = cos(Time * windSpeed + grassPosition.y * 0.1 + instanceSeed) * 0.1;
 
-            uint ox = streams.InstanceID + (uint)grassPosition.x;
-            uint oy = streams.InstanceID + (uint)grassPosition.y;
+            //streams.PositionWS.x += windOffsetX * streams.PositionWS.y;
+            //streams.PositionWS.z += windOffsetZ * streams.PositionWS.y;
 
-            streams.PositionWS.xz += float2(FastRandom(ox), FastRandom(oy));
+            //// Move to terrain height
+            //float2 terrainAtlasUv = GetTerrainAtlasUv(grassPosition.x, grassPosition.y);
+            //float terrainHeight = GetTerrainHeightAt(terrainAtlasUv);
+            //uint backgroundTextureIndex = GetBackgroundTextureIndexAt(terrainAtlasUv);
 
-            float2 terrainAtlasUv = GetTerrainAtlasUv(streams.PositionWS.x, streams.PositionWS.z);
-            float terrainHeight = GetTerrainHeightAt(terrainAtlasUv);
-            float3 terrainNormal = GetTerrainNormalAt(terrainAtlasUv);
-            uint backgroundTextureIndex = GetBackgroundTextureIndexAt(GetTerrainAtlasUv(grassPosition.x, grassPosition.y));
+            //streams.PositionWS.y += terrainHeight;
 
-            // TODO: Very nice hardcode.
-            int isGrass = (backgroundTextureIndex == 0 || backgroundTextureIndex == 4 || backgroundTextureIndex == 22 || backgroundTextureIndex == 27 || backgroundTextureIndex == 28) ? 1 : 0;
-
-            streams.PositionWS.y += terrainHeight;
-            streams.meshNormal = terrainNormal;
-            streams.meshTangent = float4(0, 0, -1, 1);
-
-            if (/*terrainHeight < 80 || terrainHeight > 180 || abs(terrainNormal.y) < 0.9f ||*/ isGrass == 0)
-                streams.PositionWS.y /= 0;
+            //// TODO: Very nice hardcode.
+            //float isGrass = (backgroundTextureIndex == 0 || backgroundTextureIndex == 4 || backgroundTextureIndex == 22 || backgroundTextureIndex == 27 || backgroundTextureIndex == 28) ? 1 : 0;
+            
+            //// cull
+            //streams.PositionWS.y /= isGrass;
         }
     };
 }

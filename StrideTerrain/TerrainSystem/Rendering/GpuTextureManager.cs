@@ -40,8 +40,6 @@ public class GpuTextureManager : IDisposable
         ControlMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UInt, atlasSize, chunkTextureSize, terrain.Header.ChunkTextureSize);
         ShadowMap = Texture.New2D(graphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R10G10B10A2_UNorm, TextureFlags.UnorderedAccess | TextureFlags.RenderTarget | TextureFlags.ShaderResource);
 
-        var chunksPerRow = Math.Min(Heightmap.ChunksPerRow, NormalMap.ChunksPerRow);
-
         _freeList = new Queue<int>(Heightmap.ChunksPerRow * Heightmap.ChunksPerRow);
         _chunks = new ChunkData[Heightmap.ChunksPerRow * Heightmap.ChunksPerRow];
         for (var i = 0; i < _chunks.Length; i++)
@@ -62,6 +60,19 @@ public class GpuTextureManager : IDisposable
         NormalMap?.Dispose();
         ControlMap?.Dispose();
         ShadowMap?.Dispose();
+    }
+
+    public float ReadHeight(int x, int y)
+    {
+        int i = (y * Heightmap.Size + x) * Heightmap.BytesPerPixel;
+        ushort raw = (ushort)(Heightmap.Data[i] | (Heightmap.Data[i + 1] << 8));
+        return (raw / 65535.0f);
+    }
+
+    public uint ReadControlMap(int x, int y)
+    {
+        int i = (y * ControlMap.Size + x) * ControlMap.BytesPerPixel;
+        return (ushort)(ControlMap.Data[i] | (ControlMap.Data[i + 1] << 8));
     }
 
     public void Update(GraphicsContext graphicsContext)

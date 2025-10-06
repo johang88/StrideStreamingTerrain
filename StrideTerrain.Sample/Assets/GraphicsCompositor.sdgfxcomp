@@ -207,7 +207,7 @@ SharedRenderers:
             FogStart: 10.0
             SkipBackground: false
         AmbientOcclusion:
-            Enabled*: false
+            Enabled: true
         LocalReflections:
             Enabled: false
             ResolvePassResolution: Full

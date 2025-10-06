@@ -30,6 +30,26 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\TerrainData.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\TerrainQuery.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Vegetation\Effects\MaterialImpostorDisplacementFeature.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -43,6 +63,18 @@
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
+	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl">
+	    <LastGenOutput>TerrainShadowBase.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\TerrainData.sdsl">
+	    <LastGenOutput>TerrainData.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\TerrainQuery.sdsl">
+	    <LastGenOutput>TerrainQuery.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl">
+	    <LastGenOutput>MaterialGrassDisplacementFeature.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Vegetation\Effects\MaterialImpostorDisplacementFeature.sdsl">
 	    <LastGenOutput>MaterialImpostorDisplacementFeature.sdsl.cs</LastGenOutput>
 	  </None>

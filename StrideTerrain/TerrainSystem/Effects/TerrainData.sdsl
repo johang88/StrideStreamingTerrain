@@ -44,7 +44,7 @@
             return UnpackInt2(chunk.PackedPositionXZ);
         }
 
-        int2 UnpackInt2(int2 v)
+        int2 UnpackInt2(int v)
         {
             int2 r;
             r.x = v & 0xFFFF;

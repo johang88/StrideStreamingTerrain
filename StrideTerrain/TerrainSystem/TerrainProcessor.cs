@@ -11,6 +11,7 @@ using Stride.Rendering;
 using StrideTerrain.TerrainSystem.Rendering;
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.InteropServices;
 
 namespace StrideTerrain.TerrainSystem;
@@ -21,9 +22,10 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
     private static readonly ProfilingKey ProfilingKeyChunk = new("Terrain.Chunk");
 
     private readonly Dictionary<RenderModel, TerrainRuntimeData> _modelToTerrainMap = [];
-    private SpriteBatch? _spriteBatch;
 
     public VisibilityGroup VisibilityGroup { get; set; } = null!;
+
+    public TerrainRuntimeData? TerrainData => _modelToTerrainMap.FirstOrDefault().Value;
 
     protected override TerrainRuntimeData GenerateComponentData([NotNull] Entity entity, [NotNull] TerrainComponent component)
         => new();

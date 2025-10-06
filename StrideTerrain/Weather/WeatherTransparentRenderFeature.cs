@@ -3,7 +3,8 @@ using Stride.Rendering;
 using StrideTerrain.Weather.Effects;
 using System.Runtime.InteropServices;
 using Stride.Core.Mathematics;
-using System.ComponentModel;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace StrideTerrain.Weather;
 
