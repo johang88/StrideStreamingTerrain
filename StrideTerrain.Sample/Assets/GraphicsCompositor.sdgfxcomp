@@ -12,7 +12,7 @@ RenderStages:
         Id: 36384924-9805-4c6b-a7f8-5a1aeed504f5
         Name: Opaque
         EffectSlotName: Main
-        SortMode: !SortModeStateChange {}
+        SortMode*: !CustomSortMode {}
     9105a30fee026d4893472b6aee83d035:
         Id: a0f4c837-aea2-48db-a2e6-bb8866f35fa4
         Name: Transparent
@@ -207,7 +207,7 @@ SharedRenderers:
             FogStart: 10.0
             SkipBackground: false
         AmbientOcclusion:
-            Enabled: true
+            Enabled: false
         LocalReflections:
             Enabled: false
             ResolvePassResolution: Full

@@ -34,7 +34,6 @@
             V /= cameraDistance;
 
             float3 volumetricLight = RayMarchVolumetricDirectionalLight(Atmosphere, Fog, P, -V, SunDirection, SunColor, CameraPosition, cameraDistance, TransmittanceLUT);
-
             return float4(volumetricLight, 1);
         }
     };

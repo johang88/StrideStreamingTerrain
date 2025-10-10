@@ -12,6 +12,7 @@ using StrideTerrain.Weather.Effects.Atmosphere.LUT;
 using StrideTerrain.Weather.Effects.Fog;
 using StrideTerrain.Weather.Effects.Lights;
 using System;
+using static StrideTerrain.Weather.Effects.Atmosphere.ShaderMixins;
 
 namespace StrideTerrain.Weather;
 
@@ -147,7 +148,9 @@ public class WeatherRenderFeature : RootRenderFeature
             //RenderAerialPerspective(context, aerialPerspectiveRenderTarget);
             //RenderFog(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize);
 
-            RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut);
+            context.RenderContext.Tags.TryGetValue(CubeMapRenderer.IsRenderingCubemap, out var isRenderingCubeMap);
+            if (!isRenderingCubeMap)
+                RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut);
 
             _depthShaderResourceView = null;
             //context.RenderContext.Allocator.ReleaseReference(aerialPerspectiveRenderTarget);
@@ -214,6 +217,7 @@ public class WeatherRenderFeature : RootRenderFeature
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.CameraPosition, cameraPosition);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.InvViewProjection, invViewProjection);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.InvResolution, invViewSize);
+        renderSkyEffect.Parameters.Set(AtmosphereEffectParameters.EnableHeightFog, true);
         renderSkyEffect.Parameters.Set(GlobalKeys.Time, (float)context.RenderContext.Time.Total.TotalSeconds);
         renderSkyEffect.Draw(context, "Atmosphere.RenderSky");
     }

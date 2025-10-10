@@ -14,9 +14,8 @@ using Half = System.Half;
 using System.Linq;
 using Stride.Core;
 using StrideTerrain.Rendering.Profiling;
-using System.Runtime.InteropServices;
 using Stride.Core.Collections;
-using System.Windows.Media.Imaging;
+using StrideTerrain.Rendering;
 
 namespace StrideTerrain.Vegetation;
 
@@ -69,17 +68,16 @@ public class TreeInstanceManager : SyncScript
         for (var i = 0; i < trees.Count; i++)
         {
             var tree = trees[i];
-            var scale = 1.0f + rng.NextSingle() * 2.0f;
+            var scale = 1.0f;
 
-            var treeType = rng.Next(TreeTypes.Count);
-            float scaleX = TreeTypes[treeType].Size.X * scale;
-            float scaleY = TreeTypes[treeType].Size.Y * scale;
+            float scaleX = TreeTypes[tree.Type].Size.X * scale;
+            float scaleY = TreeTypes[tree.Type].Size.Y * scale;
 
-            treeInstances[treeType].Add(new(tree.X, tree.Y, tree.Z, PackScale(scaleX, scaleY)));
+            treeInstances[tree.Type].Add(new(tree.X, tree.Y, tree.Z, PackScale(scaleX, scaleY)));
             var gridPosition = GetGridPosition(tree.X, tree.Z);
-            if (!gridPositions[treeType].ContainsKey(gridPosition))
-                gridPositions[treeType].Add(gridPosition, []);
-            gridPositions[treeType][gridPosition].Add(new(tree.X, tree.Y, tree.Z, scale));
+            if (!gridPositions[tree.Type].ContainsKey(gridPosition))
+                gridPositions[tree.Type].Add(gridPosition, []);
+            gridPositions[tree.Type][gridPosition].Add(new(tree.X, tree.Y, tree.Z, scale));
         }
 
         for (var i = 0; i < treeInstances.Count; i++)
@@ -100,10 +98,11 @@ public class TreeInstanceManager : SyncScript
                 {
                     PrimitiveType = PrimitiveType.TriangleList,
                     VertexBuffers = [],
-                    DrawCount = treeInstances[i].Count * 6
+                    DrawCount = treeInstances[i].Count * 6,
                 },
                 BoundingBox = new BoundingBox(new Vector3(-100000, -100000, -100000), new Vector3(100000, 100000, 100000)),
             }];
+            impostorModel.RenderGroup = RenderGroups.Impostors;
             impostorModel.Model.BoundingSphere = new(Vector3.Zero, 10000);
             impostorModel.Model.BoundingBox = BoundingBox.FromSphere(impostorModel.BoundingSphere);
             impostorModel.IsShadowCaster = false;
@@ -164,7 +163,7 @@ public class TreeInstanceManager : SyncScript
     public override void Update()
     {
         var camera = SceneSystem.TryGetMainCamera();
-        if (camera == null)
+        if (camera == null) 
             return;
 
         var cameraPosition = camera.GetWorldPosition();
@@ -224,6 +223,7 @@ public class TreeInstanceManager : SyncScript
         public float X;
         public float Y;
         public float Z;
+        public int Type;
     }
 
     class RuntimeData

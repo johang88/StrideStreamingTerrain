@@ -137,6 +137,9 @@ public class PlayerInput : SyncScript
                 var p = Entity.Transform.Position;
                 var result = simulation.Raycast(new Vector3(p.X, 1000, p.Z), new Vector3(p.X, -1000, p.Z));
 
+                var hits = new List<HitResult>();
+                simulation.RaycastPenetrating(new Vector3(p.X, 1000, p.Z), new Vector3(p.X, -1000, p.Z), hits);
+
                 if (result.Succeeded && result.Collider.Entity != Entity)
                 {
                     Entity.Get<CharacterComponent>().Teleport(result.Point);

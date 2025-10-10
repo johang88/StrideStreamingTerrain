@@ -132,7 +132,12 @@ public class BasicCameraController : SyncScript
                 }
 
                 // Increase speed when pressing shift
-                if (Input.IsKeyDown(Keys.LeftShift) || Input.IsKeyDown(Keys.RightShift))
+                if (Input.IsKeyDown(Keys.LeftShift))
+                {
+                    speed *= SpeedFactor * 10;
+                }
+
+                if (Input.IsKeyDown(Keys.LeftCtrl))
                 {
                     speed *= SpeedFactor * 50;
                 }

@@ -47,8 +47,8 @@ public sealed class TerrainRuntimeData : IDisposable
 
         var chunkSize = TerrainData.Header.ChunkSize;
 
-        var sectorX = Math.Min(ChunksPerRowLod0, (int)Math.Floor(wx / chunkSize));
-        var sectorZ = Math.Min(ChunksPerRowLod0, (int)Math.Floor(wz / chunkSize));
+        var sectorX = Math.Clamp((int)Math.Floor(wx / chunkSize), 0, ChunksPerRowLod0 - 1);
+        var sectorZ = Math.Clamp((int)Math.Floor(wz / chunkSize), 0, ChunksPerRowLod0 - 1);
         var sectorIndex = sectorZ * ChunksPerRowLod0 + sectorX;
 
         var chunkIndex = MeshManager!.SectorToChunkMap[sectorIndex];
@@ -66,6 +66,9 @@ public sealed class TerrainRuntimeData : IDisposable
 
         uv *= InvRuntimeTextureSize;
 
+        uv.X = Math.Clamp(uv.X, 0.0f, 0.999999f);
+        uv.Y = Math.Clamp(uv.Y, 0.0f, 0.999999f);
+
         return (uv, lodLevel);
 
         static Vector2 UnpackInt2(int v)
@@ -74,9 +77,6 @@ public sealed class TerrainRuntimeData : IDisposable
 
     public float GetHeightAt(Vector2 uv)
     {
-        uv.X = Math.Clamp(uv.X, 0.0f, 0.999999f);
-        uv.Y = Math.Clamp(uv.Y, 0.0f, 0.999999f);
-
         var fx = uv.X * (RuntimeTextureSize - 1);
         var fy = uv.Y * (RuntimeTextureSize - 1);
 
@@ -105,8 +105,33 @@ public sealed class TerrainRuntimeData : IDisposable
     }
 
     public uint GetControlMapAt(Vector2 uv)
-        => GpuTextureManager!.ReadControlMap((int)(uv.X * RuntimeTextureSize - 0.5f), (int)(uv.Y * RuntimeTextureSize - 0.5f));
-    
+    {
+        var x = Math.Clamp((int)(uv.X * RuntimeTextureSize), 0, RuntimeTextureSize - 1);
+        var y = Math.Clamp((int)(uv.Y * RuntimeTextureSize), 0, RuntimeTextureSize - 1);
+        return GpuTextureManager!.ReadControlMap(x, y);
+    }
+
+    public (uint A, uint B, uint C, uint D) GetControlMapLinearSampleAt(Vector2 uv)
+    {
+        var fx = uv.X * (RuntimeTextureSize - 1);
+        var fy = uv.Y * (RuntimeTextureSize - 1);
+
+        var x0 = (int)MathF.Floor(fx);
+        var y0 = (int)MathF.Floor(fy);
+        var x1 = Math.Min(x0 + 1, RuntimeTextureSize - 1);
+        var y1 = Math.Min(y0 + 1, RuntimeTextureSize - 1);
+
+        var tx = fx - x0;
+        var ty = fy - y0;
+
+        var a = GpuTextureManager!.ReadControlMap(x0, y0);
+        var b = GpuTextureManager!.ReadControlMap(x1, y0);
+        var c = GpuTextureManager!.ReadControlMap(x0, y1);
+        var d = GpuTextureManager!.ReadControlMap(x1, y1);
+
+        return (a, b, c, d);
+    }
+
     public void Dispose()
     {
         RenderModel = null;

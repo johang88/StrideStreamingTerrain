@@ -30,6 +30,11 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialStreamInitializer.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -45,6 +50,11 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Vegetation\Effects\ComoputeColorImpostor.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -56,6 +66,21 @@
 	    <AutoGen>True</AutoGen>
 	    <DependentUpon>MaterialImpostorDisplacementFeature.sdsl</DependentUpon>
 	  </Compile>
+	  <Compile Update="Vegetation\Effects\MaterialTreeDisplacementFeature.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Vegetation\Effects\MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Lights\VolumetricLightDiretional.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -63,6 +88,9 @@
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialStreamInitializer.sdsl">
+	    <LastGenOutput>TerrainMaterialStreamInitializer.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl">
 	    <LastGenOutput>TerrainShadowBase.sdsl.cs</LastGenOutput>
 	  </None>
@@ -72,11 +100,23 @@
 	  <None Update="TerrainSystem\Effects\TerrainQuery.sdsl">
 	    <LastGenOutput>TerrainQuery.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="Vegetation\Effects\ComoputeColorImpostor.sdsl">
+	    <LastGenOutput>ComoputeColorImpostor.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl">
 	    <LastGenOutput>MaterialGrassDisplacementFeature.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Vegetation\Effects\MaterialImpostorDisplacementFeature.sdsl">
 	    <LastGenOutput>MaterialImpostorDisplacementFeature.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Vegetation\Effects\MaterialTreeDisplacementFeature.sdsl">
+	    <LastGenOutput>MaterialTreeDisplacementFeature.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Vegetation\Effects\MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl">
+	    <LastGenOutput>MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Lights\VolumetricLightDiretional.sdsl">
+	    <LastGenOutput>VolumetricLightDiretional.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl">
 	    <LastGenOutput>VolumetricLightDiretionalBase.sdsl.cs</LastGenOutput>

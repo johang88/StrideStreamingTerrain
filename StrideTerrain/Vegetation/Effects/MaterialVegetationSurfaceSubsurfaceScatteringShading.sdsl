@@ -8,23 +8,31 @@
 		//stream float subsurfaceLightingAmount;
 		stream float3 extinction;
 
-		float3 CalculateSubSurfaceColor(float3 L, float3 V, float3 N, float subsurfaceLightingAmount, float3 diffuse, float3 extinction)
+		float3 CalculateSubSurfaceColor(float3 L, float3 V, float3 N, float subsurfaceLightingAmount, float3 diffuse, float3 extinction, float thickness)
 		{
 			float3 H = normalize(L + V);
-			
-			float inScatter = pow(saturate(dot(L, -V)), 12) * lerp(3.0, 0.1, subsurfaceLightingAmount);
+
+			// Backlight factor: only grazing/backlit surfaces get in-scatter
+			float backlight = saturate(dot(N, -L)); // 1 = backlit, 0 = front-lit
+			float inScatter = pow(backlight, 6) * 0.25;
+
 			float normalContribution = saturate(dot(N, H) * subsurfaceLightingAmount + 1 - subsurfaceLightingAmount);
 			float backScatter = normalContribution / (PI * 2);
-			
-			return diffuse * lerp(backScatter, 1, inScatter) * extinction;
+
+			float3 transmittance = exp(-extinction * thickness);
+			float3 scattered = diffuse * lerp(backScatter, 1.0, inScatter);
+
+			// Apply extinction/transmittance
+			return scattered * transmittance;
 		}
 
 		override void PrepareForLightingAndShading()
 		{
-			streams.IsFrontFace = true;
 			base.PrepareForLightingAndShading();
-			streams.subsurfaceLightingAmount = SubsurfaceLightingAmount.Compute().x ;
-			streams.extinction = Extinction.Compute().xyz;
+			// streams.subsurfaceLightingAmount = SubsurfaceLightingAmount.Compute().x;
+			// streams.extinction = Extinction.Compute().xyz;
+			streams.subsurfaceLightingAmount = streams.matDiffuse.a;
+			streams.extinction = float3(0.15, 0.35, 0.1);
 		}
 
 		override float3 ComputeDirectLightContribution()
@@ -35,7 +43,8 @@
 				streams.normalWS, 
 				streams.subsurfaceLightingAmount,
 				streams.lightColor * streams.matDiffuseVisible,
-				streams.extinction
+				streams.extinction, 
+				lerp(0.2f, 0.5f, streams.matDiffuse.a)
 			);
 
 			return result;

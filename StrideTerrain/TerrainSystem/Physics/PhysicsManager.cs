@@ -73,12 +73,12 @@ public sealed class PhysicsManager : IDisposable
     public void Update(float cameraPositionX, float cameraPositionZ)
     {
         // Transform camera position to terrain space.
-        cameraPositionX /= _terrain.UnitsPerTexel;
-        cameraPositionZ /= _terrain.UnitsPerTexel;
+        var cameraPositionXTerrainSpace = cameraPositionX / _terrain.UnitsPerTexel;
+        var cameraPositionZTerrainSpace = cameraPositionZ / _terrain.UnitsPerTexel;
 
         // Calculate camera chunk position
-        var cameraChunkX = (int)(cameraPositionX / _terrain.ChunksPerRowLod0);
-        var cameraChunkY = (int)(cameraPositionZ / _terrain.ChunksPerRowLod0);
+        var cameraChunkX = (int)(cameraPositionXTerrainSpace / _terrain.TerrainData.Header.ChunkSize);
+        var cameraChunkY = (int)(cameraPositionZTerrainSpace / _terrain.TerrainData.Header.ChunkSize);
 
         // Calculate desired chunk positions, note this assumes that the terrain is big enough to contain all physics chunks ...
         var halfChunkCount = PhysicsEntityCount / 2;

@@ -8,6 +8,7 @@ using Stride.Games;
 using Stride.Graphics;
 using Stride.Profiling;
 using Stride.Rendering;
+using StrideTerrain.Rendering;
 using StrideTerrain.TerrainSystem.Rendering;
 using System;
 using System.Collections.Generic;
@@ -109,7 +110,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.ModelComponent.IsShadowCaster = false;
                 data.ModelComponent.Materials[0] = component.Material;
                 data.ModelComponent.Enabled = false; // Stays disabled until everything is ready.
-                data.ModelComponent.RenderGroup = component.RenderGroup;
+                data.ModelComponent.RenderGroup = RenderGroups.Terrain;
 
                 data.TerrainDataUrl = component.TerrainData.Url;
                 data.IsInitialized = true;

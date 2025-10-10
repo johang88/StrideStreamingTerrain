@@ -1,8 +1,10 @@
 ﻿// See https://aka.ms/new-console-template for more information
+using Stride.Core.IO;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.TextureConverter;
 using StrideTerrain.Common;
+using StrideTerrain.Importer;
 using System.CommandLine;
 using System.Runtime.InteropServices;
 using System.Text.Json;
@@ -65,7 +67,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
     using var textureTool = new TextureTool();
     using var heightmap = textureTool.Load(input.FullName, false);
-    using var controlMapData = textureTool.Load(controlMapInput.FullName, false);
+    //using var controlMapData = textureTool.Load(controlMapInput.FullName, false);
 
     if (heightmap.Width != heightmap.Height)
     {
@@ -112,8 +114,6 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
     Console.WriteLine("Loading heights");
     var heights = LoadData(heightmap);
-    Console.WriteLine("Loading control map");
-    var controlMap = LoadData(controlMapData);
 
     float HeightAt(int x, int y)
     {
@@ -161,6 +161,28 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
     Console.WriteLine("Loading normals");
     var normals = LoadNormals();
 
+    unsafe ushort[] LoadControlMap()
+    {
+        var controlMap = new ushort[terrainSize * terrainSize];
+        Parallel.For(0, terrainSize, y =>
+        {
+            for (var x = 0; x < terrainSize; x++)
+            {
+                var normal = NormalAt(x, y);
+
+                float height = HeightAt(x, y);
+                var worldPos = new Vector3(x * unitsPerTexel, height, y * unitsPerTexel);
+
+                controlMap[y * terrainSize + x] = TerrainControlMap.ComputeControlValue(height, normal, worldPos);
+            }
+        });
+
+        return controlMap;
+    }
+
+    Console.WriteLine("Loading control map");
+    var controlMap = LoadControlMap();
+
     (byte x, byte y) GetNormal(int x, int y)
     {
         x = Math.Clamp(x, 0, terrainSize - 1);
@@ -170,29 +192,104 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
         return (normals[index + 0], normals[index + 1]);
     }
 
-    bool genereateTrees = true;
+    var genereateTrees = true;
     if  (genereateTrees)
     {
-        var trees = new List<TreeInstance>(terrainSize * terrainSize);
-        for (var y = 0; y < terrainSize; y += 24)
+        Console.WriteLine("Generating trees");
+
+        var trees = new List<TreeInstance>();
+
+        // Define bounding radius per tree type (0–5 = pine, 6–11 = poplar)
+        float[] treeRadii = { 3f, 3f, 5f, 7f, 7f, 8f, 3f, 3f, 5f, 7f, 7f, 8f };
+
+        // Spatial hash parameters
+        float cellSize = 8f; // Roughly the largest radius
+        var grid = new Dictionary<(int, int), List<TreeInstance>>();
+
+        int tileStep = 12;
+        int maxAttemptsPerTile = 10;
+
+        for (int y = 0; y < terrainSize; y += tileStep)
         {
-            for (var x = 0; x < terrainSize; x += 24)
+            for (int x = 0; x < terrainSize; x += tileStep)
             {
-                var ox = Random.Shared.Next(1, 23);
-                var oy = Random.Shared.Next(1, 23);
-                var height = HeightAt(x + ox, y + oy);
-                if (height >= 90 && height < 200)
+                for (int attempt = 0; attempt < maxAttemptsPerTile; attempt++)
                 {
-                    var normal = NormalAt(x + ox, y + oy);
-                    if (Math.Abs(normal.Y) > 0.9f)
+                    int px = x + Random.Shared.Next(0, tileStep);
+                    int py = y + Random.Shared.Next(0, tileStep);
+                    float height = HeightAt(px, py);
+                    Vector3 normal = NormalAt(px, py);
+
+                    if (height < 70 || height >= 140 || Math.Abs(normal.Y) < 0.9f)
+                        continue;
+
+                    ushort control = controlMap[py * terrainSize + px];
+                    int textureIndex = control & 0x1F;
+                    if (textureIndex != 0 && textureIndex != 17 && textureIndex != 20 && textureIndex != 27)
+                        continue;
+
+                    float density = Noise.LowFreqNoise(new Vector2(px, py) * 0.05f);
+                    if (density < 0.35f) continue;
+
+                    float pineWeight = Math.Clamp((height - 70f) / 60f + (1f - normal.Y) * 2f, 0f, 1f);
+                    bool usePine = Random.Shared.NextDouble() < pineWeight;
+
+                    int treeType;
+                    float r = (float)Random.Shared.NextDouble();
+                    if (r < 0.5f)
+                        treeType = Random.Shared.Next(0, 2);
+                    else if (r < 0.85f)
+                        treeType = 2;
+                    else
+                        treeType = Random.Shared.Next(3, 6);
+
+                    if (!usePine)
+                        treeType += 6; // poplar variant
+
+                    float radius = treeRadii[treeType];
+
+                    // --- Spatial hash lookup ---
+                    int gx = (int)((px * unitsPerTexel) / cellSize);
+                    int gz = (int)((py * unitsPerTexel) / cellSize);
+                    bool tooClose = false;
+
+                    for (int yy = -1; yy <= 1 && !tooClose; yy++)
                     {
-                        trees.Add(new()
+                        for (int xx = -1; xx <= 1 && !tooClose; xx++)
                         {
-                            X = (x + ox) * unitsPerTexel,
-                            Y = height,
-                            Z = (y + oy) * unitsPerTexel
-                        });
+                            if (!grid.TryGetValue((gx + xx, gz + yy), out var nearby)) continue;
+                            foreach (var t in nearby)
+                            {
+                                float dx = t.X - (px * unitsPerTexel);
+                                float dz = t.Z - (py * unitsPerTexel);
+                                float minDist = MathF.Max(radius, treeRadii[t.Type]);
+                                if (dx * dx + dz * dz < minDist * minDist)
+                                {
+                                    tooClose = true;
+                                    break;
+                                }
+                            }
+                        }
                     }
+                    if (tooClose) continue;
+
+                    var tree = new TreeInstance
+                    {
+                        X = px * unitsPerTexel,
+                        Y = height,
+                        Z = py * unitsPerTexel,
+                        Type = treeType
+                    };
+                    trees.Add(tree);
+
+                    // --- Insert into spatial grid ---
+                    var key = (gx, gz);
+                    if (!grid.TryGetValue(key, out var list))
+                    {
+                        list = new List<TreeInstance>();
+                        grid[key] = list;
+                    }
+                    list.Add(tree);
                 }
             }
         }
@@ -203,7 +300,6 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
             IncludeFields = true
         };
         File.WriteAllText(outputPathTreeData, JsonSerializer.Serialize(trees, options));
-
         return;
     }
 
@@ -391,4 +487,5 @@ class TreeInstance
     public float X;
     public float Y;
     public float Z;
+    public int Type;
 }

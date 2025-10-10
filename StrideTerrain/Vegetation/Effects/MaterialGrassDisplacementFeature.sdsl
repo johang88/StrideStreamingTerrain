@@ -1,7 +1,7 @@
 ﻿namespace StrideTerrain.Vegetation.Effects
 {
     shader MaterialGrassDisplacementFeature 
-        : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, TerrainQuery, Math, TransformationInstancing, Global, NormalUpdate
+        : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, Math, TransformationInstancing, Global, NormalUpdate
     {
         override void Compute()
         {

@@ -16,12 +16,6 @@
             float Roughness;
         };
 
-        struct TextureParam {
-            float BlendSharpness;
-            float SlopeBasedDamp;
-            float NormalBasedDamp;
-        };
-
         override void ResetStream()
         {
             base.ResetStream();
@@ -33,41 +27,6 @@
             normal = normalize(normal);
 
             streams.meshNormal = normal;
-
-            // Should this be hard coded? No it should not.
-            const TextureParam TextureParams[31] = {
-                {0.3650000095, 0.5, 0.5},
-                {0.163635999, 0.5, 0.5},
-                {0.2060610056, 0.5, 0.0121210003},
-                {0.3220340014, 0.2711859941, 0.4848479927},
-                {0.1557790041, 0.5, 0.5},
-                {0.1700000018, 0.5, 0.5},
-                {0.5, 0.5, 0.5},
-                {0.5921049714, 0.5789470077, 0.5},
-                {0.5, 0.5, 0.5},
-                {0.1368419975, 0.5, 0.5},
-                {0.1684210002, 0.1894740015, 0.5},
-                {0.5368419886, 0.400000006, 0.5},
-                {0.1789470017, 0.5, 0.5},
-                {0.3644070029, 0.3644070029, 0.5},
-                {0.2150000036, 0.5, 0.5},
-                {0.5, 0.5, 0.2181819975},
-                {0.1199999973, 0.5, 0.5},
-                {0.1757580042, 0.9878789783, 0.5},
-                {0.1299999952, 0.5, 0.5},
-                {0.1052630022, 0.1016950011, 0.5},
-                {0.5, 0.5, 0.5},
-                {0.5, 0.5, 0.5},
-                {0.5, 0.5, 0.5},
-                {0.5, 0.5, 0.5},
-                {0.4322029948, 0.4067800045, 0.5},
-                {0.174999997, 0.5, 0.5},
-                {0.3449999988, 0.5, 0.5},
-                {0.1319440007, 0.5, 0.5},
-                {0.5, 0.5, 0.5},
-                {0.5, 0.5, 0.5},
-                {0.5, 0.5, 0.5}
-            };
 
             float2 positionFract = frac(streams.TerrainAtlasCoord);
             positionFract = streams.TerrainFract;
@@ -85,50 +44,84 @@
             uint controlValueC = (uint)TerrainControlMap.Load(int3(uv.xy + int2(0, 1), 0)).x;
             uint controlValueD = (uint)TerrainControlMap.Load(int3(uv.xy + int2(1, 1), 0)).x;
 
-            uint4 overlayTextureIndices = uint4(
-                (uint)((controlValueA & 0x1F) - 1),
-                (uint)((controlValueB & 0x1F) - 1),
-                (uint)((controlValueC & 0x1F) - 1),
-                (uint)((controlValueD & 0x1F) - 1)
-            );
-
             uint4 backgroundTextureIndices = uint4(
-                (uint)(((controlValueA >> 5) & 0x1F) - 1),
-                (uint)(((controlValueB >> 5) & 0x1F) - 1),
-                (uint)(((controlValueC >> 5) & 0x1F) - 1),
-                (uint)(((controlValueD >> 5) & 0x1F) - 1)
-            );
-
-            uint4 slopeThresholds = uint4(
-                (uint)((controlValueA >> 10) & 0x07),
-                (uint)((controlValueB >> 10) & 0x07),
-                (uint)((controlValueC >> 10) & 0x07),
-                (uint)((controlValueD >> 10) & 0x07)
+                (uint)((controlValueA & 0x1F)),
+                (uint)((controlValueB & 0x1F)),
+                (uint)((controlValueC & 0x1F)),
+                (uint)((controlValueD & 0x1F))
             );
 
             uint4 backgroundUvScaling = uint4(
-                (uint)((controlValueA >> 13) & 0x07),
-                (uint)((controlValueB >> 13) & 0x07),
-                (uint)((controlValueC >> 13) & 0x07),
-                (uint)((controlValueD >> 13) & 0x07)
+                (uint)((controlValueA >> 5) & 0x07),
+                (uint)((controlValueB >> 5) & 0x07),
+                (uint)((controlValueC >> 5) & 0x07),
+                (uint)((controlValueD >> 5) & 0x07)
             );
 
-            //overlayTextureIndices = uint4(4,4,4,4);
-            //backgroundTextureIndices = uint4(9,9,9,9);
-            //slopeThresholds = uint4(1,1,1,1);
-            //backgroundUvScaling = uint4(1,1,1,1);
+            //float slope = saturate(1 - normal.y);
+            //float height = streams.PositionWS.y + (LowFreqNoise(streams.PositionWS.xz) - 0.5) * 2.0 * 10;
+            //float3 worldPos = streams.PositionWS.xyz;
+            //float rnd = LowFreqNoise(worldPos.xz);
 
-            //backgroundTextureIndices.x = backgroundTextureIndices.y = backgroundTextureIndices.z = backgroundTextureIndices.w = 1;
+            //uint textureIndex = 0;
+            //uint scaleIndex = 0;
 
-            const float slopeThresholdsMap[8] = { 0.0f, 0.125f, 0.25f, 0.375f, 0.5f, 0.625f, 0.75f, 0.98f };
-            float slopeThreshold = 
-                  fractionalWeights.x * slopeThresholdsMap[slopeThresholds.x]
-                + fractionalWeights.y * slopeThresholdsMap[slopeThresholds.y]
-                + fractionalWeights.z * slopeThresholdsMap[slopeThresholds.z]
-                + fractionalWeights.w * slopeThresholdsMap[slopeThresholds.w];
+            //// --- 1. Coast / ocean (height < 57)
+            //if (height < 62)
+            //{
+            //    float coastThresh = 0.01 + rnd * 0.01;
+            //    textureIndex = (slope < coastThresh) ? 21 : 6; // coast_sand_01 / mud_wet
+            //    scaleIndex = 2;
+            //}
+            //// --- 2. Lowlands / forests (57–140 m)
+            //else if (height < 140)
+            //{
+            //    // Use smoothed slope thresholds
+            //    float flatThresh = 0.01 + rnd * 0.01;
+            //    float gentleThresh = 0.35 + rnd * 0.05;
+            //    float steepThresh = 0.55 + rnd * 0.05;
+
+            //    if (slope < flatThresh)
+            //    {
+            //        // flat mossy areas
+            //        if (rnd < 0.33) textureIndex = 0;   // grass_mossy
+            //        else if (rnd < 0.66) textureIndex = 27; // grass_mossy variant
+            //        else textureIndex = 17; // grass_path_2
+            //    }
+            //    else if (slope < gentleThresh)
+            //    {
+            //        // gentle slope forest/leaf floor
+            //        textureIndex = (rnd < 0.5) ? 20 : 27;
+            //    }
+            //    else if (slope < steepThresh)
+            //    {
+            //        // moderate slope: grass_rocks / rocky patches
+            //        textureIndex = (rnd < 0.5) ? 4 : 18;
+            //    }
+            //    else
+            //    {
+            //        // very steep slope: rock base
+            //        textureIndex = 18;
+            //    }
+
+            //    // Smooth scale transition with slope
+            //    scaleIndex = 1 + (uint)saturate(slope * 4.0); // 1–3
+            //}
+            //// --- 3. Mountains (≥140 m)
+            //else
+            //{
+            //    // Use smooth slope threshold for snow
+            //    float flatThresh = 0.08 + rnd * 0.02;
+            //    textureIndex = (slope < flatThresh) ? 12 : 14; // snow_flat / rock_boulder_dry
+
+            //    // Scale based on slope
+            //    scaleIndex = (slope > 0.6) ? 3 : 4;
+            //}
+
+            //backgroundTextureIndices = textureIndex.xxxx;
+            //backgroundUvScaling = scaleIndex.xxxx;
 
             float tighten = 0.576f;
-            streams.meshNormal = normalize(streams.meshNormal);
             float3 triPlanarWeights = saturate(abs(streams.meshNormal) - tighten);
 	        triPlanarWeights = triPlanarWeights / (triPlanarWeights.x + triPlanarWeights.y + triPlanarWeights.z);
 
@@ -140,76 +133,51 @@
             float2 ddy_yz = ddy(streams.PositionWS.yz);
 
             MaterialSample background = SampleBackground(backgroundTextureIndices, backgroundUvScaling, triPlanarWeights, streams.meshNormal, streams.PositionWS.xyz, fractionalWeights, ddx_xy, ddy_xy, ddx_xz, ddy_xz, ddx_yz, ddy_yz);
-            MaterialSample overlay = SampleOverlay(streams.PositionWS.xz, overlayTextureIndices, fractionalWeights, ddx_xz, ddy_xz);
-
-            TextureParam backgroundTextureParamsA = TextureParams[backgroundTextureIndices.x];
-            TextureParam backgroundTextureParamsB = TextureParams[backgroundTextureIndices.y];
-            TextureParam backgroundTextureParamsC = TextureParams[backgroundTextureIndices.z];
-            TextureParam backgroundTextureParamsD = TextureParams[backgroundTextureIndices.w];
-
-            TextureParam overlayTextureParamsA = TextureParams[overlayTextureIndices.x];
-            TextureParam overlayTextureParamsB = TextureParams[overlayTextureIndices.y];
-            TextureParam overlayTextureParamsC = TextureParams[overlayTextureIndices.z];
-            TextureParam overlayTextureParamsD = TextureParams[overlayTextureIndices.w];
-
-            float baseDampening = 
-                  fractionalWeights.x * backgroundTextureParamsA.SlopeBasedDamp
-                + fractionalWeights.y * backgroundTextureParamsB.SlopeBasedDamp
-                + fractionalWeights.z * backgroundTextureParamsC.SlopeBasedDamp
-                + fractionalWeights.w * backgroundTextureParamsD.SlopeBasedDamp;
-
-            float backgroundNormalDampening = 
-                  fractionalWeights.x * backgroundTextureParamsA.NormalBasedDamp
-                + fractionalWeights.y * backgroundTextureParamsB.NormalBasedDamp
-                + fractionalWeights.z * backgroundTextureParamsC.NormalBasedDamp
-                + fractionalWeights.w * backgroundTextureParamsD.NormalBasedDamp;
-
-            float blendSharpness = 
-                  fractionalWeights.x * overlayTextureParamsA.BlendSharpness
-                + fractionalWeights.y * overlayTextureParamsB.BlendSharpness
-                + fractionalWeights.z * overlayTextureParamsC.BlendSharpness
-                + fractionalWeights.w * overlayTextureParamsD.BlendSharpness;
-
             float3 backgroundNormal = DecodeNormal(background.Normal);
-            float3 overlayNormal = DecodeNormal(overlay.Normal);
-
-            float2 overlayNormalDerivative = overlayNormal.xy / overlayNormal.z;
-            float2 backgroundNormalDerivative = backgroundNormal.xy / backgroundNormal.z;
-            float2 dampenedOverlayNormal = lerp(overlayNormalDerivative, backgroundNormalDerivative, saturate(backgroundNormalDampening));
-
-            overlayNormal = normalize(float3(dampenedOverlayNormal.x, dampenedOverlayNormal.y, 1.0f));
-            //overlayNormal = lerp(overlayNormal, backgroundNormal, saturate(backgroundNormalDampening));
 
             float3 tangent = normalize(float3(1, 0, 0) - streams.meshNormal * dot(float3(1, 0, 0), streams.meshNormal));
             float3 bitangent = cross(streams.meshNormal, tangent);
             float3x3 tangentMatrix = float3x3(tangent, bitangent, streams.meshNormal);
 
             backgroundNormal = mul(backgroundNormal, tangentMatrix);
-            overlayNormal = mul(overlayNormal, tangentMatrix);
 
-            float surfaceSlopeBlend = ComputeSlopeBlend(streams.meshNormal, backgroundNormal, baseDampening, slopeThreshold, blendSharpness);
-
-            //streams.TerrainDiffuse = float3(1, 1, 1);
-            //streams.TerrainNormal = float3(0, 1, 0);
-            //streams.TerrainRoughness = 0;
-
-            streams.TerrainDiffuse = lerp(overlay.Diffuse, background.Diffuse, surfaceSlopeBlend);
-            streams.TerrainRoughness = lerp(overlay.Roughness, background.Roughness, surfaceSlopeBlend);
-            streams.TerrainNormal = normalize(lerp(overlayNormal, backgroundNormal, surfaceSlopeBlend));
+            streams.TerrainDiffuse = background.Diffuse;
+            streams.TerrainRoughness = background.Roughness;
+            streams.TerrainNormal = normalize(backgroundNormal);
             streams.normalWS = streams.TerrainNormal;
+
+            //streams.TerrainDiffuse.xyz = rnd.xxx;
         }
 
-        float ComputeSlopeBlend(float3 normal, float3 backgroundNormal, float baseDampening, float slopeThreshold, float blendSharpness)
+        // Smooth 2D noise via bilinear interpolation
+        float SmoothNoise2D(float2 pos)
         {
-            float vertexSlope = dot(normal, float3(0, 1, 0));
-            float3 flattenedBackgroundNormal = lerp(backgroundNormal, float3(0, 1, 0), vertexSlope);
-            float3 biasedBackgroundNormal = normalize(lerp(backgroundNormal, flattenedBackgroundNormal, baseDampening));
+            float2 ipos = floor(pos);         // integer grid cell
+            float2 fpos = frac(pos);          // local fraction in cell
 
-            float slopeValue = (abs(biasedBackgroundNormal.x) + abs(biasedBackgroundNormal.z)) / biasedBackgroundNormal.y;
+            // Random values at four corners
+            float a = frac(sin(dot(ipos, float2(12.9898,78.233))) * 43758.5453);
+            float b = frac(sin(dot(ipos + float2(1,0), float2(12.9898,78.233))) * 43758.5453);
+            float c = frac(sin(dot(ipos + float2(0,1), float2(12.9898,78.233))) * 43758.5453);
+            float d = frac(sin(dot(ipos + float2(1,1), float2(12.9898,78.233))) * 43758.5453);
 
-            float a = slopeThreshold;
-            float b = slopeThreshold + blendSharpness;
-            return clamp((slopeValue - a) / (b - a), 0.0f, 1.0f);
+            // Bilinear interpolate
+            float u = fpos.x;
+            float v = fpos.y;
+            float ab = lerp(a, b, u);
+            float cd = lerp(c, d, u);
+            return lerp(ab, cd, v);
+        }
+
+        // Very low frequency: adjust scale for patch size
+        float LowFreqNoise(float2 worldXZ)
+        {
+            return SmoothNoise2D(worldXZ * 0.25);
+        }
+
+        float SmoothThreshold(float value, float minVal, float maxVal)
+        {
+            return saturate((value - minVal) / (maxVal - minVal));
         }
 
         MaterialSample SampleBackground(uint4 backgroundTextureIndices, uint4 backgroundUvScaling, float3 triPlanarWeights, float3 normalWS, float3 positionWS, float4 fractionalWeights,
@@ -221,23 +189,6 @@
             MaterialSample b = TriPlanarMapping(backgroundTextureIndices.y, scaleValues[backgroundUvScaling.y], triPlanarWeights, normalWS, positionWS, ddx_xy, ddy_xy, ddx_xz, ddy_xz, ddx_yz, ddy_yz);
             MaterialSample c = TriPlanarMapping(backgroundTextureIndices.z, scaleValues[backgroundUvScaling.z], triPlanarWeights, normalWS, positionWS, ddx_xy, ddy_xy, ddx_xz, ddy_xz, ddx_yz, ddy_yz);
             MaterialSample d = TriPlanarMapping(backgroundTextureIndices.w, scaleValues[backgroundUvScaling.w], triPlanarWeights, normalWS, positionWS, ddx_xy, ddy_xy, ddx_xz, ddy_xz, ddx_yz, ddy_yz);
-
-            MaterialSample result;
-            result.Diffuse = a.Diffuse * fractionalWeights.x + b.Diffuse * fractionalWeights.y + c.Diffuse * fractionalWeights.z + d.Diffuse * fractionalWeights.w;
-            result.Normal = a.Normal * fractionalWeights.x + b.Normal * fractionalWeights.y + c.Normal * fractionalWeights.z + d.Normal * fractionalWeights.w;
-            result.Roughness = a.Roughness * fractionalWeights.x + b.Roughness * fractionalWeights.y + c.Roughness * fractionalWeights.z + d.Roughness * fractionalWeights.w;
-
-            return result;
-        }
-
-        MaterialSample SampleOverlay(float2 uv, uint4 overlayTextureIndices, float4 fractionalWeights, float2 ddx, float2 ddy)
-        {
-            const float uvScale = 0.333f;
-
-            MaterialSample a = SampleMaterialGrad(uv, uvScale, overlayTextureIndices.x, ddx, ddy);
-            MaterialSample b = SampleMaterialGrad(uv, uvScale, overlayTextureIndices.y, ddx, ddy);
-            MaterialSample c = SampleMaterialGrad(uv, uvScale, overlayTextureIndices.z, ddx, ddy);
-            MaterialSample d = SampleMaterialGrad(uv, uvScale, overlayTextureIndices.w, ddx, ddy);
 
             MaterialSample result;
             result.Diffuse = a.Diffuse * fractionalWeights.x + b.Diffuse * fractionalWeights.y + c.Diffuse * fractionalWeights.z + d.Diffuse * fractionalWeights.w;
