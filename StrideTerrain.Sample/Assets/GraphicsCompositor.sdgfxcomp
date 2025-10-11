@@ -207,7 +207,7 @@ SharedRenderers:
             FogStart: 10.0
             SkipBackground: false
         AmbientOcclusion:
-            Enabled: false
+            Enabled*: true
         LocalReflections:
             Enabled: false
             ResolvePassResolution: Full
@@ -223,15 +223,28 @@ SharedRenderers:
             Distortion: {X: 1.0, Y: 1.0}
             Afterimage:
                 Enabled: false
+            StableConvolution*: true
         LightStreak:
             Enabled*: false
-            Attenuation: 0.7
+            Amount*: 0.05
+            StreakCount*: 7
+            Attenuation*: 0.43
+            Phase*: 40.2
+            IsAnamorphic*: true
         LensFlare:
-            Enabled*: false
+            Enabled*: true
         ColorTransforms:
             Transforms:
                 1e06f805f8b2e949a06c30d45fe413ef: !ToneMap
-                    Operator: !ToneMapHejl2Operator {}
+                    Operator*: !ToneMapHejl2Operator
+                        WhitePoint*: 5.0
+                    AutoKeyValue*: true
+                    KeyValue*: 0.2
+                    AutoExposure*: true
+                    Exposure*: -3.0
+                    UseLocalLuminance*: false
+                    Contrast*: 0.0
+                    Brightness*: 0.0
                 c57351444609d14ea258b3f511ec8a74: !FilmGrain
                     Enabled: false
                 e86e22e9a5d65545b8b55fca26e0afee: !Vignetting

@@ -1,13 +1,12 @@
 ﻿using System.Collections.Generic;
 using System.Linq;
 using Hexa.NET.ImGui;
+using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Engine.Events;
 using Stride.Input;
 using Stride.Physics;
-using StrideTerrain.TerrainSystem;
-using StrideTerrain.TerrainSystem.Effects.Material;
 
 namespace StrideTerrain.Sample.Player;
 
@@ -117,6 +116,14 @@ public class PlayerInput : SyncScript
                 if (Input.IsMousePositionLocked)
                 {
                     cameraDirection += new Vector2(Input.MouseDelta.X, -Input.MouseDelta.Y) * MouseSensitivity;
+                }
+                if (Input.IsKeyPressed(Keys.M))
+                {
+                    var playerUI = Entity.Get<PlayerUI>();
+                    if (playerUI != null)
+                    {
+                        playerUI.ShowFullMap = !playerUI.ShowFullMap;
+                    }
                 }
 
                 // Broadcast the camera direction directly, as a screen-space Vector2

@@ -14,7 +14,7 @@
         {
             stage Texture2D<float> Heightmap;
             stage Texture2D TerrainNormalMap;
-            stage Texture2D<int> TerrainControlMap;
+            stage Texture2D<uint> TerrainControlMap;
             stage Texture2D TerrainShadowMap;
             stage StructuredBuffer<ChunkData> ChunkBuffer;
             stage StructuredBuffer<int> SectorToChunkMapBuffer;

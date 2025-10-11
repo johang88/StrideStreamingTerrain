@@ -6,6 +6,7 @@ using Stride.TextureConverter;
 using StrideTerrain.Common;
 using StrideTerrain.Importer;
 using System.CommandLine;
+using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text.Json;
 
@@ -42,10 +43,6 @@ var unitsPerTexelOption = new Option<float>(
     name: "--units-per-texel",
     description: "Units per texel");
 
-var treesOptions = new Option<bool>(
-    name: "--trees",
-    description: "Generate tree location");
-
 var rootCommand = new RootCommand("StrideTerrain Importer");
 rootCommand.AddOption(inputOption);
 rootCommand.AddOption(controlMapOption);
@@ -55,7 +52,6 @@ rootCommand.AddOption(unitsPerTexelOption);
 rootCommand.AddOption(maxHeightOption);
 rootCommand.AddOption(maxLodOption);
 rootCommand.AddOption(nameOption);
-rootCommand.AddOption(treesOptions);
 
 const bool CompressNormals = true;
 
@@ -161,7 +157,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
     Console.WriteLine("Loading normals");
     var normals = LoadNormals();
 
-    unsafe ushort[] LoadControlMap()
+    unsafe ushort[] GenerateControlMap()
     {
         var controlMap = new ushort[terrainSize * terrainSize];
         Parallel.For(0, terrainSize, y =>
@@ -180,8 +176,8 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
         return controlMap;
     }
 
-    Console.WriteLine("Loading control map");
-    var controlMap = LoadControlMap();
+    Console.WriteLine("Generating control map");
+    var controlMap = GenerateControlMap();
 
     (byte x, byte y) GetNormal(int x, int y)
     {
@@ -192,12 +188,11 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
         return (normals[index + 0], normals[index + 1]);
     }
 
+    var trees = new List<TreeInstance>();
     var genereateTrees = true;
-    if  (genereateTrees)
+    if (genereateTrees)
     {
         Console.WriteLine("Generating trees");
-
-        var trees = new List<TreeInstance>();
 
         // Define bounding radius per tree type (0–5 = pine, 6–11 = poplar)
         float[] treeRadii = { 3f, 3f, 5f, 7f, 7f, 8f, 3f, 3f, 5f, 7f, 7f, 8f };
@@ -300,7 +295,6 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
             IncludeFields = true
         };
         File.WriteAllText(outputPathTreeData, JsonSerializer.Serialize(trees, options));
-        return;
     }
 
     var actualMaxLod = (int)Math.Log2(terrainSize / chunkSize); // Max lod = single chunk
@@ -344,6 +338,32 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
     {
         File.Delete(outputPathTerrainData);
     }
+
+    Console.WriteLine("Generating mini map");
+    var waterHeight = 55.0f;
+    var miniMapSize = 1024;
+    var miniMapToTerrain = terrainSize / miniMapSize;
+    TerrainMiniMap.Generate(miniMapSize,
+        1.0f / unitsPerTexel,
+        terrainSize,
+        (x, y) => HeightAt(x * miniMapToTerrain, y * miniMapToTerrain),
+        (x, y) => controlMap[y * miniMapToTerrain * terrainSize + x * miniMapToTerrain],
+        trees,
+        Path.Combine(outputPath, $"{name}_MiniMap.png"),
+        waterHeight);
+
+    Console.WriteLine("Generating biome map");
+    var biomeMap = BiomeMap.Generate(
+        terrainSize,
+        1024,
+        1.0f / unitsPerTexel,
+        (x, y) => HeightAt(x, y),
+        (x, y) => controlMap[y * terrainSize + x],
+        waterHeight,
+        trees,
+        Path.Combine(outputPath, $"{name}_BiomeDebug.png"));
+
+    File.WriteAllBytes(Path.Combine(outputPath, $"{name}_Biomes"), biomeMap);
 
     using var outputStream = File.Open(outputPathTerrainData, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Delete);
     using var writer = new BinaryWriter(outputStream);
@@ -482,7 +502,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
 
 await rootCommand.InvokeAsync(args);
 
-class TreeInstance
+public class TreeInstance
 {
     public float X;
     public float Y;

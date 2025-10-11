@@ -37,7 +37,7 @@
 					const float halfCosHalfApex = sunCosHalfApexAngle + (1.0f - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
 					const float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
 
-					retval = weight * sunIlluminance;
+					retval = weight * sunIlluminance * 10000;
 				}
 
 				// https://www.shadertoy.com/view/NtsBzB

@@ -20,7 +20,7 @@ public class ImGuiExtension
     /// </summary>
     /// <param name="texture"></param>
     /// <returns></returns>
-    internal static nint GetTextureKey(Texture texture)
+    public static nint GetTextureKey(Texture texture)
     {
         _textureRegistry.Add(texture);
         nint id = _textureRegistry.Count;

@@ -34,14 +34,22 @@
             uint triangleVertex = streams.VertexId % (uint)6;
 
             // Merge logic (based on edge LODs and even/odd alignment)
-            bool mergeNorth     = (ldN > 0) && (offsetZ == 0) && (offsetX % 2 == 0);
-            bool mergeNorthAlt  = (ldN > 0) && (offsetZ == 0) && (offsetX % 2 == 1);
-            bool mergeSouth     = (ldS > 0) && (offsetZ == ChunkSize - 1) && (offsetX % 2 == 0);
-            bool mergeSouthAlt  = (ldS > 0) && (offsetZ == ChunkSize - 1) && (offsetX % 2 == 1);
-            bool mergeWest      = (ldW > 0) && (offsetX == 0) && (offsetZ % 2 == 0);
-            bool mergeWestAlt   = (ldW > 0) && (offsetX == 0) && (offsetZ % 2 == 1);
-            bool mergeEast      = (ldE > 0) && (offsetX == ChunkSize - 1) && (offsetZ % 2 == 0);
-            bool mergeEastAlt   = (ldE > 0) && (offsetX == ChunkSize - 1) && (offsetZ % 2 == 1);
+            bool ldN0 = (ldN > 0) && (offsetZ == 0);
+            bool ldSmax = (ldS > 0) && (offsetZ == ChunkSize - 1);
+            bool ldW0 = (ldW > 0) && (offsetX == 0);
+            bool ldEmax = (ldE > 0) && (offsetX == ChunkSize - 1);
+
+            uint offsetXMod2 = offsetX & 1;
+            uint offsetZMod2 = offsetZ & 1;
+
+            bool mergeNorth    = ldN0 && (offsetXMod2 == 0);
+            bool mergeNorthAlt = ldN0 && (offsetXMod2 == 1);
+            bool mergeSouth    = ldSmax && (offsetXMod2 == 0);
+            bool mergeSouthAlt = ldSmax && (offsetXMod2 == 1);
+            bool mergeWest     = ldW0 && (offsetZMod2 == 0);
+            bool mergeWestAlt  = ldW0 && (offsetZMod2 == 1);
+            bool mergeEast     = ldEmax && (offsetZMod2 == 0);
+            bool mergeEastAlt  = ldEmax && (offsetZMod2 == 1);
 
             // Base triangle positions
             const float2 baseVerts[6] = {
@@ -62,13 +70,7 @@
             }
 
             float3 vertexPosition;
-            vertexPosition.xz = baseVerts[triangleVertex] + mergeOffset;
-            vertexPosition.y = 0;
-   
-            streams.TerrainFract = vertexPosition.xz;
-
-            vertexPosition.x += offsetX;
-            vertexPosition.z += offsetZ;
+            vertexPosition.xz = baseVerts[triangleVertex] + mergeOffset + int2(offsetX, offsetZ);
 
             // Compute final UV
             int2 fullUV = uv + int2(vertexPosition.xz);
@@ -76,15 +78,10 @@
 
             // Position in world space
             streams.Position = float4(vertexPosition * scale + float3(worldPosition.x, 0, worldPosition.y), 1);
-            streams.PositionWS = streams.Position;
 
             // Sample height
             float height = Heightmap.SampleLevel(LinearSampler, streams.TexCoord, 0).x;
             streams.Position.y = height * MaxHeight;
-            streams.TerrainHeight01 = height;
-            streams.TerrainHeight = streams.Position.y;
-
-            streams.TerrainAtlasCoord = float2(fullUV);
         }
     };
 }

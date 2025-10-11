@@ -26,6 +26,5 @@
 
 	<ItemGroup>
 		<Folder Include="Camera\" />
-		<Folder Include="Player\" />
 	</ItemGroup>
 </Project>

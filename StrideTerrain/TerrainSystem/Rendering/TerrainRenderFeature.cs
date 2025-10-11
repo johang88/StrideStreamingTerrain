@@ -150,15 +150,11 @@ public class TerrainRenderFeature : SubRenderFeature
         if (Context.VisibilityGroup == null || !Context.VisibilityGroup.Tags.TryGetValue(ModelToTerrainMap, out var modelToTerrainMap))
             return;
 
-        //if (renderView.Index != OpaqueRenderStage?.Index)
-        //    return;
+        if (renderView.Index != OpaqueRenderStage?.Index)
+            return;
 
         if (_renderMesh == null)
             return;
-
-        var frustum = new BoundingFrustum(ref renderView.ViewProjection);
-
-        using var profilingScope = context.QueryManager.BeginProfile(Color4.Black, ProflingKeyCull);
 
         var renderModel = _renderMesh.RenderModel;
         if (renderModel == null)
@@ -173,8 +169,10 @@ public class TerrainRenderFeature : SubRenderFeature
             return;
         }
 
+        using (var profilingScope = context.QueryManager.BeginProfile(Color4.Black, ProflingKeyCull))
+
         // Prepare and upload instancing data for the draw call.
-        data.MeshManager!.PrepareDraw(context.CommandList, _renderMesh, frustum, renderView.VisiblityIgnoreDepthPlanes);
+        data.MeshManager!.PrepareDraw(context.CommandList, _renderMesh, renderView);
         _renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.MeshManager.ChunkInstanceDataBuffer);
     }
 }

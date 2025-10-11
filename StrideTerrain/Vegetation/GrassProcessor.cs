@@ -18,6 +18,8 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
 {
     private static readonly ProfilingKey ProfilingKeyDraw = new("Grass.Draw");
 
+    private static float[] _grassDensities = [ 0, 0.2f, 0.4f, 0.5f, 0.6f, 0.8f, 1.0f ];
+
     protected override RuntimeData GenerateComponentData([NotNull] Entity entity, [NotNull] GrassComponent component)
         => new();
 

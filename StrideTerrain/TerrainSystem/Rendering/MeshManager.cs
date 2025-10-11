@@ -4,7 +4,9 @@ using Stride.Graphics;
 using Stride.Rendering;
 using System;
 using System.Buffers;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Windows.Media.Media3D;
 using Buffer = Stride.Graphics.Buffer;
 namespace StrideTerrain.TerrainSystem.Rendering;
 
@@ -242,23 +244,39 @@ public class MeshManager : IDisposable
         SectorToChunkMapBuffer.SetData(commandList, (ReadOnlySpan<int>)_sectorToChunkMap.AsSpan());
     }
 
-    public void PrepareDraw(CommandList commandList, RenderMesh renderMesh, BoundingFrustum frustum, bool VisiblityIgnoreDepthPlanes)
+    public void PrepareDraw(CommandList commandList, RenderMesh renderMesh, RenderView renderView)
     {
+        var frustum = new BoundingFrustum(ref renderView.ViewProjection);
+
+        var invView = Matrix.Invert(renderView.View);
+        var cameraPosition = invView.TranslationVector;
+
+        // Frustum cull instances
         var maxChunks = _terrain.ChunksPerRowLod0 * _terrain.ChunksPerRowLod0;
         renderMesh.InstanceCount = 0;
         var chunkInstanceData = ArrayPool<int>.Shared.Rent(maxChunks);
+        var distances = ArrayPool<float>.Shared.Rent(maxChunks);
         for (var i = 0; i < _chunkCount; i++)
         {
-            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _chunkBounds[i], VisiblityIgnoreDepthPlanes))
+            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _chunkBounds[i], renderView.VisiblityIgnoreDepthPlanes))
                 continue;
 
-            chunkInstanceData[renderMesh.InstanceCount++] = i;
+            chunkInstanceData[renderMesh.InstanceCount] = i;
+
+            var center = _chunkBounds[i].Center;
+            distances[renderMesh.InstanceCount] = Vector3.DistanceSquared(cameraPosition, center);
+
+            renderMesh.InstanceCount++;
         }
+
+        // Sort indices by distance
+        distances.AsSpan(0, renderMesh.InstanceCount).Sort(chunkInstanceData.AsSpan(0, renderMesh.InstanceCount));
 
         // Upload to GPU.
         ChunkInstanceDataBuffer.SetData(commandList, (ReadOnlySpan<int>)chunkInstanceData.AsSpan(0, renderMesh.InstanceCount));
 
         ArrayPool<int>.Shared.Return(chunkInstanceData);
+        ArrayPool<float>.Shared.Return(distances);
     }
 
     byte GetLodDifference(int x, int z, int chunksPerRow, int ratioToLod0, int lod)
