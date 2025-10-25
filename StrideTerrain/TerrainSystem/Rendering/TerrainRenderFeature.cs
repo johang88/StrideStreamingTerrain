@@ -18,6 +18,9 @@ public class TerrainRenderFeature : SubRenderFeature
     [DataMemberIgnore] public static readonly PropertyKey<TerrainRuntimeData> Current = new("TerrainRenderFeature.Current", typeof(TerrainRenderFeature));
 
     [DataMember] public RenderStage? OpaqueRenderStage { get; set; }
+    [DataMember] public RenderStage? GBufferRenderStage { get; set; }
+
+    private bool _hadPrepass = false;
 
     private ConstantBufferOffsetReference _chunkSizeOffset;
 
@@ -55,6 +58,8 @@ public class TerrainRenderFeature : SubRenderFeature
 
             break; // Currently only support single terrain
         }
+
+        _hadPrepass = false;
     }
 
     public override unsafe void Prepare(RenderDrawContext context)
@@ -172,7 +177,12 @@ public class TerrainRenderFeature : SubRenderFeature
         using (var profilingScope = context.QueryManager.BeginProfile(Color4.Black, ProflingKeyCull))
 
         // Prepare and upload instancing data for the draw call.
-        data.MeshManager!.PrepareDraw(context.CommandList, _renderMesh, renderView);
-        _renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.MeshManager.ChunkInstanceDataBuffer);
+        //if (!_hadPrepass)
+        {
+            data.MeshManager!.PrepareDraw(context.CommandList, _renderMesh, renderView);
+            _renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.MeshManager.ChunkInstanceDataBuffer);
+        }
+
+        _hadPrepass = true;
     }
 }

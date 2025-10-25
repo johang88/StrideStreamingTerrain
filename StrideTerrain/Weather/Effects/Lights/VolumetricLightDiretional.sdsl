@@ -1,7 +1,9 @@
 ﻿namespace StrideTerrain.Weather.Effects.Lights
 {
-    shader VolumetricLightDiretional : ImageEffectShader, VolumetricLightDiretionalBase
+    shader VolumetricLightDiretional : ImageEffectShader, VolumetricLightDiretionalBase, LightStream, NormalStream, Transformation, PositionStream4
     {
+        stage compose DirectLightGroup lightGroup;
+
         stage Texture2D<float4> TransmittanceLUT;
         stage Texture2D DepthTexture;
 
@@ -16,6 +18,57 @@
             float2 InvResolution;
         }
 
+        float3 RayMarchVolumetricDirectionalLight2(AtmosphereParameters atmosphere, FogParameters fog, float3 P, float3 V, float3 L, float3 lightColor, 
+            float3 cameraPosition, float cameraDistance, Texture2D<float4> transmittanceLUT)
+        {
+            const float scattering = ComputeScattering(saturate(dot(L, -V)));
+
+            float3 rayEnd = cameraPosition;
+
+            const uint SampleCount = 16;
+            const float stepSize = length(P - rayEnd) / SampleCount;
+
+            float marchedDistance = 0;
+            float3 accumulation = 0;
+
+            float fogFalloff = 0.0001;
+
+            streams.DepthVS = cameraDistance;
+
+            const float cosTheta = dot(-V, L);
+
+            for (uint i = 0; i < SampleCount; ++i)
+            {
+                ResetLightStream();
+
+                streams.NdotL = 1;
+                streams.normalWS = float3(0,1,0);
+                streams.meshNormalWS = 0.0f;
+                streams.PositionWS = 0.0f;
+
+                float shadow = GetTerrainShadow(P);
+                shadow *= lightGroup.ComputeShadow(P, 0).x;
+                shadow *= GetFogAmount(fog, cameraDistance - marchedDistance, P, 0);
+                shadow *= scattering;
+
+                float stepTransmittance = exp(-fogFalloff * marchedDistance);
+
+                accumulation += shadow * stepSize * stepTransmittance * GetAtmosphericLightTransmittance(atmosphere, P, L, transmittanceLUT);
+                marchedDistance += stepSize;
+
+                P = P + V * stepSize;
+            }
+
+            accumulation /= SampleCount;
+
+            float3 atmosphereTransmittance = GetAtmosphericLightTransmittance(atmosphere, P, L, transmittanceLUT);
+            
+            //accumulation = min(1, accumulation);
+            accumulation = max(0, accumulation * lightColor * atmosphereTransmittance);
+
+            return accumulation;
+        }
+
         stage override float4 Shading()
         {
             float2 pixelPosition = streams.ShadingPosition.xy;
@@ -23,7 +76,7 @@
             float2 uv = (pixelPosition + 0.5f) * InvResolution;
 
             float depth = DepthTexture[pixelPosition];
-            
+
             float2 clipSpace = uv * float2(2.0, -2.0) - float2(1.0, -1.0);
             
             float4 worldPosition = mul(float4(clipSpace, depth, 1.0), InvViewProjection);
@@ -33,8 +86,9 @@
             float cameraDistance = length(V);
             V /= cameraDistance;
 
-            float3 volumetricLight = RayMarchVolumetricDirectionalLight(Atmosphere, Fog, P, -V, SunDirection, SunColor, CameraPosition, cameraDistance, TransmittanceLUT);
-            return float4(volumetricLight, 1);
+            float3 volumetricLight = RayMarchVolumetricDirectionalLight2(Atmosphere, Fog, P, -V, SunDirection, SunColor, CameraPosition, cameraDistance, TransmittanceLUT);
+
+            return max(0, float4(volumetricLight, 0));
         }
     };
 }

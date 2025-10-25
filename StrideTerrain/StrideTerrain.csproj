@@ -30,6 +30,51 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <Compile Update="Rendering\Effects\PostEffectCommon.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\HistogramReduce.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\HistogramDrawDebug.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\Histogram.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\ExposureCommon.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\BloomUpSample.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\BloomDownSample.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\BloomBrightPass.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\ToneMapASEC.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -65,7 +110,17 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Vegetation\Effects\ClearDrawArgs.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Vegetation\Effects\ComoputeColorImpostor.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Vegetation\Effects\GrassPopulateInstances.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
@@ -91,7 +146,17 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereBase.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\LUT\AtmosphereCameraVolumeLut.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
@@ -106,8 +171,45 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Weather\Effects\Lights\VolumetricLightDiretionalEffect.sdfx.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\WeatherFordwardRenderer.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
+	  <None Update="Rendering\Effects\PostEffectCommon.sdsl">
+	    <LastGenOutput>PostEffectCommon.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\HistogramReduce.sdsl">
+	    <LastGenOutput>HistogramReduce.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\HistogramDrawDebug.sdsl">
+	    <LastGenOutput>HistogramDrawDebug.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\Histogram.sdsl">
+	    <LastGenOutput>Histogram.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\ExposureCommon.sdsl">
+	    <LastGenOutput>ExposureCommon.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\BloomUpSample.sdsl">
+	    <LastGenOutput>BloomUpSample.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\BloomDownSample.sdsl">
+	    <LastGenOutput>BloomDownSample.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\BloomBrightPass.sdsl">
+	    <LastGenOutput>BloomBrightPass.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\ToneMapASEC.sdsl">
+	    <LastGenOutput>ToneMapASEC.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl">
 	    <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
 	  </None>
@@ -129,8 +231,14 @@
 	  <None Update="TerrainSystem\Effects\TerrainStreams.sdsl">
 	    <LastGenOutput>TerrainStreams.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="Vegetation\Effects\ClearDrawArgs.sdsl">
+	    <LastGenOutput>ClearDrawArgs.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Vegetation\Effects\ComoputeColorImpostor.sdsl">
 	    <LastGenOutput>ComoputeColorImpostor.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Vegetation\Effects\GrassPopulateInstances.sdsl">
+	    <LastGenOutput>GrassPopulateInstances.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl">
 	    <LastGenOutput>MaterialGrassDisplacementFeature.sdsl.cs</LastGenOutput>
@@ -144,8 +252,14 @@
 	  <None Update="Vegetation\Effects\MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl">
 	    <LastGenOutput>MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="Weather\Effects\Atmosphere\AtmosphereBase.sdsl">
+	    <LastGenOutput>AtmosphereBase.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl">
 	    <LastGenOutput>AtmosphereRenderSky.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\LUT\AtmosphereCameraVolumeLut.sdsl">
+	    <LastGenOutput>AtmosphereCameraVolumeLut.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Weather\Effects\Lights\VolumetricLightDiretional.sdsl">
 	    <LastGenOutput>VolumetricLightDiretional.sdsl.cs</LastGenOutput>
@@ -153,6 +267,12 @@
 	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl">
 	    <LastGenOutput>VolumetricLightDiretionalBase.sdsl.cs</LastGenOutput>
 	    <Generator>StrideShaderKeyGenerator</Generator>
+	  </None>
+	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalEffect.sdfx">
+	    <LastGenOutput>VolumetricLightDiretionalEffect.sdfx.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\WeatherFordwardRenderer.sdsl">
+	    <LastGenOutput>WeatherFordwardRenderer.sdsl.cs</LastGenOutput>
 	  </None>
 	</ItemGroup>
 </Project>

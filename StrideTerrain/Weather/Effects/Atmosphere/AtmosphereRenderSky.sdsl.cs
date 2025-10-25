@@ -24,6 +24,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
         public static readonly ObjectParameterKey<Texture> SkyViewLUT = ParameterKeys.NewObject<Texture>();
         public static readonly ValueParameterKey<AtmosphereParameters> Atmosphere = ParameterKeys.NewValue<AtmosphereParameters>();
         public static readonly ValueParameterKey<FogParameters> Fog = ParameterKeys.NewValue<FogParameters>();
+        public static readonly ValueParameterKey<CloudParameters> Clouds = ParameterKeys.NewValue<CloudParameters>();
         public static readonly ValueParameterKey<Matrix> InvViewProjection = ParameterKeys.NewValue<Matrix>();
         public static readonly ValueParameterKey<Vector3> SunDirection = ParameterKeys.NewValue<Vector3>();
         public static readonly ValueParameterKey<Color3> SunColor = ParameterKeys.NewValue<Color3>();

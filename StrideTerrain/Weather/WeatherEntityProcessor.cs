@@ -1,8 +1,11 @@
-﻿using Stride.Core.Mathematics;
+﻿using Stride.Animations;
+using Stride.Core;
+using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Graphics;
 using Stride.Rendering;
 using Stride.Rendering.Lights;
+using StrideTerrain.Rendering;
 
 namespace StrideTerrain.Weather;
 
@@ -31,23 +34,43 @@ public class WeatherEntityProcessor : EntityProcessor<WeatherComponent, WeatherR
     public override void Draw(RenderContext context)
     {
         base.Draw(context);
-        
+
         if (_activeAtmosphere != null)
         {
             var renderObject = ComponentDatas[_activeAtmosphere];
             if (_activeAtmosphere.Sun != null)
             {
+                var timeOfDay = _activeAtmosphere.Entity.Get<TimeOfDayComponent>();
+                if (timeOfDay != null)
+                {
+                    _activeAtmosphere.Sun.Entity.Transform.Rotation =
+                        Quaternion.RotationX(MathUtil.DegreesToRadians(timeOfDay.SunAngle))
+                        * Quaternion.RotationY(MathUtil.DegreesToRadians(-90));
+                    _activeAtmosphere.Sun.Entity.Transform.UpdateWorldMatrix();
+
+                    if (timeOfDay.ExposureAutoKeyBiasPower != null && CustomPostProcessingEffects.Current != null)
+                    {
+                        // TODO: Would make more sense to base it on sun direction?
+                        timeOfDay.ExposureAutoKeyBiasPower.UpdateChanges();
+                        CustomPostProcessingEffects.Current.ExposureSettings.AutoKeyBiasPower = timeOfDay.ExposureAutoKeyBiasPower.Evaluate(timeOfDay.TimeOfDay);
+                    }
+                }
+
                 var sunDirection = Vector3.TransformNormal(-Vector3.UnitZ, _activeAtmosphere.Sun.Entity.Transform.WorldMatrix);
                 sunDirection.Normalize();
 
                 Color3 sunColor = new();
                 if (_activeAtmosphere.Sun.Type is IColorLight colorLight)
-                        sunColor = colorLight.ComputeColor(ColorSpace.Linear, _activeAtmosphere.Sun.Intensity);
+                    sunColor = colorLight.ComputeColor(ColorSpace.Linear, _activeAtmosphere.Sun.Intensity);
+
+                var lightProcessor = EntityManager.GetProcessor<LightProcessor>();
 
                 renderObject.SunDirection = -sunDirection;
                 renderObject.SunColor = sunColor;
                 renderObject.Atmosphere = _activeAtmosphere.Atmosphere;
+                renderObject.Clouds = _activeAtmosphere.Clouds;
                 renderObject.Fog = _activeAtmosphere.Fog;
+                renderObject.Sun = lightProcessor?.GetRenderLight(_activeAtmosphere.Sun);
             }
 
             return;

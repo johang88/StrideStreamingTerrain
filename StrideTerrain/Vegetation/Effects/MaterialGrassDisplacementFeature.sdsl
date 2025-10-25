@@ -1,44 +1,37 @@
 ﻿namespace StrideTerrain.Vegetation.Effects
 {
     shader MaterialGrassDisplacementFeature 
-        : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, Math, TransformationInstancing, Global, NormalUpdate
+        : IMaterialSurface, PositionStream4, NormalStream, TransformationBase, Transformation, ShaderBase, Texturing, Math, Global, NormalUpdate
     {
         override void Compute()
         {
+            //GrassInstance inst = GrassData[streams.InstanceID];
+
+            //float4x4 world = BuildInstanceMatrix(inst);
+
+            //streams.Position.xyz = mul(float4(streams.Position.xyz, 1), world);
+
+            //streams.Position.xyz += inst.Position.xyz;
+            
+            // TODO: Normal
         }
 
         stage override void TransformPosition()
         {
-            //float4x4 instanceWorld = GetInstanceWorld(streams.InstanceID);
+            float windStrength = 0.1;  // max displacement
+            float windSpeed = 1.5;     // cycles/sec
+            float2 windDir = normalize(float2(1, 0.3)); // global wind direction
 
-            //float2 grassPosition = instanceWorld._m30_m32;
+            float windPhase = dot(streams.PositionWS.xz, windDir) * 0.5 + Time * windSpeed;
+            float windBase = sin(windPhase) * windStrength;
 
-            //// Wind
-            //float windSpeed = 0.5f;
-            //float windFrequency = 0.8f;
+            float bladeVariation = sin(streams.Position.x * 3.7 + streams.Position.z * 2.1) * 0.05;
 
-            //// Instance variation to avoid everything moving identically
-            //float instanceSeed = float(streams.InstanceID) * 12.345; 
+            float3 bendOffset = float3(0, 0, 0);
+            bendOffset.x = windBase + bladeVariation; // horizontal sway
+            bendOffset.z = bladeVariation * 0.5;      // optional depth sway
 
-            //// Compute a nice waving offset
-            //float windOffsetX = sin(Time * windSpeed + grassPosition.x * 0.1 + instanceSeed) * 0.1;
-            //float windOffsetZ = cos(Time * windSpeed + grassPosition.y * 0.1 + instanceSeed) * 0.1;
-
-            //streams.PositionWS.x += windOffsetX * streams.PositionWS.y;
-            //streams.PositionWS.z += windOffsetZ * streams.PositionWS.y;
-
-            //// Move to terrain height
-            //float2 terrainAtlasUv = GetTerrainAtlasUv(grassPosition.x, grassPosition.y);
-            //float terrainHeight = GetTerrainHeightAt(terrainAtlasUv);
-            //uint backgroundTextureIndex = GetBackgroundTextureIndexAt(terrainAtlasUv);
-
-            //streams.PositionWS.y += terrainHeight;
-
-            //// TODO: Very nice hardcode.
-            //float isGrass = (backgroundTextureIndex == 0 || backgroundTextureIndex == 4 || backgroundTextureIndex == 22 || backgroundTextureIndex == 27 || backgroundTextureIndex == 28) ? 1 : 0;
-            
-            //// cull
-            //streams.PositionWS.y /= isGrass;
+            streams.PositionWS.xyz += bendOffset * streams.Position.y;
         }
     };
 }

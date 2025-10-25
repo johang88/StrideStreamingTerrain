@@ -1,7 +1,6 @@
 ﻿using Stride.Audio;
 using Stride.Core;
 using Stride.Engine;
-using Stride.Engine.Events;
 using Stride.Media;
 using StrideTerrain.TerrainSystem;
 using System;
@@ -10,12 +9,13 @@ using System.Linq;
 
 namespace StrideTerrain.Sample.Player;
 
+// TODO: Should be some kind of generic thing no?
 public class PlayerAudioController : SyncScript
 {
     public Dictionary<GroundType, FootstepsSounds> Footsteps { get; set; } = [];
     private SoundInstance? _activeInstance;
 
-    private readonly EventReceiver<float> runSpeedEvent = new EventReceiver<float>(PlayerController.RunSpeedEventKey);
+    public float PlayerSpeed { get; set; }
 
     public override void Start()
     {
@@ -49,7 +49,7 @@ public class PlayerAudioController : SyncScript
 
     public override void Update()
     {
-        if (!runSpeedEvent.TryReceive(out var speed) || speed <= 0.01f)
+        if (PlayerSpeed <= 0.01f)
             return;
 
         if (_activeInstance != null && _activeInstance.PlayState == PlayState.Playing)

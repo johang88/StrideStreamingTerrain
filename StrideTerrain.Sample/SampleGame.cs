@@ -1,29 +1,47 @@
-﻿using Stride.Core.Diagnostics;
-using Stride.Engine;
+﻿using Stride.Engine;
 using Stride.Games;
-using Stride.Graphics;
-using Stride.Rendering.Compositing;
 using StrideCommunity.ImGuiDebug;
-using StrideTerrain.Rendering;
+using StrideTerrain.Sample.Game;
 using StrideTerrain.TerrainSystem;
+using StrideTerrain.Vegetation;
 using System.Linq;
+using Stride.Graphics;
 
 namespace StrideTerrain.Sample;
 
-public class SampleGame : Game
+public class SampleGame : Stride.Engine.Game
 {
+    private GameSessionSystem? _gameSessionSystem = null;
+
+    protected override void Initialize()
+    {
+        base.Initialize();
+
+        // Set the window in a sane position
+        // TODO: This should center the window instead
+        Window.Position = new Stride.Core.Mathematics.Int2(10, 10);
+        //Window.FullscreenIsBorderlessWindow = true;
+
+        var coreDataSettings = Settings.Configurations.Get<CoreDataSettings>();
+
+        _gameSessionSystem = new GameSessionSystem(Services, SceneSystem, Script, coreDataSettings);
+        GameSystems.Add(_gameSessionSystem);
+        Services.AddService(_gameSessionSystem);
+    }
+
     protected override void BeginRun()
     {
         base.BeginRun();
-        _ = new ImGuiSystem(Services, GraphicsDeviceManager);
 
-        //new PerfMonitor(Services);
-        //new HierarchyView(Services);
-        //Inspector.FindFreeInspector(Services).Target = SceneSystem.SceneInstance.RootScene.Entities.FirstOrDefault(x => x.Name == "Terrain")?.Get<TerrainComponent>();
+        // Fix Update order
+        ((GameSystemBase)GameSystems.First(x => x is InputSystem)).UpdateOrder = -2;
 
-        //var reverseZRenderer = (ReverseZRenderer)((SceneRendererCollection)((SceneCameraRenderer)SceneSystem.GraphicsCompositor.Game).Child).Children.First();
-        //var forwardRenderer = (ForwardRenderer)reverseZRenderer.Child;
-        //Inspector.FindFreeInspector(Services).Target = forwardRenderer.PostEffects;
+        var imGuiSystem = new ImGuiSystem(Services, GraphicsDeviceManager)
+        {
+            UpdateOrder = -1
+        };
+
+        new HierarchyView(Services);
     }
 
     public override void ConfirmRenderingSettings(bool gameCreation)

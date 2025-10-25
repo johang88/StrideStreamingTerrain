@@ -85,9 +85,13 @@ namespace TR.Stride.Ocean
 
             float3 viewDir = normalize(viewVector);
 
+            float NdotL = saturate(dot(worldNormal, -LightDirectionWS));
+
             float3 H = normalize(-streams.normalWS + -LightDirectionWS);
             float ViewDotH = pow5(saturate(dot(viewDir, -H))) * 30 * SSSStrength;
             float3 color = lerp(Color, saturate(Color + SSSColor.xyz * ViewDotH * streams.lodScales.w), streams.lodScales.z);
+
+            color *= NdotL;
 
             float fresnel = dot(worldNormal, viewDir);
             fresnel = saturate(1 - fresnel);

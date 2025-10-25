@@ -1,0 +1,272 @@
+﻿namespace StrideTerrain.Vegetation
+{
+    shader GrassPopulateInstances : ComputeShaderBase, TerrainQuery, Math
+    {
+        stage float3 CameraPosition;
+        stage uint Size;
+        stage uint InstanceCount;
+        stage float CellSize;
+        stage float FadeStartFraction;
+        stage float MinScale;
+        stage float MaxScale;
+        stage float2 Seed;
+        stage bool RotateAlongTerrainNormal;
+        stage float BoundingRadius;
+        stage float4 FrustumPlanes[6];
+        stage float Clumpiness = 0.5f;
+        stage float ClumpSize = 32.0f;
+        stage uint ValidBackgroundTexturesIds[5];
+
+        struct GrassMatrix
+        {
+            float4x4 Matrix;
+        };
+
+        stage AppendStructuredBuffer<GrassMatrix> OutputWorld;
+        stage AppendStructuredBuffer<GrassMatrix> OutputWorldInverse;
+
+        override void Compute()
+        {
+            uint2 tid = streams.DispatchThreadId.xy;
+            uint index = tid.y * Size + tid.x;
+            if (index >= InstanceCount)
+                return;
+
+            float radius = Size * CellSize * 0.5;
+
+            // Snap camera position to the grid to keep grass "fixed"
+            float2 snappedCameraXZ = floor(CameraPosition.xz / CellSize) * CellSize;
+
+            // Local grid position relative to the snapped origin
+            float2 localPos = (tid.xy * CellSize) - radius;
+
+            float2 cellSeed = floor((snappedCameraXZ + localPos) / CellSize); 
+            cellSeed += Seed;
+
+            float rndPosX = Hash21(cellSeed);
+            float rndPosZ = Hash21(cellSeed.yx + 19.19);
+            float rndScale = Hash21(cellSeed * 31.0);
+            float rndRot = Hash21(cellSeed * 73.0);
+
+            float2 jitter = (float2(rndPosX, rndPosZ) - 0.5f) * CellSize;
+            localPos += jitter;
+
+            // Clumping
+            if (Clumpiness > 0.0f)
+            {
+                // TODO: This does not look great
+                float2 clumpCell = floor((snappedCameraXZ + localPos) / ClumpSize);
+
+                float2 clumpCenter = clumpCell * ClumpSize + ClumpSize * 0.5;
+
+                float2 clumpSeed = clumpCell + Seed * 123.456;
+                float r = sqrt(Hash21(clumpSeed)) * (ClumpSize * 0.5);
+                float angle = Hash21(clumpSeed.yx) * 2.0*PI;
+                float2 circularOffset = float2(cos(angle), sin(angle)) * r;
+
+                clumpCenter += circularOffset;
+
+                float localClumpiness = lerp(0.3, 1, Hash21(cellSeed + 839.23)) * Clumpiness;
+
+                localPos = lerp(localPos, clumpCenter - snappedCameraXZ, localClumpiness);
+            }
+
+            // Final world-space position
+            float3 position;
+            position.xz = localPos + snappedCameraXZ;
+            position.y = 0;
+
+            float2 terrainUv = GetTerrainAtlasUv(position.x, position.z);
+
+            // Check if spawn location is valid
+            uint backgroundTextureIndex = GetBackgroundTextureIndexAt(terrainUv);
+            
+            bool isValid = false;
+            for (int i = 0; i < 5; i++)
+            {
+                if (ValidBackgroundTexturesIds[i] == backgroundTextureIndex)
+                {
+                    isValid = true;
+                }
+            }
+
+            //bool isGrass = backgroundTextureIndex == 0 || backgroundTextureIndex == 4 ||
+            //               backgroundTextureIndex == 22 || backgroundTextureIndex == 27 || backgroundTextureIndex == 28;
+
+            if (!isValid)
+                return;
+
+            // Adjust height, fade out at distance and randomize scale + rotation
+            position.y = GetTerrainHeightAt(terrainUv);
+
+            float distanceToCamera = distance(CameraPosition.xz, position.xz);
+
+            float startFadeRadius = radius * FadeStartFraction; 
+
+            float fade = smoothstep(radius, startFadeRadius, distanceToCamera);
+            float scale = fade * lerp(MinScale, MaxScale, rndScale);
+            float rotationAngle = (rndRot * 2.0f - 1.0f) * PI;
+
+            if (!IsInsideFrustum(position, BoundingRadius * scale))
+                return;
+
+            float3 terrainNormal = RotateAlongTerrainNormal ? GetTerrainNormalAt(terrainUv) : float3(0, 1, 0);
+
+            // Build world matrix
+            float4 rotation = QuaternionMultiply(CreateRotationAxisYQuaternion(float3(0, 1, 0), rotationAngle), CreateQuaternionBetweenDirections(float3(0, 1, 0), terrainNormal));
+
+            float4x4 world = CreateTransformationMatrix(scale.xxx, rotation, position);
+            float4x4 worldInverse = transpose(world);
+
+            GrassMatrix m;
+            m.Matrix = world;
+            OutputWorld.Append(m);
+
+            m.Matrix = worldInverse;
+            OutputWorldInverse.Append(m);
+        }
+
+        float Hash21(float2 p)
+        {
+            p = frac(p * 0.1031);
+            p += dot(p, p.yx + 33.33);
+            return frac((p.x + p.y) * p.x * p.y);
+        }
+
+        bool IsInsideFrustum(float3 position, float radius)
+        {
+            [unroll]
+            for (int i = 0; i < 6; i++)
+            {
+                float3 n = FrustumPlanes[i].xyz;
+                float d = FrustumPlanes[i].w;
+
+                float dist = dot(n, position);
+
+                if (dist + radius <= -d)
+                    return false;
+            }
+
+            return true;
+        }
+
+        float4 QuaternionMultiply(float4 left, float4 right)
+        {
+            float4 result;
+
+            float lx = left.x;
+            float ly = left.y;
+            float lz = left.z;
+            float lw = left.w;
+            float rx = right.x;
+            float ry = right.y;
+            float rz = right.z;
+            float rw = right.w;
+
+            result.x = (rx * lw + lx * rw + ry * lz) - (rz * ly);
+            result.y = (ry * lw + ly * rw + rz * lx) - (rx * lz);
+            result.z = (rz * lw + lz * rw + rx * ly) - (ry * lx);
+            result.w = (rw * lw) - (rx * lx + ry * ly + rz * lz);
+
+            return result;
+        }
+
+        float4 CreateRotationAxisYQuaternion(float3 axis, float angle)
+        {
+            float halfAngle = angle * 0.5f;
+            float s = sin(halfAngle);
+            float c = cos(halfAngle);
+
+            float4 result;
+            result.x = axis.x * s;
+            result.y = axis.y * s;
+            result.z = axis.z * s;
+            result.w = c;
+
+            return result;
+        }
+
+        float4 CreateQuaternionBetweenDirections(float3 source, float3 target)
+        {
+            float4 result;
+
+            float sourceLength = length(source);
+            float targetLength = length(target);
+
+            float norms = sqrt((sourceLength * sourceLength) * (targetLength * targetLength)); // todo: this is stupid
+            float real = norms + dot(source, target);
+            if (real < 1e-6f * norms)
+            {
+                // If source and target are exactly opposite, rotate 180 degrees around an arbitrary orthogonal axis.
+                // Axis normalisation can happen later, when we normalise the quaternion.
+                result = abs(source.x) > abs(source.z) ? float4(-source.y, source.x, 0, 0) : float4(0, -source.z, source.y, 0);
+            }
+            else
+            {
+                float3 axis = cross(source, target);
+                result = float4(axis, real);
+            }
+
+            result = normalize(result);
+
+            return result;
+        }
+
+        float4x4 CreateTransformationMatrix(float3 scaling, float4 rotation, float3 translation)
+        {
+            float4x4 result;
+
+            float xx = rotation.x * rotation.x;
+            float yy = rotation.y * rotation.y;
+            float zz = rotation.z * rotation.z;
+            float xy = rotation.x * rotation.y;
+            float zw = rotation.z * rotation.w;
+            float zx = rotation.z * rotation.x;
+            float yw = rotation.y * rotation.w;
+            float yz = rotation.y * rotation.z;
+            float xw = rotation.x * rotation.w;
+
+            result._11 = 1.0f - (2.0f * (yy + zz));
+            result._12 = 2.0f * (xy + zw);
+            result._13 = 2.0f * (zx - yw);
+            result._21 = 2.0f * (xy - zw);
+            result._22 = 1.0f - (2.0f * (zz + xx));
+            result._23 = 2.0f * (yz + xw);
+            result._31 = 2.0f * (zx + yw);
+            result._32 = 2.0f * (yz - xw);
+            result._33 = 1.0f - (2.0f * (yy + xx));
+
+            // position
+            result._41 = translation.x;
+            result._42 = translation.y;
+            result._43 = translation.z;
+
+            // scale
+            if (scaling.x != 1.0f)
+            {
+                result._11 *= scaling.x;
+                result._12 *= scaling.x;
+                result._13 *= scaling.x;
+            }
+            if (scaling.y != 1.0f)
+            {
+                result._21 *= scaling.y;
+                result._22 *= scaling.y;
+                result._23 *= scaling.y;
+            }
+            if (scaling.z != 1.0f)
+            {
+                result._31 *= scaling.z;
+                result._32 *= scaling.z;
+                result._33 *= scaling.z;
+            }
+
+            result._14 = 0.0f;
+            result._24 = 0.0f;
+            result._34 = 0.0f;
+            result._44 = 1.0f;
+            
+            return result;
+        }
+    };
+}

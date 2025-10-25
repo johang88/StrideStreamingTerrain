@@ -46,6 +46,8 @@ public sealed class PhysicsManager : IDisposable
 
             Entity entity = [collider];
 
+            entity.Name = $"Terrain Collider ({i})";
+
             entity.Transform.Scale = new Vector3(_terrain.UnitsPerTexel, 1, _terrain.UnitsPerTexel);
             entity.Transform.Position = new Vector3(0, -100000, 0);
             _scene.Entities.Add(entity);
@@ -170,6 +172,22 @@ public sealed class PhysicsManager : IDisposable
         physicsEntity.Collider.UpdatePhysicsTransformation();
 
         physicsEntity.ChunkIndex = physicsEntity.DesiredChunkIndex;
+    }
+
+    public bool IsLoaded(Vector3 position)
+    {
+        var size = _terrain.TerrainData.Header.ChunkSize * _terrain.UnitsPerTexel;
+        foreach (var physicsEntity in _physicsEntities)
+        {
+            if (physicsEntity.DesiredChunkIndex != physicsEntity.ChunkIndex)
+                continue;
+
+            var rect = new RectangleF(physicsEntity.DesiredChunkPosition.X - size * 0.5f, physicsEntity.DesiredChunkPosition.Z - size * 0.5f, size, size);
+            if (rect.Contains(position.XZ()))
+                return true;
+        }
+
+        return false;
     }
 
     private sealed class PhysicsEntity

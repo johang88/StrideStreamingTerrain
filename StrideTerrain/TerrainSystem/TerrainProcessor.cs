@@ -28,6 +28,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
     public TerrainRuntimeData? TerrainData => _modelToTerrainMap.FirstOrDefault().Value;
 
+    public Vector3? OverrideCameraPosition { get; set; }
+
     protected override TerrainRuntimeData GenerateComponentData([NotNull] Entity entity, [NotNull] TerrainComponent component)
         => new();
 
@@ -123,7 +125,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         base.Draw(context);
 
         var camera = Services.GetService<SceneSystem>()?.TryGetMainCamera();
-        if (camera == null)
+        if (camera == null && OverrideCameraPosition == null)
             return;
 
         var modelRenderProcessor = EntityManager.GetProcessor<ModelRenderProcessor>();
@@ -164,7 +166,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             data.ModelComponent.Enabled = true;
 
             // Update all managers.
-            var cameraPosition = camera.GetWorldPosition();
+            var cameraPosition = OverrideCameraPosition ?? camera!.GetWorldPosition();
             data.PhysicsManager?.Update(cameraPosition.X, cameraPosition.Z);
             data.GpuTextureManager?.Update(graphicsContext);
             data.StreamingManager?.ProcessPendingCompletions(1);

@@ -36,13 +36,17 @@
 
         float3 GetTerrainNormalAt(float2 uv)
         {
-            return normalize(TerrainNormalMap.SampleLevel(LinearSampler, uv, 0).xyz * 2.0 - 1.0);
+            float3 normal = float3(0, 0, 0);
+            normal.xz = TerrainNormalMap.SampleLevel(LinearSampler, uv, 0).xy * 2.0f - 1.0f;
+            normal.y = sqrt(max(0.0f, 1.0f - (normal.x * normal.x + normal.z * normal.z)));
+
+            return normalize(normal);
         }
 
         uint GetBackgroundTextureIndexAt(float2 uv)
         {
             uint controlValue = (uint)TerrainControlMap.Load(int3((uv.xy * TerrainTextureSize) - 0.5f, 0)).x;
-            return ((controlValue >> 5) & 0x1F) - 1;
+            return controlValue & 0x1F;
         }
     };
 }

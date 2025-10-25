@@ -98,6 +98,12 @@ public sealed class TerrainRuntimeData : IDisposable
         return MathUtil.Lerp(hx0, hx1, ty);
     }
 
+    public float GetHeightAtWorldPosition(float x, float z)
+    {
+        var (uv, _) = GetAtlasUv(x, z);
+        return GetHeightAt(uv);
+    }
+
     public float GetHeightAt(int x, int y)
     {
         var height = GpuTextureManager!.ReadHeight(x, y);
@@ -130,6 +136,22 @@ public sealed class TerrainRuntimeData : IDisposable
         var d = GpuTextureManager!.ReadControlMap(x1, y1);
 
         return (a, b, c, d);
+    }
+
+    public Vector3 GetNormalAt(float x, float z)
+    {
+        // This is not really corect as it operates in world units but whatever
+        var here = new Vector3(x, GetHeightAtWorldPosition(x, z), z);
+        var left = new Vector3(x - 1.0f, GetHeightAtWorldPosition(x - 1.0f, z), z);
+        var down = new Vector3(x, GetHeightAtWorldPosition(x, z + 1.0f), z + 1.0f);
+
+        left -= here;
+        down -= here;
+
+        var normal = Vector3.Cross(left, down);
+        normal.Normalize();
+
+        return normal;
     }
 
     public void Dispose()

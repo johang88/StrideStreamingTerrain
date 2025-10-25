@@ -1,4 +1,4 @@
-﻿using System.Numerics;
+﻿using Stride.Core.Mathematics;
 
 namespace StrideTerrain.Importer;
 
@@ -14,8 +14,8 @@ public static class Noise
     public static float SmoothNoise2D(Vector2 pos)
     {
         // Integer cell coordinates
-        Vector2 ipos = new Vector2(MathF.Floor(pos.X), MathF.Floor(pos.Y));
-        Vector2 fpos = new Vector2(Frac(pos.X), Frac(pos.Y));
+        var ipos = new Vector2(MathF.Floor(pos.X), MathF.Floor(pos.Y));
+        var fpos = new Vector2(Frac(pos.X), Frac(pos.Y));
 
         // Random values at four corners
         float a = Frac(MathF.Sin(Vector2.Dot(ipos, new Vector2(12.9898f, 78.233f))) * 43758.5453f);

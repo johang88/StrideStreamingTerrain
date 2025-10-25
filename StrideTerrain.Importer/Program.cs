@@ -1,5 +1,4 @@
 ﻿// See https://aka.ms/new-console-template for more information
-using Stride.Core.IO;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.TextureConverter;
@@ -273,7 +272,8 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
                         X = px * unitsPerTexel,
                         Y = height,
                         Z = py * unitsPerTexel,
-                        Type = treeType
+                        Type = treeType,
+                        Scale = (float)Random.Shared.NextDouble() * (1.2f - 0.8f) + 0.8f
                     };
                     trees.Add(tree);
 
@@ -289,12 +289,9 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
             }
         }
 
-        var outputPathTreeData = Path.Combine(outputPath, $"{name}_Trees.json");
-        var options = new JsonSerializerOptions(JsonSerializerDefaults.General)
-        {
-            IncludeFields = true
-        };
-        File.WriteAllText(outputPathTreeData, JsonSerializer.Serialize(trees, options));
+        var prefab = TreePrefab.GeneratePrefab(trees);
+        var outputPathTreeData = Path.Combine(outputPath, $"Island_Trees_Prefab.sdprefab");
+        File.WriteAllText(outputPathTreeData, prefab);
     }
 
     var actualMaxLod = (int)Math.Log2(terrainSize / chunkSize); // Max lod = single chunk
@@ -381,6 +378,10 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
             File.Delete(outputPathStreamData);
         }
 
+        List<ushort[]> heightMips = [heights];
+        List<byte[]> normalMips = [normals];
+        List<ushort[]> controlMapMips = [controlMap];
+
         using var outputStream = File.Open(outputPathStreamData, FileMode.OpenOrCreate, FileAccess.Write, FileShare.Delete);
         using var writer = new BinaryWriter(outputStream);
 
@@ -411,7 +412,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
                         fixed (byte* ptr = chunkNormalMap)
                         {
                             // Compress
-                            using var normalMap = new TexImage((nint)ptr, chunkNormalMap.Length, normalMapTextureSize, normalMapTextureSize, 1, PixelFormat.R8G8_UNorm, 1, 1, TexImage.TextureDimension.Texture3D);
+                            using var normalMap = new TexImage((nint)ptr, chunkNormalMap.Length, normalMapTextureSize, normalMapTextureSize, 1, PixelFormat.R8G8_UNorm, 1, 1, TexImage.TextureDimension.Texture2D);
                             textureTool.Compress(normalMap, PixelFormat.BC5_UNorm);
 
                             // Copy data back
@@ -507,5 +508,179 @@ public class TreeInstance
     public float X;
     public float Y;
     public float Z;
+    public float Scale;
     public int Type;
+}
+
+public struct TreeInstanceOutput(float x, float y, float z, float w)
+{
+    public float X = x, Y = y, Z = z, W = w;
+}
+
+public class TreePrefab
+{
+    public required string Material { get; set; }
+    public required string Model { get; set; }
+    public Vector2 Size { get; set; }
+    public float LodDistance { get; set; }
+
+    public const string PrefabTemplate = """
+!PrefabAsset
+Id: 417e9d2b-cdf0-43cb-b809-c9930afc9340
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+#ROOTPARTS
+    Parts:
+#ENTITIES
+""";
+
+    public const string EntityTemplate = """
+        -   Entity:
+                Id: #ENTITY_ID
+                Name: #ENTITY_NAME
+                Components:
+                    #TRANSFORM_GUID: !TransformComponent
+                        Id: #TRANSFORM_ID
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    #VEGETATION_GUID: !StrideTerrain.Vegetation.VegetationComponent,StrideTerrain
+                        Id: #VEGETATION_ID
+                        ImpostorMaterial: #MATERIAL
+                        Model: #MODEL
+                        ImpostorSize: {X: #SIZE_X, Y: #SIZE_Y}
+                        ImpostorLodDistance: #LOD_DISTANCE
+                        InstancesJson: "#JSON"
+""";
+
+    public const string RootPartTemplate = """
+        - ref!! #ENTITY_ID
+""";
+
+    public static string GeneratePrefab(List<TreeInstance> trees)
+    {
+        var options = new JsonSerializerOptions(JsonSerializerDefaults.General)
+        {
+            IncludeFields = true,
+            WriteIndented = false
+        };
+
+        var treesByType = trees.GroupBy(x => x.Type).ToDictionary(x => x.Key, v => v.ToList());
+
+        var entityIds = treesByType.Keys.GroupBy(x => x).ToDictionary(x => x.Key, v => StringGuid());
+
+        var entities = treesByType.Keys.Select(x => EntityTemplate
+            .Replace("#ENTITY_ID", entityIds[x])
+            .Replace("#ENTITY_NAME", $"Trees_{x}")
+            .Replace("#TRANSFORM_GUID", StringId())
+            .Replace("#TRANSFORM_ID", StringGuid())
+            .Replace("#VEGETATION_GUID", StringId())
+            .Replace("#VEGETATION_ID", StringGuid())
+            .Replace("#MATERIAL", TreeTypes[x].Material)
+            .Replace("#MODEL", TreeTypes[x].Model)
+            .Replace("#SIZE_X", TreeTypes[x].Size.X.ToString("0.0"))
+            .Replace("#SIZE_Y", TreeTypes[x].Size.Y.ToString("0.0"))
+            .Replace("#LOD_DISTANCE", TreeTypes[x].LodDistance.ToString("0.0"))
+            .Replace("#JSON", JsonSerializer.Serialize(treesByType[x].Select(t => new TreeInstanceOutput(t.X, t.Y, t.Z, t.Scale)), options).Replace("\"", "\\\""))
+            );
+
+        var rootParts = treesByType.Keys.Select(x => RootPartTemplate.Replace("#ENTITY_ID", entityIds[x]));
+
+        return PrefabTemplate
+            .Replace("#ROOTPARTS", string.Join("\n", rootParts))
+            .Replace("#ENTITIES", string.Join("\n", entities));
+
+        static string StringGuid() => Guid.NewGuid().ToString();
+        static string StringId() => Guid.NewGuid().ToString().Replace("-", ""); ;
+    }
+
+    public static readonly List<TreePrefab> TreeTypes = [
+        new()
+        {
+            Material = "f523c726-90e7-4f37-9a0a-ae36f011e4af:Epic/Environment_Set/Impostors/Fir01",
+            Model = "6aab6e2a-3c46-4b6e-98c0-6a7ee713645a:Epic/Environment_Set/Models/Fir_01_Plant",
+            Size = new(6.0f, 6.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "ed273be8-5e31-4c2a-892c-d011ea9c5b7c:Epic/Environment_Set/Impostors/Fir02",
+            Model = "8192197f-4c40-41ef-88a5-4413ba05bf45:Epic/Environment_Set/Models/Fir_02_Small",
+            Size = new(8.0f, 8.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "8db3a336-c56c-420d-90f2-3056d1b21a6b:Epic/Environment_Set/Impostors/Fir03",
+            Model = "b3f17aed-66c2-404f-b8f5-55dbd2a8115c:Epic/Environment_Set/Models/Fir_03_Medium",
+            Size = new(12.0f, 12.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "8ff71e45-1436-486c-81c0-5931e6ddfcee:Epic/Environment_Set/Impostors/Fir04",
+            Model = "8a74a859-426e-4dee-af90-8695bd6fd195:Epic/Environment_Set/Models/Fir_04_Standalone",
+            Size = new(20.0f, 20.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "88fc3fd2-f805-440f-9ca4-9e3b9ba55bfe:Epic/Environment_Set/Impostors/Fir06",
+            Model = "3fccb271-0f9a-4434-a571-5c1b9efa8a7a:Epic/Environment_Set/Models/Fir_06_Forest",
+            Size = new(20.0f, 20.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "b0b76227-e013-485f-a2c6-ce652987e59a:Epic/Environment_Set/Impostors/Fir07",
+            Model = "d9ec25fd-65d0-421e-a81a-3d7179d08c86:Epic/Environment_Set/Models/Fir_07_Forest",
+            Size = new(20.0f, 20.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "6f2a84f9-3ff6-413e-9848-1b8048ec2b3f:Epic/Environment_Set/Impostors/Poplar04",
+            Model = "b3b27e9b-da88-415e-a2a8-b677606162ae:Epic/Environment_Set/Models/Poplar_04_Small",
+            Size = new(12.0f, 12.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "5f03d417-bebc-4570-9e22-ea19730a1867:Epic/Environment_Set/Impostors/Poplar05",
+            Model = "1a8f6434-f7be-4a19-b299-8eb944e2088f:Epic/Environment_Set/Models/Poplar_05_Small",
+            Size = new(10.0f, 10.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "2b46719d-c003-4966-a290-d3ed73057480:Epic/Environment_Set/Impostors/Poplar03",
+            Model = "ce1aa4d9-d596-4c4c-ba83-397a4d5896a8:Epic/Environment_Set/Models/Poplar_03_Medium",
+            Size = new(16.0f, 16.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "aaf774b2-6c33-4767-bc70-62f8ff9ef3a2:Epic/Environment_Set/Impostors/Poplar06",
+            Model = "cfb3e33d-8ed2-4991-aa35-b0fd013c0382:Epic/Environment_Set/Models/Poplar_06_Forest",
+            Size = new(28.0f, 28.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "7257da3b-6694-4b7a-9b04-876c7647125b:Epic/Environment_Set/Impostors/Poplar07",
+            Model = "677903c9-bd50-47e1-83b2-493b323e2ebe:Epic/Environment_Set/Models/Poplar_07_Forest",
+            Size = new(22.0f, 22.0f),
+            LodDistance = 64.0f
+        },
+        new()
+        {
+            Material = "66090946-2d77-4e1e-ae1c-5ea71cdff1fd:Epic/Environment_Set/Impostors/Poplar01",
+            Model = "6854ee8f-4caf-4676-9c13-3a09b00c3d01:Epic/Environment_Set/Models/Poplar_01_Standalone",
+            Size = new(18.0f, 18.0f),
+            LodDistance = 64.0f
+        }];
+
 }

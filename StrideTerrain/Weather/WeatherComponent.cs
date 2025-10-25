@@ -12,4 +12,6 @@ public class WeatherComponent : EntityComponent
     public AtmosphereParameters Atmosphere { get; set; } = new();
 
     public FogParameters Fog { get; set; } = new();
+
+    public CloudParameters Clouds { get; set; } = new();
 }

@@ -28,8 +28,9 @@ public class CustomSortMode : StateChangeSortMode
             // Customize some sorting keys as we don't have proper distances to some big meshes
             uint stateSortKey = renderObject.RenderGroup switch
             {
-                RenderGroups.Terrain => 0,
-                RenderGroups.Impostors => uint.MaxValue, // Last
+                RenderGroups.Terrain => uint.MaxValue,
+                RenderGroups.Impostors => uint.MaxValue - 1,
+                RenderGroups.Grass => uint.MaxValue - 2,
                 _ => renderObject.StateSortKey
             };
 

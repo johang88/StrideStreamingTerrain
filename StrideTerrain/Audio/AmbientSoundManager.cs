@@ -75,7 +75,11 @@ public class AmbientSoundManager : SyncScript
         var size = (int)Math.Sqrt(_biomes.Length);
         float terrainToBiome = (float)size / terrainData.TerrainData.Header.Size;
 
-        Vector2 playerPosWorld = Entity.Transform.Position.XZ();
+        var camera = Services.GetService<SceneSystem>()?.TryGetMainCamera();
+        if (camera == null)
+            return;
+
+        Vector2 playerPosWorld = camera.GetWorldPosition().XZ();
         Vector2 playerPosTerrain = playerPosWorld / terrainData.TerrainData.Header.UnitsPerTexel;
         Vector2 playerPosBiome = playerPosTerrain * terrainToBiome;
 

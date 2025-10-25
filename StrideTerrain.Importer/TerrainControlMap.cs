@@ -1,18 +1,13 @@
-﻿using System.Numerics;
-using System.Drawing.Imaging;
-using System.Drawing;
+﻿using Stride.Core.Mathematics;
 
 namespace StrideTerrain.Importer;
 
 public static class TerrainControlMap
 {
-    // Fraction helper
     private static float Frac(float x) => x - MathF.Floor(x);
 
-    // Linear interpolation
     private static float Lerp(float a, float b, float t) => a + (b - a) * t;
 
-    // Smooth 2D noise for large patches
     private static float SmoothNoise2D(Vector2 pos)
     {
         Vector2 ipos = new Vector2(MathF.Floor(pos.X), MathF.Floor(pos.Y));
@@ -34,15 +29,12 @@ public static class TerrainControlMap
     private static float LowFreqNoise(Vector2 worldXZ, float scale = 0.25f) =>
         SmoothNoise2D(worldXZ * scale);
 
-    // Optional: small height offset to randomize biome bands
     private static float HeightOffset(Vector2 worldXZ, float range = 5f) =>
         (LowFreqNoise(worldXZ) - 0.5f) * 2f * range;
 
-    // Compute slope from normal
     private static float ComputeSlope(Vector3 normal) =>
         Math.Clamp(1f - normal.Y, 0f, 1f);
 
-    // Write control map value for one point
     public static ushort ComputeControlValue(float height, Vector3 normal, Vector3 worldPos)
     {
         float slope = ComputeSlope(normal);
@@ -52,14 +44,14 @@ public static class TerrainControlMap
         var textureIndex = 0;
         var scaleIndex = 2;
 
-        // --- 1. Coast / ocean
+        // Coast / ocean
         if (h < 62f)
         {
             float coastThresh = 0.01f + rnd * 0.01f;
             textureIndex = slope < coastThresh ? 21 : 6;
             scaleIndex = 2;
         }
-        // --- 2. Lowlands / forest
+        // Lowlands / forest
         else if ((h + HeightOffset(worldPos.XZ()) * 2) < 140f)
         {
             float flatThresh = 0.01f + rnd * 0.01f;
@@ -85,7 +77,7 @@ public static class TerrainControlMap
 
             scaleIndex = slope > 0.6f ? 3 : 1;
         }
-        // --- 3. Mountains / snow
+        // Mountains / snow
         else
         {
             float mountainNoise = LowFreqNoise(worldPos.XZ() * 0.5f); // coarse scale for large snow patches
@@ -97,10 +89,8 @@ public static class TerrainControlMap
             scaleIndex = slope > 0.6f ? 3 : 4;
         }
 
-        // Encode into ushort: lower 5 bits textureIndex, upper 3 bits scaleIndex
         return (ushort)((scaleIndex << 5) | (textureIndex & 0x1F));
     }
 
-    // Extension for Vector3.XZ as Vector2
     private static Vector2 XZ(this Vector3 v) => new Vector2(v.X, v.Z);
 }

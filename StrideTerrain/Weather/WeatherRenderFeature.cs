@@ -4,6 +4,9 @@ using Stride.Graphics;
 using Stride.Rendering;
 using Stride.Rendering.ComputeEffect;
 using Stride.Rendering.Images;
+using Stride.Rendering.Lights;
+using Stride.Rendering.Shadows;
+using Stride.Shaders;
 using StrideTerrain.Rendering;
 using StrideTerrain.TerrainSystem.Effects;
 using StrideTerrain.TerrainSystem.Rendering;
@@ -12,7 +15,8 @@ using StrideTerrain.Weather.Effects.Atmosphere.LUT;
 using StrideTerrain.Weather.Effects.Fog;
 using StrideTerrain.Weather.Effects.Lights;
 using System;
-using static StrideTerrain.Weather.Effects.Atmosphere.ShaderMixins;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace StrideTerrain.Weather;
 
@@ -36,6 +40,12 @@ public class WeatherRenderFeature : RootRenderFeature
     private Texture? _depthShaderResourceView;
 
     private SpriteBatch? _spriteBatch;
+
+    private ILightShadowMapRenderer? _shadowMapRenderer;
+    private LightShadowType? _shadowType;
+    private LightGroupRendererDynamic? _groupRenderer;
+    private LightShaderGroupDynamic? _shaderGroup;
+    private List<RenderView> _renderViews = [];
 
     protected override void InitializeCore()
     {
@@ -69,9 +79,10 @@ public class WeatherRenderFeature : RootRenderFeature
         };
         _renderFogEffect.BlendState = BlendStates.AlphaBlend;
 
-        _renderVolumetricLightDirectional = new ImageEffectShader("VolumetricLightDiretional");
+        _renderVolumetricLightDirectional = new ImageEffectShader("VolumetricLightDiretionalEffect");
+        _renderVolumetricLightDirectional.Initialize(Context);
         _renderVolumetricLightDirectional.DisposeBy(this);
-        _renderVolumetricLightDirectional.BlendState = BlendStates.Additive;
+        _renderVolumetricLightDirectional.BlendState = BlendStates.AlphaBlend;
 
         _renderAerialPerspectiveEffect = new(Context) { ShaderSourceName = "AtmosphereRenderAerialPerspective" };
         _renderAerialPerspectiveEffect.DisposeBy(this);
@@ -120,6 +131,7 @@ public class WeatherRenderFeature : RootRenderFeature
 
         var atmosphere = renderObject.Atmosphere;
         var fog = renderObject.Fog;
+        var clouds = renderObject.Clouds;
         var sunDirection = renderObject.SunDirection;
         var sunColor = renderObject.SunColor;
 
@@ -144,13 +156,13 @@ public class WeatherRenderFeature : RootRenderFeature
             //var aerialPerspectiveRenderTarget = context.RenderContext.Allocator.GetTemporaryTexture2D((int)viewSize.X, (int)viewSize.Y, PixelFormat.R16G16B16A16_Float, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource); ;
             //RenderAerialPerspectiveTexture(context, atmosphere, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, viewSize, aerialPerspectiveRenderTarget);
 
-            RenderSky(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, multiScatteredLuminanceLut, skyLuminanceLut, skyViewLut);
+            RenderSky(context, atmosphere, fog, clouds, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, multiScatteredLuminanceLut, skyLuminanceLut, skyViewLut);
             //RenderAerialPerspective(context, aerialPerspectiveRenderTarget);
             //RenderFog(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize);
 
             context.RenderContext.Tags.TryGetValue(CubeMapRenderer.IsRenderingCubemap, out var isRenderingCubeMap);
             if (!isRenderingCubeMap)
-                RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut);
+                RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, renderView, renderObject.Sun);
 
             _depthShaderResourceView = null;
             //context.RenderContext.Allocator.ReleaseReference(aerialPerspectiveRenderTarget);
@@ -194,7 +206,7 @@ public class WeatherRenderFeature : RootRenderFeature
         _renderAerialPerspectiveEffect.Draw(context);
     }
 
-    private void RenderSky(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor, Vector3 cameraPosition,
+    private void RenderSky(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, CloudParameters clouds, Vector3 sunDirection, Color3 sunColor, Vector3 cameraPosition,
         Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut, Texture mulitScatteredLuminanceLut, Texture skyLuminanceLut, Texture skyViewLut)
     {
         if (_depthShaderResourceView == null || _renderSkyEffect == null)
@@ -217,6 +229,7 @@ public class WeatherRenderFeature : RootRenderFeature
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.CameraPosition, cameraPosition);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.InvViewProjection, invViewProjection);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.InvResolution, invViewSize);
+        renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.Clouds, clouds);
         renderSkyEffect.Parameters.Set(AtmosphereEffectParameters.EnableHeightFog, true);
         renderSkyEffect.Parameters.Set(GlobalKeys.Time, (float)context.RenderContext.Time.Total.TotalSeconds);
         renderSkyEffect.Draw(context, "Atmosphere.RenderSky");
@@ -242,12 +255,80 @@ public class WeatherRenderFeature : RootRenderFeature
     }
 
     private void RenderVolumetricLightDirectional(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor,
-        Vector3 cameraPosition, Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut)
+        Vector3 cameraPosition, Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut, RenderView renderView, RenderLight? light)
     {
-        if (_depthShaderResourceView == null || _renderVolumetricLightDirectional == null)
+        if (_depthShaderResourceView == null || _renderVolumetricLightDirectional == null || light == null)
             return;
 
         context.Tags.TryGetValue(TerrainRenderFeature.Current, out var terrain);
+
+        // TODO: Should draw at half res and upscale
+
+        var meshRenderFeature = RenderSystem.RenderFeatures.OfType<MeshRenderFeature>().FirstOrDefault();
+        var forwardLightingFeature = meshRenderFeature?.RenderFeatures.OfType<ForwardLightingRenderFeature>().FirstOrDefault();
+        if (forwardLightingFeature != null)
+        {
+            var shadowMapRenderer = forwardLightingFeature.ShadowMapRenderer;
+            var shadowMapTexture = shadowMapRenderer.FindShadowMap(renderView.LightingView ?? renderView, light);
+
+            if (shadowMapTexture != null && _shadowMapRenderer != null)
+            {
+                // Detect changed shadow map renderer or type
+                if (_shadowMapRenderer != shadowMapTexture.Renderer || _shadowType != shadowMapTexture.ShadowType)
+                    UpdateRenderData(context, shadowMapTexture);
+            }
+            else if (shadowMapTexture?.Renderer != _shadowMapRenderer || _shaderGroup == null)
+            {
+                UpdateRenderData(context, shadowMapTexture);
+            }
+
+            _renderViews.Clear();
+            _renderViews.Add(renderView);
+
+            _shaderGroup!.Reset();
+            _shaderGroup.SetViews(_renderViews);
+            _shaderGroup.AddView(0, context.RenderContext.RenderView, 1);
+
+            _shaderGroup.AddLight(light, shadowMapTexture);
+            _shaderGroup.UpdateLayout("lightGroup");
+
+            _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalEffectKeys.LightGroup, _shaderGroup.ShaderSource);
+
+            // Update the effect here so the layout is correct
+            _renderVolumetricLightDirectional.EffectInstance.UpdateEffect(RenderSystem.GraphicsDevice);
+
+            _shaderGroup.ApplyViewParameters(context, 0, _renderVolumetricLightDirectional.Parameters);
+
+            var box = new BoundingBoxExt(new Vector3(-float.MaxValue), new Vector3(float.MaxValue));
+            _shaderGroup.ApplyDrawParameters(context, 0, _renderVolumetricLightDirectional.Parameters, ref box);
+
+            void UpdateRenderData(RenderDrawContext context, LightShadowMapTexture? shadowMapTexture)
+            {
+                _groupRenderer = new LightDirectionalGroupRenderer();
+
+                ILightShadowMapShaderGroupData? shadowGroup = null;
+                if (shadowMapTexture != null)
+                {
+                    _shadowType = shadowMapTexture.ShadowType;
+                    _shadowMapRenderer = shadowMapTexture.Renderer;
+                    shadowGroup = _shadowMapRenderer.CreateShaderGroupData(_shadowType.Value);
+                }
+                else
+                {
+                    _shadowType = 0;
+                    _shadowMapRenderer = null;
+                }
+                _shaderGroup = _groupRenderer.CreateLightShaderGroup(context, shadowGroup);
+            }
+        }
+
+        var viewInverse = Matrix.Invert(renderView.View);
+        _renderVolumetricLightDirectional.Parameters.Set(TransformationKeys.ViewInverse, ref viewInverse);
+        _renderVolumetricLightDirectional.Parameters.Set(TransformationKeys.Eye, new Vector4(viewInverse.TranslationVector, 1));
+
+        Matrix projectionInverse;
+        Matrix.Invert(ref renderView.Projection, out projectionInverse);
+        _renderVolumetricLightDirectional.Parameters.Set(TransformationKeys.ProjectionInverse, projectionInverse);
 
         _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.TransmittanceLUT, transmittanceLut);
         _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.DepthTexture, _depthShaderResourceView);
@@ -308,4 +389,9 @@ public class WeatherRenderFeature : RootRenderFeature
             _depthShaderResourceView = (Texture)resource;
         }
     }
+}
+
+public static class VolumetricLightDiretionalEffectKeys
+{
+    public static readonly PermutationParameterKey<ShaderSource> LightGroup = ParameterKeys.NewPermutation<ShaderSource>();
 }

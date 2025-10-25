@@ -4,6 +4,7 @@
 	<PropertyGroup>
 		<TargetFrameworks>net8.0-windows</TargetFrameworks>
 		<Configurations>Debug;Release;DebugExGameEditor</Configurations>
+		<Nullable>enable</Nullable>
 	</PropertyGroup>
 
 	<ItemGroup>
@@ -22,9 +23,5 @@
 		<ProjectReference Include="..\StrideCommunity.ImGuiDebug\StrideCommunity.ImGuiDebug.csproj" />
 		<ProjectReference Include="..\StrideTerrain\StrideTerrain.csproj" />
 		<ProjectReference Include="..\TR.Stride.Ocean\TR.Stride.Ocean.csproj" />
-	</ItemGroup>
-
-	<ItemGroup>
-		<Folder Include="Camera\" />
 	</ItemGroup>
 </Project>

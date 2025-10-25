@@ -7,10 +7,21 @@
         stage Texture2D<float4> MultiScatteringLUT;
         stage Texture2D<float4> SkyViewLUT;
 
+		struct CloudParameters
+        {
+            float Scale;
+            float Speed;
+            float Cloudiness;
+            float Density;
+            float3 Color;
+            float OverrideFogColor;
+        };
+
         cbuffer Atmosphere
         {
 			AtmosphereParameters Atmosphere;
             FogParameters Fog;
+            CloudParameters Clouds;
             float4x4 InvViewProjection;
             float3 SunDirection;
             [Color] float3 SunColor;
@@ -20,24 +31,28 @@
 
         float3 GetSunLuminance(float3 worldPosition, float3 worldDirection, float3 sunDirection, float3 sunIlluminance, AtmosphereParameters atmosphere, Texture2D<float4> transmittanceLutTexture)
 		{
-			//float sunApexAngleDegree = 0.545; // Angular diameter of sun to earth from sea level, see https://en.wikipedia.org/wiki/Solid_angle
-			float sunApexAngleDegree = 2.4; // Modified sun size
-			float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
-			float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
-
 			float3 retval = 0;
 
 			float t = RaySphereIntersectNearest(worldPosition, worldDirection, float3(0.0f, 0.0f, 0.0f), atmosphere.BottomRadius);
-			if (t < 0.0f) // no intersection
+			if (t < 0.0f) // no intersection with planet
 			{
-				float VdotL = dot(worldDirection, normalize(sunDirection)); // weird... the sun disc shrinks near the horizon if we don't normalize sun direction
-				if (VdotL > sunCosHalfApexAngle)
-				{
-					// Edge fade
-					const float halfCosHalfApex = sunCosHalfApexAngle + (1.0f - sunCosHalfApexAngle) * 0.25; // Start fading when at 75% distance from light disk center
-					const float weight = 1.0 - saturate((halfCosHalfApex - VdotL) / (halfCosHalfApex - sunCosHalfApexAngle));
+				const float sunApexAngleDegree = 2.4; // Big sun
+				const float sunHalfApexAngleRadian = 0.5 * sunApexAngleDegree * PI / 180.0;
+				const float sunCosHalfApexAngle = cos(sunHalfApexAngleRadian);
 
-					retval = weight * sunIlluminance * 10000;
+				sunIlluminance *= 10;
+
+				float VdotL = dot(worldDirection, sunDirection);
+				if (VdotL >= sunCosHalfApexAngle)
+				{
+					retval = sunIlluminance;
+				}
+				else
+				{
+					float offset = sunCosHalfApexAngle - VdotL;
+					float gaussianBloom = exp(-offset * 50000.0) * 0.5;
+					float invBloom = 1.0 / (0.02 + offset * 3000.0) * 0.01;
+					retval = float(gaussianBloom + invBloom).xxx * sunIlluminance;
 				}
 
 				// https://www.shadertoy.com/view/NtsBzB
@@ -48,6 +63,7 @@
 					float3 starsDirection = normalize(worldDirection); // could be view vector for example
 					float starsThreshold = lerp(24, 12, starsAmount); // modifies the number of stars that are visible
 					float starsExposure = lerp(0, 500.0f, starsVisibility); // modifies the overall strength of the stars
+
 					float stars = pow(saturate(NoiseGradient3d(starsDirection * 200.0f)), starsThreshold) * starsExposure;
 					stars *= lerp(0.4, 1.4, NoiseGradient3d(starsDirection * 100.0f + Time));
 
@@ -126,15 +142,44 @@
 		        }
             }
 
-            if (RenderSun)
-            {
-                float3 sunIlluminance = SunColor;
-		        luminance = luminance + GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, TransmittanceLUT);
-            }
-
             float3 totalColor = luminance;
 
-            if (EnableHeightFog)
+			// Trace clouds
+			float t = TracePlane(CameraPosition, worldDirection, float3(0,1000,0), float3(0,-1,0));
+			CloudResult cloud;
+			if (t > 0)
+			{
+				float3 cloudPos = CameraPosition + worldDirection * t;
+				cloud = CalculateCloudsLit(cloudPos);
+
+				float3 transmittance = GetAtmosphericLightTransmittance(atmosphere, cloudPos, SunDirection, TransmittanceLUT);
+				float3 cloudColor = GetCloudLighting(cloudPos, cloud.normal, SunDirection, SunColor * transmittance, cloud.density);
+
+				totalColor = lerp(totalColor, cloudColor, cloud.density);
+			}
+
+			if (!RenderSun)
+			{
+				// This makes the night blue tinted and not good looking, might make more sense to cheat the ambient color instead ... 
+				// but it all looks bad ...
+				float nightFactor = saturate(-sunDirection.y / 0.05);
+				float3 nightColor = float3(0.02, 0.05, 0.15) * 0.1;
+				totalColor = lerp(totalColor, nightColor, nightFactor * 1);
+			}
+
+			if (RenderSun)
+			{
+				float3 sunIlluminance = SunColor;
+				float3 sun = GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, TransmittanceLUT);
+
+				// Sun transmittance through clouds ... hack as everything here
+				float tau = cloud.density * 40.0; 
+				float transmittance = exp(-tau);
+				sun *= transmittance;
+				totalColor += sun;
+			}
+
+            if (EnableHeightFog && RenderSun)
             {
 		        const float3 planetCenter = atmosphere.PlanetCenter * SKY_UNIT_TO_M;
 		        const float bottomRadius = atmosphere.BottomRadius * SKY_UNIT_TO_M;
@@ -161,9 +206,178 @@
 		        }
             }
 
-            totalColor = clamp(totalColor, 0, 65000);
-
+			totalColor = clamp(totalColor, 0, 65000);
             return float4(totalColor.xyz, 1);
         }
+
+		float TracePlane(float3 o, float3 d, float3 planeOrigin, float3 planeNormal)
+		{
+			return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
+		}
+
+		float2 Hash(float2 p)
+		{
+			p = float2(dot(p, float2(127.1, 311.7)), dot(p, float2(269.5, 183.3)));
+			return -1.0 + 2.0 * frac(sin(p) * 43758.5453123);
+		}
+
+		float Noise(in float2 p)
+		{
+			const float K1 = 0.366025404; // (sqrt(3)-1)/2;
+			const float K2 = 0.211324865; // (3-sqrt(3))/6;
+			float2 i = floor(p + (p.x + p.y) * K1);
+			float2 a = p - i + (i.x + i.y) * K2;
+			float2 o = (a.x > a.y) ? float2(1.0, 0.0) : float2(0.0, 1.0); //float2 of = 0.5 + 0.5*float2(sign(a.x-a.y), sign(a.y-a.x));
+			float2 b = a - o + K2;
+			float2 c = a - 1.0 + 2.0 * K2;
+			float3 h = max(0.5 - float3(dot(a, a), dot(b, b), dot(c, c)), 0.0);
+			float3 n = h * h * h * h * float3(dot(a, Hash(i + 0.0)), dot(b, Hash(i + o)), dot(c, Hash(i + 1.0)));
+			return dot(n, float3(70.0, 70.0, 70.0));
+		}
+
+		struct CloudResult
+		{
+			float density;
+			float3 normal;
+		};
+
+		CloudResult CalculateCloudsLit(float3 worldPos)
+		{
+			float2 clouds = CalculateClouds(worldPos);
+
+			// --- Compute approximate normal for lighting ---
+			float eps = 100;
+			float dX = (CalculateClouds(worldPos + float3(eps,0,0)).y - clouds.y) / eps;
+			float dY = (CalculateClouds(worldPos + float3(0, eps, 0)).y - clouds.y) / eps;
+			float dZ = (CalculateClouds(worldPos + float3(0,0,eps)).y - clouds.y) / eps;
+			
+			float3 normal = normalize(float3(-dX, -dY * 2.0, -dZ));
+			normal = normalize(lerp(normal, float3(0,1,0), 0.4));
+
+			CloudResult result;
+			result.density = clouds.x;
+			result.normal = normal;
+			return result;
+		}
+
+		float2 CalculateClouds(float3 V)
+		{
+			const float3 o = CameraPosition.xyz;
+			const float3 d = V;
+			const float3 planeOrigin = float3(0, 1000, 0);
+			const float3 planeNormal = float3(0, -1, 0);
+
+			const float t = TracePlane(o, d, planeOrigin, planeNormal);
+
+			if (t < 0.0f)
+				return 0.0f;
+
+			const float3 cloudPos = o + d * t;
+			const float2 cloudUV = cloudPos.xz * Clouds.Scale;
+			const float cloudTime = Time * Clouds.Speed;
+			const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
+			const uint quality = 8;
+
+			// rotate uvs like a flow effect:
+			float flow = 0;
+			{
+				float2 uv = cloudUV * 0.5f;
+				float amount = 0.1;
+				for (uint i = 0; i < quality; i++)
+				{
+					flow += Noise(uv) * amount;
+					uv = mul(m, uv);
+					amount *= 0.4;
+				}
+			}
+
+			// Main shape:
+			float clouds = 0.0;
+			{
+				const float time = cloudTime * 0.2f;
+				float density = 1.1f;
+				float2 uv = cloudUV * 0.8f;
+				uv -= flow - time;
+				for (uint i = 0; i < quality; i++)
+				{
+					clouds += density * Noise(uv);
+					uv = mul(m, uv) + time;
+					density *= 0.6f;
+				}
+			}
+
+			// Detail shape:
+			{
+				float detail_shape = 0.0;
+				const float time = cloudTime * 0.1f;
+				float density = 0.8f;
+				float2 uv = cloudUV;
+				uv -= flow - time;
+				for (uint i = 0; i < quality; i++)
+				{
+					detail_shape += abs(density * Noise(uv));
+					uv = mul(m, uv) + time;
+					density *= 0.7f;
+				}
+				clouds *= detail_shape + clouds;
+				clouds *= detail_shape;
+			}
+
+			// lerp between "choppy clouds" and "uniform clouds". Lower cloudiness will produce choppy clouds, but very high cloudiness will switch to overcast unfiform clouds:
+			clouds = lerp(clouds * 9.0f * Clouds.Cloudiness + 0.3f, clouds * 0.5f + 0.5f, pow(saturate(Clouds.Cloudiness), 8));
+			float cloudsNotClamped = clouds - (1 - Clouds.Cloudiness);
+			clouds = saturate(clouds - (1 - Clouds.Cloudiness)); // modulate constant cloudiness
+			clouds *= pow(1 - saturate(length(abs(cloudPos.xz * 0.00001f))), 16); //fade close to horizon
+
+			return float2(clouds, cloudsNotClamped);
+		}
+
+		float3 GetCloudLighting(
+			float3 worldPos,
+			float3 normal,
+			float3 lightDir,
+			float3 lightColor,
+			float density)
+		{
+			float3 viewDir = normalize(CameraPosition - worldPos);
+
+			// --- Normal bias toward light to fake internal scattering ---
+			float biasAmount = lerp(0.5, 0.2, saturate(density)); // thin → 0.5, thick → 0.2
+			float3 biasedNormal = normalize(lerp(normal, lightDir, biasAmount));
+
+			// --- Wrap lighting to avoid hard terminators ---
+			float NdotL = saturate(dot(biasedNormal, lightDir));
+			NdotL = saturate((NdotL + 0.3) / 1.3); // wrap amount 0.3
+			float3 diffuse = lightColor * NdotL;
+
+			// --- Forward + backward scatter ---
+			float viewDotLight = dot(viewDir, lightDir);
+			float forward = pow(saturate(viewDotLight), 10.0);
+			float backward = pow(saturate(-viewDotLight), 2.0);
+			float3 warmTint = float3(1.0, 0.7, 0.5);
+
+			// --- Fake "subsurface" blend based on viewDir·normal ---
+			// Adds that nice smooth glow you noticed
+			float viewFacing = saturate(dot(viewDir, normal));
+			float3 subsurface = lightColor * pow(viewFacing, 2.0) * 0.4;
+
+			// --- Combine scatter lobes ---
+			float3 scatter =
+				lightColor * (forward * 0.3 + backward * 0.6 * warmTint) + subsurface;
+
+			// --- Density-based modulation ---
+			float softness = 1.0 - saturate(density);
+			scatter *= 0.6 + 0.4 * softness;
+
+			// --- Ambient light ---
+			float3 ambient = 0.25 * SkyLuminanceLUT.SampleLevel(
+				SamplerLinearClamp, float2(0.5, 0.5), 0).rgb;
+
+			// --- Combine final color ---
+			float3 color = diffuse + scatter + ambient;
+			color *= lerp(0.5, 1.0, density);
+
+			return color;
+		}
     };
 }

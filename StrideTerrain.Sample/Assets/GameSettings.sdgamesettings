@@ -2,7 +2,7 @@
 Id: fb5fe8cf-34e8-4625-b57e-bc3fad9d01b9
 SerializedVersion: {Stride: 3.1.0.1}
 Tags: []
-DefaultScene: c02bb4f9-ba7d-4bee-9946-cc9b66bbd39c:MainScene
+DefaultScene: 58e08753-d6bf-4bca-81b5-247aa1946880:MainScene
 GraphicsCompositor: 5930e9ff-a4b7-4d73-bb19-61b7649afd2d:GraphicsCompositor
 Defaults:
     - !Stride.Audio.AudioEngineSettings,Stride.Audio
@@ -21,6 +21,10 @@ Defaults:
         ResourceLiveTimeout: 0:00:00:08.0000000
     - !Stride.Assets.Textures.TextureSettings,Stride.Assets
         TextureQuality: Best
+    - !StrideTerrain.Sample.CoreDataSettings,StrideTerrain.Sample
+        PlayerCamera: 8f236f47-d911-484e-a39a-7d6bc993a7b3:Prefabs/Camera
+        Player: 3cd4d2b0-a650-4b5b-93a8-eb0a406eb8be:Prefabs/Player
+        InitialScene: c02bb4f9-ba7d-4bee-9946-cc9b66bbd39c:Maps/Island_Scene
 Overrides: []
 PlatformFilters:
     - PowerVR SGX 54[0-9]
