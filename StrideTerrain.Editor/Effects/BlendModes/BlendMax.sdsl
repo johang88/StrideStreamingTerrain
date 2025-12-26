@@ -1,0 +1,10 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader BlendMax : TerrainBlendMode
+    {
+        override float Blend(float a, float b)
+        {
+            return max(a, b);
+        }
+    };
+}

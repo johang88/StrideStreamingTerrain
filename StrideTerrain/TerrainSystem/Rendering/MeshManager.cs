@@ -1,12 +1,9 @@
-﻿using ServiceWire;
-using Stride.Core.Mathematics;
+﻿using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.Rendering;
 using System;
 using System.Buffers;
-using System.Collections.Generic;
 using System.Runtime.InteropServices;
-using System.Windows.Media.Media3D;
 using Buffer = Stride.Graphics.Buffer;
 namespace StrideTerrain.TerrainSystem.Rendering;
 

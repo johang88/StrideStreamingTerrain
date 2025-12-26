@@ -1,0 +1,220 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+	<Import Project="..\Common.props" />
+
+	<PropertyGroup>
+		<TargetFramework>net8.0-windows</TargetFramework>
+		<RuntimeIdentifier>win-x64</RuntimeIdentifier>
+		<ApplicationIcon>Resources\Icon.ico</ApplicationIcon>
+		<OutputType>WinExe</OutputType>
+		<RootNamespace>StrideTerrain.Editor</RootNamespace>
+
+		<OutputPath>..\Bin\Editor\$(Configuration)\</OutputPath>
+		<AppendTargetFrameworkToOutputPath>false</AppendTargetFrameworkToOutputPath>
+		
+		<Nullable>Enable</Nullable>
+		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+
+		<!-- Force msbuild to check to rebuild this assembly instead of letting VS IDE guess -->
+		<DisableFastUpToDateCheck>true</DisableFastUpToDateCheck>
+		<Configurations>Debug;Release;DebugExGameEditor</Configurations>
+	</PropertyGroup>
+
+	<ItemGroup>
+	  <None Remove="Resources\forkawesome-webfont.ttf" />
+	  <None Remove="Resources\JetBrainsMonoNL-Medium.ttf" />
+	  <None Remove="Resources\Roboto-Regular.ttf" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <EmbeddedResource Include="Resources\forkawesome-webfont.ttf" />
+	  <EmbeddedResource Include="Resources\JetBrainsMonoNL-Medium.ttf" />
+	  <EmbeddedResource Include="Resources\Roboto-Regular.ttf" />
+	</ItemGroup>
+
+	<ItemGroup>
+		<ProjectReference Include="..\StrideCommunity.ImGuiDebug\StrideCommunity.ImGuiDebug.csproj" />
+		<ProjectReference Include="..\StrideTerrain\StrideTerrain.csproj" />
+		<ProjectReference Include="..\TR.Stride.Ocean\TR.Stride.Ocean.csproj" />
+	</ItemGroup>
+
+	<ItemGroup>
+	  <Compile Update="Effects\BlendModes\BlendSubtract.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\BlendModes\BlendMax.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\BlendModes\BlendAlphaBlend.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>BlendAlphaBlend.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="Effects\BlendModes\BlendAdd.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\BlendModes\BlendMultiply.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>BlendMultiply.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="Effects\CalculateNormalMap.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>CalculateNormalMap.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="Effects\ComputeTerrainLayerEffect.sdfx.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\EditorTerrainMaterialStreamInitializer.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>EditorTerrainMaterialStreamInitializer.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="Effects\EditorTerrainDiffuse.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\EditorTerrainDisplacement.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\ComputeTerrainLayer.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\Layers\LayerErosion.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\Layers\LayerGroup.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>LayerGroup.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="Effects\Layers\LayerCircle.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\TerrainBlendMode.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\TerrainLayer.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>TerrainLayer.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="Effects\Layers\LayerConstantValue.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\Layers\LayerFbm.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\Layers\LayerRidged.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\Layers\LayerTurbulence.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Effects\NoiseBase.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	</ItemGroup>
+
+	<ItemGroup>
+	  <None Update="Effects\BlendModes\BlendSubtract.sdsl">
+	    <LastGenOutput>BlendSubtract.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\BlendModes\BlendMax.sdsl">
+	    <LastGenOutput>BlendMax.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\BlendModes\BlendAlphaBlend.sdsl">
+	    <LastGenOutput>BlendAlphaBlend.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\BlendModes\BlendAdd.sdsl">
+	    <LastGenOutput>BlendAdd.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\BlendModes\BlendMultiply.sdsl">
+	    <LastGenOutput>BlendMultiply.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\CalculateNormalMap.sdsl">
+	    <LastGenOutput>CalculateNormalMap.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\ComputeTerrainLayerEffect.sdfx">
+	    <LastGenOutput>ComputeTerrainLayerEffect.sdfx.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\EditorTerrainMaterialStreamInitializer.sdsl">
+	    <LastGenOutput>EditorTerrainMaterialStreamInitializer.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\EditorTerrainDiffuse.sdsl">
+	    <LastGenOutput>EditorTerrainDiffuse.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\EditorTerrainDisplacement.sdsl">
+	    <LastGenOutput>EditorTerrainDisplacement.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\ComputeTerrainLayer.sdsl">
+	    <LastGenOutput>ComputeTerrainLayer.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\Layers\LayerErosion.sdsl">
+	    <LastGenOutput>LayerErosion.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\Layers\LayerGroup.sdsl">
+	    <LastGenOutput>LayerGroup.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\Layers\LayerCircle.sdsl">
+	    <LastGenOutput>LayerCircle.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\TerrainBlendMode.sdsl">
+	    <LastGenOutput>TerrainBlendMode.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\TerrainLayer.sdsl">
+	    <LastGenOutput>TerrainLayer.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\Layers\LayerRidged.sdsl">
+	    <LastGenOutput>LayerRidged.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\NoiseBase.sdsl">
+	    <LastGenOutput>NoiseBase.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\Layers\LayerTurbulence.sdsl">
+	    <LastGenOutput>LayerTurbulence.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\Layers\LayerFbm.sdsl">
+	    <LastGenOutput>LayerFbm.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Effects\Layers\LayerConstantValue.sdsl">
+	    <LastGenOutput>LayerConstantValue.sdsl.cs</LastGenOutput>
+	  </None>
+	</ItemGroup>
+
+</Project>

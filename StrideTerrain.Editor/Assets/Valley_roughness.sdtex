@@ -1,0 +1,7 @@
+!Texture
+Id: 18d52ae4-0c9b-4942-b7db-9a93141ec4f3
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../Resources/Valley_roughness.dds
+Type: !GrayscaleTextureType {}
+IsStreamable: false

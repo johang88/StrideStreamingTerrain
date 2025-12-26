@@ -1,0 +1,11 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    effect ComputeTerrainLayerEffect
+    {
+        using params ComputeTerrainLayerEffectKeys;
+        mixin compose Layer = (ComputeTerrainLayerEffectKeys.Layer);
+        mixin compose BlendMode = (ComputeTerrainLayerEffectKeys.BlendMode);
+
+        mixin ComputeTerrainLayer;
+    };
+}

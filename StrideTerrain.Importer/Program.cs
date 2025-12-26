@@ -200,7 +200,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
         float cellSize = 8f; // Roughly the largest radius
         var grid = new Dictionary<(int, int), List<TreeInstance>>();
 
-        int tileStep = 12;
+        int tileStep = 22;
         int maxAttemptsPerTile = 10;
 
         for (int y = 0; y < terrainSize; y += tileStep)
@@ -273,7 +273,7 @@ rootCommand.SetHandler((input, controlMapInput, outputPath, name, chunkSize, max
                         Y = height,
                         Z = py * unitsPerTexel,
                         Type = treeType,
-                        Scale = (float)Random.Shared.NextDouble() * (1.2f - 0.8f) + 0.8f
+                        Scale = (float)Random.Shared.NextDouble() + 1.0f
                     };
                     trees.Add(tree);
 

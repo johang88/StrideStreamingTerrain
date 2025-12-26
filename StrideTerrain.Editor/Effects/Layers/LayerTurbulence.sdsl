@@ -1,0 +1,32 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader LayerTurbulence : TerrainLayer, NoiseBase
+    {
+        stage float Frequency;
+        stage float Amplitude;
+        stage int Octaves;
+        stage float Lacunarity;
+        stage float Gain;
+        stage float Seed;
+
+        override float ComputeHeight(float2 coord)
+        {
+            return Turbulence(coord + float2(Seed, Seed));
+        }
+
+        float Turbulence(float2 st) {
+            // Initial values
+            float value = 0.0;
+            float amplitude = Amplitude;
+            float frequency = Frequency;
+            //
+            // Loop of octaves
+            for (int i = 0; i < Octaves; i++) {
+                value += amplitude * abs(snoise(st * frequency));
+                st *= Lacunarity;
+                amplitude *= Gain;
+            }
+            return value;
+        }
+    };
+}

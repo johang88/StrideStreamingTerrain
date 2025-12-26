@@ -1,0 +1,12 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader BlendAlphaBlend : TerrainBlendMode
+    {
+        stage float Alpha;
+
+        override float Blend(float a, float b)
+        {
+            return (a * (1.0f - Alpha)) + (b * Alpha);
+        }
+    };
+}

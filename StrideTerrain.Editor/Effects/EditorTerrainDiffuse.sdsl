@@ -1,0 +1,28 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader EditorTerrainDiffuse : IMaterialSurfacePixel, TerrainMaterialStreams, Texturing
+    {
+        cbuffer PerMaterial
+        {
+            float4 GridColor;
+        }
+
+        override void Compute()
+        {
+            const int GridSize = 64;
+            float2 uv = streams.TexCoord2;
+
+            float2 grid = frac(uv);
+
+            const float GridThickness = 0.5f;
+
+            float2 l = step(grid, float2(GridThickness / GridSize, GridThickness / GridSize)) +
+                          step(1.0 - grid, float2(GridThickness / GridSize, GridThickness / GridSize));
+
+            float lineMask = saturate(l.x + l.y);
+
+            float3 color = lerp(streams.TerrainDiffuse, GridColor.xyz, lineMask * GridColor.w);
+            streams.matDiffuse = streams.matColorBase = float4(color, 1);
+        }
+    };
+}

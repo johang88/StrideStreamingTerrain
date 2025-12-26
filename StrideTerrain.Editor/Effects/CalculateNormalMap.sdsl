@@ -1,0 +1,39 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader CalculateNormalMap : ComputeShaderBase
+    {
+        stage Texture2D<float4> InputTexture;
+        stage RWTexture2D<float4> OutputTexture;
+
+        stage float MaxHeight;
+
+        float SampleHeight(int2 uv, int2 offset, int2 dimensions)
+        {
+            uv += offset;
+            uv = clamp(uv, int2(0, 0), dimensions - int2(1, 1));
+            return InputTexture[uv].x * MaxHeight;
+        }
+
+        override void Compute()
+        {
+            float height = InputTexture[streams.DispatchThreadId.xy].x * MaxHeight;
+
+            int2 dimensions;
+            InputTexture.GetDimensions(dimensions.x, dimensions.y);
+
+            int2 uv = streams.DispatchThreadId.xy;
+
+            float hL = SampleHeight(uv, int2(-1,0), dimensions);
+            float hR = SampleHeight(uv, int2(1, 0), dimensions);
+            float hD = SampleHeight(uv, int2(1,-0), dimensions);
+            float hU = SampleHeight(uv, int2(1, 1), dimensions);
+
+            float3 dx = float3(2, hR - hL, 0);
+            float3 dz = float3(0, hU - hD, 2);
+
+            float3 normal = normalize(cross(dz, dx));
+
+            OutputTexture[uv] = float4(normal * 0.5 + 0.5, 1);
+        }
+    };
+}

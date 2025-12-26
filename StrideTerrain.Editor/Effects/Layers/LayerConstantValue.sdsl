@@ -1,0 +1,12 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader LayerConstantValue : TerrainLayer
+    {
+        stage float Value;
+
+        override float ComputeHeight(float2 coord)
+        {
+            return Value;
+        }
+    };
+}

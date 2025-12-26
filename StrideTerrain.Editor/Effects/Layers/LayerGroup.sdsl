@@ -1,0 +1,10 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader LayerGroup : TerrainLayer
+    {
+        override float ComputeHeight(float2 coord)
+        {
+            return OutputTexture[streams.DispatchThreadId.xy].x;
+        }
+    };
+}

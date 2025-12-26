@@ -1,0 +1,62 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader LayerFbm : TerrainLayer
+    {
+        stage float Frequency;
+        stage float Amplitude;
+        stage int Octaves;
+        stage float Lacunarity;
+        stage float Gain;
+        stage float Seed;
+
+        override float ComputeHeight(float2 coord)
+        {
+            return Fbm(coord + float2(Seed, Seed));
+        }
+
+        float Fbm(float2 st)
+        {
+            float amplitude = Amplitude;
+            float frequency = Frequency;
+
+            float ridge = 0;
+            float y = 0;
+            for (int i = 0; i < Octaves; i++)
+            {
+                float h = amplitude * Noise(st * frequency);
+                y += h;
+
+                frequency *= Lacunarity;
+                amplitude *= Gain;
+            }
+
+            return y;
+        }
+
+        float2 Noise(float2 st)
+        {
+            float2 i = floor(st);
+            float2 f = frac(st);
+
+            // Four corners in 2D of a tile
+            float a = Random(i);
+            float b = Random(i + float2(1.0, 0.0));
+            float c = Random(i + float2(0.0, 1.0));
+            float d = Random(i + float2(1.0, 1.0));
+
+            // Smooth Interpolation
+            // Cubic Hermine Curve.  Same as SmoothStep()
+            float2 u = f*f*(3.0-2.0*f);
+
+            // Mix 4 coorners percentages
+            return lerp(a, b, u.x) +
+                    (c - a)* u.y * (1.0 - u.x) +
+                    (d - b) * u.x * u.y;
+        }
+
+        float2 Random(float2 st)
+        {
+            return frac(sin(dot(st.xy, float2(12.9898,78.233))) * 43758.5453123);
+        }
+    };
+}

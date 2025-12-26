@@ -53,7 +53,8 @@
 
                 float stepTransmittance = exp(-fogFalloff * marchedDistance);
 
-                accumulation += shadow * stepSize * stepTransmittance * GetAtmosphericLightTransmittance(atmosphere, P, L, transmittanceLUT);
+                accumulation += shadow * GetAtmosphericLightTransmittance(atmosphere, P, L, transmittanceLUT);
+                //accumulation += shadow * stepSize * stepTransmittance * GetAtmosphericLightTransmittance(atmosphere, P, L, transmittanceLUT);
                 marchedDistance += stepSize;
 
                 P = P + V * stepSize;

@@ -1,0 +1,21 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader ComputeTerrainLayer : TerrainLayer, TerrainBlendMode
+    {
+        compose TerrainLayer Layer;
+        compose TerrainBlendMode BlendMode;
+
+        override void Compute()
+        {
+            float2 coord = GetWorldCoordinate();
+            coord *= 0.001;
+
+            float input = InputTexture[streams.DispatchThreadId.xy].x;
+            float value = Layer.ComputeHeight(coord);
+
+            float output = BlendMode.Blend(input, value);
+
+            OutputTexture[streams.DispatchThreadId.xy] = float4(saturate(output.x), 0, 0, 0);
+        }
+    };
+}

@@ -27,12 +27,9 @@ namespace StrideTerrain.Vegetation
         public static readonly ValueParameterKey<float> MaxScale = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<Vector2> Seed = ParameterKeys.NewValue<Vector2>();
         public static readonly ValueParameterKey<bool> RotateAlongTerrainNormal = ParameterKeys.NewValue<bool>();
-        public static readonly ValueParameterKey<float> BoundingRadius = ParameterKeys.NewValue<float>();
-        public static readonly ValueParameterKey<Vector4> FrustumPlanes = ParameterKeys.NewValue<Vector4>();
         public static readonly ValueParameterKey<float> Clumpiness = ParameterKeys.NewValue<float>(0.5f);
         public static readonly ValueParameterKey<float> ClumpSize = ParameterKeys.NewValue<float>(32.0f);
         public static readonly ValueParameterKey<uint> ValidBackgroundTexturesIds = ParameterKeys.NewValue<uint>();
-        public static readonly ObjectParameterKey<Buffer> OutputWorld = ParameterKeys.NewObject<Buffer>();
-        public static readonly ObjectParameterKey<Buffer> OutputWorldInverse = ParameterKeys.NewObject<Buffer>();
+        public static readonly ObjectParameterKey<Buffer> Instances = ParameterKeys.NewObject<Buffer>();
     }
 }

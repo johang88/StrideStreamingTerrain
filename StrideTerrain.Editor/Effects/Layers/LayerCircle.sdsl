@@ -1,0 +1,29 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader LayerCircle : TerrainLayer
+    {
+        stage float Radius;
+        stage float Smoothness;
+        stage float Height;
+        stage float2 Position;
+
+        override float ComputeHeight(float2 coord)
+        {
+            coord *= 1000;
+            
+            float d = SdfCircle(coord - Position, Radius);
+
+            float falloff = Radius * saturate(Smoothness);
+
+            float t = 1.0f - saturate((d + falloff) / (falloff + 1e-5f));
+            t = smoothstep(0.0f, 1.0f, t);
+
+            return Height * t;
+        }
+
+        float SdfCircle(float2 p, float r)
+        {
+            return length(p) - r;
+        }
+    };
+}

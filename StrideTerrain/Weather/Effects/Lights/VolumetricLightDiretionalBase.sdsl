@@ -43,7 +43,8 @@
                 shadow *= GetFogAmount(fog, cameraDistance - marchedDistance, P, 0);
 
                 float stepTransmittance = exp(-fogFalloff * marchedDistance);
-                shadow *= scattering * stepSize * stepTransmittance * GetAtmosphericLightTransmittance(atmosphere, P, L, transmittanceLUT);
+                shadow *= scattering * GetAtmosphericLightTransmittance(atmosphere, P, L, transmittanceLUT);
+                //shadow *= scattering * stepSize * stepTransmittance * GetAtmosphericLightTransmittance(atmosphere, P, L, transmittanceLUT);
 
                 accumulation += shadow;
                 marchedDistance += stepSize;

@@ -1,0 +1,41 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader LayerRidged : TerrainLayer, NoiseBase
+    {
+        stage float Frequency;
+        stage float Amplitude;
+        stage int Octaves;
+        stage float Lacunarity;
+        stage float Gain;
+        stage float Scale;
+
+        override float ComputeHeight(float2 coord)
+        {
+            return RidgedMF(coord * Scale);
+        }
+
+        float Ridge(float h, float offset) {
+            h = abs(h);     // create creases
+            h = offset - h; // invert so creases are at top
+            h = h * h;      // sharpen creases
+            return h;
+        }
+
+        float RidgedMF(float2 p) {
+            float offset = 0.9;
+
+            float sum = 0.0;
+            float freq = Frequency, amp = Amplitude;
+            float prev = 1.0;
+            for(int i=0; i < Octaves; i++) {
+                float n = Ridge(snoise(p*freq), offset);
+                sum += n*amp;
+                sum += n*amp*prev;  // scale by previous octave
+                prev = n;
+                freq *= Lacunarity;
+                amp *= Gain;
+            }
+            return sum;
+        }
+    };
+}

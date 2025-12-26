@@ -1,0 +1,25 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader TerrainLayer : ComputeShaderBase
+    {
+        stage Texture2D<float4> InputTexture;
+        stage RWTexture2D<float4> OutputTexture;
+        stage uint Resolution;
+        stage float InvResolution;
+        stage float InvSize;
+        stage float Size;
+        stage float UnitsPerTexel;
+        stage float InvUnitsPerTexel;
+        stage float MaxHeight;
+
+        float ComputeHeight(float2 coord)
+        {
+            return 0;
+        }
+
+        stage float2 GetWorldCoordinate()
+        {
+            return streams.DispatchThreadId.xy * UnitsPerTexel;
+        }
+    };
+}

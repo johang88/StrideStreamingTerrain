@@ -11,19 +11,17 @@
         stage float MaxScale;
         stage float2 Seed;
         stage bool RotateAlongTerrainNormal;
-        stage float BoundingRadius;
-        stage float4 FrustumPlanes[6];
         stage float Clumpiness = 0.5f;
         stage float ClumpSize = 32.0f;
         stage uint ValidBackgroundTexturesIds[5];
 
-        struct GrassMatrix
+        struct GrassInstance
         {
-            float4x4 Matrix;
+            float4 PositionScale;
+            float4 Rotation;
         };
 
-        stage AppendStructuredBuffer<GrassMatrix> OutputWorld;
-        stage AppendStructuredBuffer<GrassMatrix> OutputWorldInverse;
+        stage AppendStructuredBuffer<GrassInstance> Instances;
 
         override void Compute()
         {
@@ -90,9 +88,6 @@
                 }
             }
 
-            //bool isGrass = backgroundTextureIndex == 0 || backgroundTextureIndex == 4 ||
-            //               backgroundTextureIndex == 22 || backgroundTextureIndex == 27 || backgroundTextureIndex == 28;
-
             if (!isValid)
                 return;
 
@@ -107,23 +102,16 @@
             float scale = fade * lerp(MinScale, MaxScale, rndScale);
             float rotationAngle = (rndRot * 2.0f - 1.0f) * PI;
 
-            if (!IsInsideFrustum(position, BoundingRadius * scale))
-                return;
-
             float3 terrainNormal = RotateAlongTerrainNormal ? GetTerrainNormalAt(terrainUv) : float3(0, 1, 0);
 
             // Build world matrix
             float4 rotation = QuaternionMultiply(CreateRotationAxisYQuaternion(float3(0, 1, 0), rotationAngle), CreateQuaternionBetweenDirections(float3(0, 1, 0), terrainNormal));
 
-            float4x4 world = CreateTransformationMatrix(scale.xxx, rotation, position);
-            float4x4 worldInverse = transpose(world);
+            GrassInstance grassInstance;
+            grassInstance.PositionScale = float4(position.xyz, scale);
+            grassInstance.Rotation = rotation;
 
-            GrassMatrix m;
-            m.Matrix = world;
-            OutputWorld.Append(m);
-
-            m.Matrix = worldInverse;
-            OutputWorldInverse.Append(m);
+            Instances.Append(grassInstance);
         }
 
         float Hash21(float2 p)
@@ -131,23 +119,6 @@
             p = frac(p * 0.1031);
             p += dot(p, p.yx + 33.33);
             return frac((p.x + p.y) * p.x * p.y);
-        }
-
-        bool IsInsideFrustum(float3 position, float radius)
-        {
-            [unroll]
-            for (int i = 0; i < 6; i++)
-            {
-                float3 n = FrustumPlanes[i].xyz;
-                float d = FrustumPlanes[i].w;
-
-                float dist = dot(n, position);
-
-                if (dist + radius <= -d)
-                    return false;
-            }
-
-            return true;
         }
 
         float4 QuaternionMultiply(float4 left, float4 right)
@@ -209,63 +180,6 @@
 
             result = normalize(result);
 
-            return result;
-        }
-
-        float4x4 CreateTransformationMatrix(float3 scaling, float4 rotation, float3 translation)
-        {
-            float4x4 result;
-
-            float xx = rotation.x * rotation.x;
-            float yy = rotation.y * rotation.y;
-            float zz = rotation.z * rotation.z;
-            float xy = rotation.x * rotation.y;
-            float zw = rotation.z * rotation.w;
-            float zx = rotation.z * rotation.x;
-            float yw = rotation.y * rotation.w;
-            float yz = rotation.y * rotation.z;
-            float xw = rotation.x * rotation.w;
-
-            result._11 = 1.0f - (2.0f * (yy + zz));
-            result._12 = 2.0f * (xy + zw);
-            result._13 = 2.0f * (zx - yw);
-            result._21 = 2.0f * (xy - zw);
-            result._22 = 1.0f - (2.0f * (zz + xx));
-            result._23 = 2.0f * (yz + xw);
-            result._31 = 2.0f * (zx + yw);
-            result._32 = 2.0f * (yz - xw);
-            result._33 = 1.0f - (2.0f * (yy + xx));
-
-            // position
-            result._41 = translation.x;
-            result._42 = translation.y;
-            result._43 = translation.z;
-
-            // scale
-            if (scaling.x != 1.0f)
-            {
-                result._11 *= scaling.x;
-                result._12 *= scaling.x;
-                result._13 *= scaling.x;
-            }
-            if (scaling.y != 1.0f)
-            {
-                result._21 *= scaling.y;
-                result._22 *= scaling.y;
-                result._23 *= scaling.y;
-            }
-            if (scaling.z != 1.0f)
-            {
-                result._31 *= scaling.z;
-                result._32 *= scaling.z;
-                result._33 *= scaling.z;
-            }
-
-            result._14 = 0.0f;
-            result._24 = 0.0f;
-            result._34 = 0.0f;
-            result._44 = 1.0f;
-            
             return result;
         }
     };

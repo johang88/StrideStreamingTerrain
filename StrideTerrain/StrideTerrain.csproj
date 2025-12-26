@@ -80,6 +80,11 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainComputeColorNormal.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialStreamInitializer.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -110,6 +115,12 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Vegetation\Effects\SetupIndirectDispatchArgs.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>SetupIndirectDispatchArgs.sdsl</DependentUpon>
+	  </Compile>
 	  <Compile Update="Vegetation\Effects\ClearDrawArgs.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -118,6 +129,11 @@
 	  <Compile Update="Vegetation\Effects\ComoputeColorImpostor.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Vegetation\Effects\GrassCullInstances.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
 	  <Compile Update="Vegetation\Effects\GrassPopulateInstances.sdsl.cs">
@@ -213,6 +229,9 @@
 	  <None Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl">
 	    <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainComputeColorNormal.sdsl">
+	    <LastGenOutput>TerrainComputeColorNormal.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialStreamInitializer.sdsl">
 	    <LastGenOutput>TerrainMaterialStreamInitializer.sdsl.cs</LastGenOutput>
 	  </None>
@@ -231,11 +250,17 @@
 	  <None Update="TerrainSystem\Effects\TerrainStreams.sdsl">
 	    <LastGenOutput>TerrainStreams.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="Vegetation\Effects\SetupIndirectDispatchArgs.sdsl">
+	    <LastGenOutput>SetupIndirectDispatchArgs.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Vegetation\Effects\ClearDrawArgs.sdsl">
 	    <LastGenOutput>ClearDrawArgs.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Vegetation\Effects\ComoputeColorImpostor.sdsl">
 	    <LastGenOutput>ComoputeColorImpostor.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Vegetation\Effects\GrassCullInstances.sdsl">
+	    <LastGenOutput>GrassCullInstances.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Vegetation\Effects\GrassPopulateInstances.sdsl">
 	    <LastGenOutput>GrassPopulateInstances.sdsl.cs</LastGenOutput>

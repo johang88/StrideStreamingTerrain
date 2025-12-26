@@ -1,0 +1,43 @@
+!SceneAsset
+Id: 58e08753-d6bf-4bca-81b5-247aa1946880
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! 72664b2a-d06b-46ae-a7af-476a84918946
+        - ref!! 7a6fcbc3-7d6c-4563-b731-7100ef5344d0
+    Parts:
+        -   Entity:
+                Id: 72664b2a-d06b-46ae-a7af-476a84918946
+                Name: Camera
+                Components:
+                    808cc35aebe6debe79a48c329f6d51de: !TransformComponent
+                        Id: 11d852a8-d501-4c25-ad15-adfbbf845b4f
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5d17d89895439722fdcdee0da2a04974: !CameraComponent
+                        Id: a4bb1940-5009-4d89-b43f-43df4f1a6d8e
+                        Enabled: true
+                        Name: Default
+                        Projection: Perspective
+                        Slot: e8beb24c-7acd-4fea-ba82-a672d9225f3f
+                        VerticalFieldOfView: 60.0
+                        FarClipPlane: 20000.0
+        -   Entity:
+                Id: 7a6fcbc3-7d6c-4563-b731-7100ef5344d0
+                Name: Ambient light
+                Components:
+                    6e062d45df426b9c213b87b029353dba: !TransformComponent
+                        Id: e8517bda-fc77-4c81-bc2a-6e44543ea5ed
+                        Position: {X: 0.0, Y: 2.0, Z: -2.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    0529ea6b2e5031a8f5c5c93d2e411804: !LightComponent
+                        Id: 75a11c99-c375-4222-804f-0cbb7523cbf4
+                        Type: !LightAtmosphere
+                            DynamicSkyBox: 575c3c85-e2af-4c18-8240-c8075fee32f1:DynamicSkyBox

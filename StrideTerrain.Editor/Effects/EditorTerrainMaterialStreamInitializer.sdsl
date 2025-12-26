@@ -1,0 +1,128 @@
+﻿namespace StrideTerrain.Editor.Effects
+{
+    shader EditorTerrainMaterialStreamInitializer : IStreamInitializer, TerrainMaterialStreams, NormalStream, PositionStream4, Texturing
+    {
+        rgroup PerMaterial
+        {
+            stage Texture2DArray DiffuseArray;
+            stage Texture2DArray NormalArray;
+            stage Texture2DArray RoughnessArray;
+            stage Texture2D TerrainNormalMap;
+        }
+
+        cbuffer PerMaterial
+        {
+            stage float TerrainTextureSize;
+            stage float MaxHeight;
+        }
+
+        struct MaterialSample
+        {
+            float3 Diffuse;
+            float3 Normal;
+            float Roughness;
+        };
+
+        override void ResetStream()
+        {
+            base.ResetStream();
+			
+			float3 normal = float3(0, 0, 0);
+            normal.xyz = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord, 0).xyz * 2.0f - 1.0f;
+
+            normal = normalize(normal);
+
+            streams.meshNormal = normal;
+
+            float2 positionFract = frac(streams.TexCoord * TerrainTextureSize - 0.5f);
+            float4 fractionalWeights = float4(
+                (1.0f - positionFract.x) * (1.0f - positionFract.y),
+                positionFract.x * (1.0f - positionFract.y),
+                positionFract.y * (1.0f - positionFract.x),
+                positionFract.x * positionFract.y
+            );
+
+            int2 uv = int2(floor(streams.TexCoord));
+
+            float slope = saturate(1 - abs(normal.y));
+            float height = saturate(streams.PositionWS.y / MaxHeight);
+
+            float dirtWeight  = smoothstep(0.25f, 0.20f, height);
+            float grassWeight = smoothstep(0.0f, 0.20f, height) * (1 - smoothstep(0.8f, 0.85f, height)); 
+            float snowWeight  = smoothstep(0.7f, 0.85f, height);
+
+            float rockWeight  = smoothstep(1, 0, pow(slope, 2));
+
+            grassWeight *= (1 - rockWeight);
+            dirtWeight  *= (1 - rockWeight);
+
+            float total = dirtWeight + grassWeight + rockWeight + snowWeight + 1e-5f;
+            dirtWeight /= total;
+            grassWeight /= total;
+            rockWeight /= total;
+            snowWeight /= total;
+
+            const float scaleValues[8] = { 0.33f, 0.166f, 0.05f, 0.025f, 0.0125f, 0.0075f, 0.00375f, 0.0f };
+
+            MaterialSample dirt = SampleMaterialGrad(scaleValues[2], 21);
+            MaterialSample grass = SampleMaterialGrad(scaleValues[1], 0);
+            MaterialSample rock = SampleMaterialGrad(scaleValues[3], 14);
+            MaterialSample snow = SampleMaterialGrad(scaleValues[3], 12);
+
+            streams.TerrainDiffuse =
+                dirt.Diffuse  * dirtWeight +
+                grass.Diffuse * grassWeight +
+                rock.Diffuse  * rockWeight +
+                snow.Diffuse  * snowWeight;
+
+            streams.TerrainRoughness =
+                dirt.Roughness  * dirtWeight +
+                grass.Roughness * grassWeight +
+                rock.Roughness  * rockWeight +
+                snow.Roughness  * snowWeight;
+
+            float3 nDirt  = DecodeNormal(dirt.Normal);
+            float3 nGrass = DecodeNormal(grass.Normal);
+            float3 nRock  = DecodeNormal(rock.Normal);
+            float3 nSnow  = DecodeNormal(snow.Normal);
+
+            float3 blendedNormal = normalize(
+                nDirt  * dirtWeight +
+                nGrass * grassWeight +
+                nRock  * rockWeight +
+                nSnow  * snowWeight
+            );
+
+            float3 tangent = normalize(float3(1, 0, 0) - streams.meshNormal * dot(float3(1, 0, 0), streams.meshNormal));
+            float3 bitangent = cross(streams.meshNormal, tangent);
+            float3x3 tangentMatrix = float3x3(tangent, bitangent, streams.meshNormal);
+
+            blendedNormal = mul(blendedNormal, tangentMatrix);
+
+            streams.TerrainNormal = normalize(blendedNormal);
+            streams.normalWS = streams.TerrainNormal;
+        }
+
+        float3 DecodeNormal(float3 normal)
+        {
+            normal.y = 1.0f - normal.y;
+            normal = (2.0f * normal) - 1.0f;
+            normal.z = sqrt(max(0.001f, 1.0f - (normal.x * normal.x + normal.y * normal.y)));
+            return normalize(normal);
+        }
+
+        MaterialSample SampleMaterialGrad(float uvScale, int index)
+        {
+            float2 uv = streams.PositionWS.xz * uvScale;
+            float2 ddx_uv = ddx(uv);
+            float2 ddy_uv = ddy(uv);
+
+            MaterialSample result;
+            result.Diffuse = DiffuseArray.SampleGrad(LinearRepeatSampler, float3(uv, index), ddx_uv, ddy_uv).xyz;
+            result.Normal = NormalArray.SampleGrad(LinearRepeatSampler, float3(uv, index), ddx_uv, ddy_uv).xyz;
+            result.Roughness = RoughnessArray.SampleGrad(LinearRepeatSampler, float3(uv, index), ddx_uv, ddy_uv).x;
+
+            return result;
+        }
+    };
+}

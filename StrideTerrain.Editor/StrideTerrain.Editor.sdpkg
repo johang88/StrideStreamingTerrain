@@ -1,0 +1,21 @@
+!Package
+SerializedVersion: {Assets: 3.1.0.0}
+Meta:
+    Name: StrideTerrain.Editor
+    Version: 1.0.0
+    Authors: []
+    Owners: []
+    Dependencies: null
+AssetFolders:
+    -   Path: !dir Assets
+    -   Path: !dir Effects
+ResourceFolders:
+    - !dir Resources
+OutputGroupDirectories: {}
+ExplicitFolders: []
+Bundles: []
+TemplateFolders: []
+RootAssets:
+    - a5d32e12-8add-4e9b-ba0c-e0b7f9f2f02e:Valley_diffuse
+    - ce3e0af2-011c-4ceb-8c38-8460efbb5d1f:Valley_normal
+    - 18d52ae4-0c9b-4942-b7db-9a93141ec4f3:Valley_roughness

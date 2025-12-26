@@ -65,8 +65,8 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
         }
 
         data.RenderGrass?.IndirectBuffer?.Dispose();
-        data.RenderGrass?.WorldBuffer?.Dispose();
-        data.RenderGrass?.WorldInverseBuffer?.Dispose();
+        data.RenderGrass?.CulledWorldBuffer?.Dispose();
+        data.RenderGrass?.CulledWorldInverseBuffer?.Dispose();
     }
 
     public override void Draw(RenderContext context)
@@ -106,7 +106,7 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
             var component = componentData.Key;
             var data = componentData.Value;
 
-            if (data.RenderGrass.IndirectBuffer == null || data.RenderGrass.WorldBuffer == null || data.RenderGrass.WorldInverseBuffer == null 
+            if (data.RenderGrass.IndirectBuffer == null || data.RenderGrass.InstancesBuffer == null
                 || data.Size != component.Size || data.RenderModel == null || component.Model != data.Model)
             {
                 if (data.RenderModel != null)
@@ -132,10 +132,10 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
                 data.Size = component.Size;
 
                 data.RenderGrass.IndirectBuffer?.Dispose();
-                data.RenderGrass.WorldBuffer?.Dispose();
-                data.RenderGrass.WorldInverseBuffer?.Dispose();
+                data.RenderGrass.InstancesBuffer?.Dispose();
+                data.RenderGrass.CulledWorldInverseBuffer?.Dispose();
+                data.RenderGrass.CulledWorldInverseBuffer?.Dispose();
 
-                // TODO: This is temporary
                 DrawArgs[] drawArgs = [new()
                 {
                     BaseVertexLocation = 0,
@@ -148,31 +148,23 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
                 data.RenderGrass.IndirectBuffer = Buffer.New(graphicsDevice, (ReadOnlySpan<DrawArgs>)drawArgs, BufferFlags.ArgumentBuffer);
 
                 var bufferSize = data.Size * data.Size;
-                data.RenderGrass.WorldBuffer = Buffer.StructuredAppend.New<Matrix>(graphicsDevice, bufferSize);
-                data.RenderGrass.WorldInverseBuffer = Buffer.StructuredAppend.New<Matrix>(graphicsDevice, bufferSize);
+                data.RenderGrass.InstancesBuffer = Buffer.StructuredAppend.New(graphicsDevice, bufferSize, sizeof(float) * 8);
+                data.RenderGrass.CulledWorldBuffer = Buffer.StructuredAppend.New<Matrix>(graphicsDevice, bufferSize);
+                data.RenderGrass.CulledWorldInverseBuffer = Buffer.StructuredAppend.New<Matrix>(graphicsDevice, bufferSize);
 
                 component.Entity.GetOrCreate<ProfilingKeyComponent>().ProfilingKey = ProfilingKeyDraw;
             }
 
-            if (!component.FreezeCameraFrustum)
-            {
-                data.CameraFrustum[0] = new(camera.Frustum.LeftPlane.Normal, camera.Frustum.LeftPlane.D);
-                data.CameraFrustum[1] = new(camera.Frustum.RightPlane.Normal, camera.Frustum.RightPlane.D);
-                data.CameraFrustum[2] = new(camera.Frustum.TopPlane.Normal, camera.Frustum.TopPlane.D);
-                data.CameraFrustum[3] = new(camera.Frustum.BottomPlane.Normal, camera.Frustum.BottomPlane.D);
-                data.CameraFrustum[4] = new(camera.Frustum.NearPlane.Normal, camera.Frustum.NearPlane.D);
-                data.CameraFrustum[5] = new(camera.Frustum.FarPlane.Normal, camera.Frustum.FarPlane.D);
-            }
-
             var boundingRadius = data.RenderModel!.Model.BoundingSphere.Radius;
             if (boundingRadius <= 0)
-                boundingRadius = 1; // No idea why it keeps being 0
+                boundingRadius = 1; // No idea why it keeps being 0, apparently bug in stride!
 
             component.Model!.MeshInfos[0].BoundingSphere = new(Vector3.Zero, 1000000);
             component.Model.MeshInfos[0].BoundingBox = new(new(-10000, -10000, -10000), new(10000, 10000, 10000));
 
-            data.RenderGrass.WorldBuffer.InitialCounterOffset = 0;
-            data.RenderGrass.WorldInverseBuffer.InitialCounterOffset = 0;
+            data.RenderGrass.InstancesBuffer.InitialCounterOffset = 0;
+            data.RenderGrass.Size = data.Size;
+            data.RenderGrass.BoundingRadius = boundingRadius;
 
             // Populate instances
             var rng = new RandomSeed();
@@ -180,8 +172,7 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
             var seed = new Vector2(rng.GetFloat(rngSeed), rng.GetFloat(rngSeed + 1));
 
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.CameraPosition, cameraPosition);
-            _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.OutputWorld, data.RenderGrass.WorldBuffer);
-            _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.OutputWorldInverse, data.RenderGrass.WorldInverseBuffer);
+            _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.Instances, data.RenderGrass.InstancesBuffer);
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.Size, (uint)data.Size);
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.CellSize, component.CellSize);
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.FadeStartFraction, component.FadeStartFraction);
@@ -191,8 +182,6 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.ClumpSize, component.ClumpSize);
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.Seed, seed);
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.RotateAlongTerrainNormal, component.RotateAlongTerrainNormal);
-            _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.BoundingRadius, boundingRadius);
-            _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.FrustumPlanes, data.CameraFrustum);
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.ValidBackgroundTexturesIds, component.ValidBackgroundTexturesIds);
             _grassPopulateInstancesShader.Parameters.Set(GrassPopulateInstancesKeys.InstanceCount, (uint)(data.Size * data.Size));
 
@@ -208,12 +197,12 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
             _grassPopulateInstancesShader.Parameters.Set(TerrainDataKeys.TerrainTextureSize, TerrainRuntimeData.RuntimeTextureSize);
             _grassPopulateInstancesShader.Parameters.Set(TerrainDataKeys.InvUnitsPerTexel, 1.0f / terrain.TerrainData.Header.UnitsPerTexel);
 
-            _grassPopulateInstancesShader.ThreadGroupCounts = new(data.Size / 8, data.Size / 8, 1);
+            _grassPopulateInstancesShader.ThreadGroupCounts = new(ComputeHelpers.DispatchSize(8, data.Size), ComputeHelpers.DispatchSize(8, data.Size), 1);
             _grassPopulateInstancesShader.ThreadNumbers = new(8, 8, 1);
 
             _grassPopulateInstancesShader.Draw(renderDrawContext, "Grass.PopulateInstances");
 
-            renderDrawContext.CommandList.CopyCount(data.RenderGrass.WorldBuffer, data.RenderGrass.IndirectBuffer, 4);
+            data.RenderGrass.InstancesBuffer.InitialCounterOffset = -1;
         }
     }
 
@@ -223,13 +212,15 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
         public RenderGrass RenderGrass = new();
         public RenderModel? RenderModel;
         public int Size = 128;
-        public Vector4[] CameraFrustum = new Vector4[6];
     }
 }
 
 public class RenderGrass
 {
     public Buffer? IndirectBuffer;
-    public Buffer? WorldBuffer;
-    public Buffer? WorldInverseBuffer;
+    public Buffer? InstancesBuffer;
+    public Buffer? CulledWorldBuffer;
+    public Buffer? CulledWorldInverseBuffer;
+    public int Size;
+    public float BoundingRadius;
 }

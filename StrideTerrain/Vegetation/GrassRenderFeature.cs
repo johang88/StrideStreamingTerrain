@@ -2,9 +2,12 @@
 using Stride.Graphics;
 using Stride.Core;
 using System.Collections.Generic;
-using System.Numerics;
-using Stride.Core.Diagnostics;
 using Stride.Core.Threading;
+using Stride.Rendering.ComputeEffect;
+using System.Runtime.InteropServices;
+using Stride.Core.Mathematics;
+using System.Runtime.CompilerServices;
+using StrideTerrain.Rendering;
 
 namespace StrideTerrain.Vegetation;
 
@@ -13,8 +16,11 @@ public class GrassRenderFeature : SubRenderFeature
     public struct GrassData
     {
         public Buffer? IndirectBuffer;
-        public Buffer? WorldBuffer;
-        public Buffer? WorldInverseBuffer;
+        public Buffer? InstancesBuffer;
+        public Buffer? CulledWorldBuffer;
+        public Buffer? CulledWorldInverseBuffer;
+        public int Size;
+        public float BoundingRadius;
     }
 
     [DataMemberIgnore]
@@ -24,6 +30,13 @@ public class GrassRenderFeature : SubRenderFeature
     private StaticObjectPropertyKey<RenderEffect> _renderEffectKey;
     private LogicalGroupReference _instancingGroupKey;
 
+    private IndirectComputeEffectShader? _cullGrassShader;
+    private ComputeEffectShader? _setupIndirectDispatchShader;
+
+    private Buffer _indirectDispatchTempBuffer = null!;
+    private Buffer _indirectDispatchBuffer = null!;
+    private Vector4[] _frustumPlanes = new Vector4[6];
+
     protected override void InitializeCore()
     {
         base.InitializeCore();
@@ -31,6 +44,21 @@ public class GrassRenderFeature : SubRenderFeature
         _renderObjectGrassDataInfoKey = RootRenderFeature.RenderData.CreateStaticObjectKey<GrassData>();
         _renderEffectKey = ((RootEffectRenderFeature)RootRenderFeature).RenderEffectKey;
         _instancingGroupKey = ((RootEffectRenderFeature)RootRenderFeature).CreateDrawLogicalGroup("Instancing");
+
+        _cullGrassShader ??= new(Context)
+        {
+            ShaderSourceName = "GrassCullInstances"
+        };
+        _cullGrassShader.DisposeBy(this);
+
+        _setupIndirectDispatchShader ??= new (Context)
+        {
+            ShaderSourceName = "SetupIndirectDispatchArgs"
+        };
+        _setupIndirectDispatchShader.DisposeBy(this);
+
+        _indirectDispatchTempBuffer = Buffer.New(Context.GraphicsDevice, Marshal.SizeOf<DispatchArgs>(), BufferFlags.RawBuffer | BufferFlags.UnorderedAccess | BufferFlags.ShaderResource);
+        _indirectDispatchBuffer = Buffer.New(Context.GraphicsDevice, Marshal.SizeOf<DispatchArgs>(), BufferFlags.ArgumentBuffer);
     }
 
     public override void Extract()
@@ -52,7 +80,9 @@ public class GrassRenderFeature : SubRenderFeature
             if (renderModel == null)
                 continue;
 
-            if (!modelToGrassMap.TryGetValue(renderModel, out var renderGrass) || renderGrass.IndirectBuffer == null || renderGrass.WorldBuffer == null || renderGrass.WorldInverseBuffer == null)
+            if (!modelToGrassMap.TryGetValue(renderModel, out var renderGrass)
+                || renderGrass.IndirectBuffer == null || renderGrass.InstancesBuffer == null
+                || renderGrass.CulledWorldBuffer == null || renderGrass.CulledWorldInverseBuffer == null)
             {
                 continue;
             }
@@ -60,8 +90,11 @@ public class GrassRenderFeature : SubRenderFeature
             ref var grassData = ref renderObjectGrassData[renderMesh.StaticObjectNode];
 
             grassData.IndirectBuffer = renderGrass.IndirectBuffer;
-            grassData.WorldBuffer = renderGrass.WorldBuffer;
-            grassData.WorldInverseBuffer = renderGrass.WorldInverseBuffer;
+            grassData.InstancesBuffer = renderGrass.InstancesBuffer;
+            grassData.CulledWorldBuffer = renderGrass.CulledWorldBuffer;
+            grassData.CulledWorldInverseBuffer = renderGrass.CulledWorldInverseBuffer;
+            grassData.Size = renderGrass.Size;
+            grassData.BoundingRadius = renderGrass.BoundingRadius;
 
             renderMesh.IndirectBuffer = grassData.IndirectBuffer;
         }
@@ -89,8 +122,8 @@ public class GrassRenderFeature : SubRenderFeature
 
             if (instancingData.IndirectBuffer != null)
             {
-                renderNode.Resources.DescriptorSet.SetShaderResourceView(group.DescriptorEntryStart, instancingData.WorldBuffer);
-                renderNode.Resources.DescriptorSet.SetShaderResourceView(group.DescriptorEntryStart + 1, instancingData.WorldInverseBuffer);
+                renderNode.Resources.DescriptorSet.SetShaderResourceView(group.DescriptorEntryStart, instancingData.CulledWorldBuffer);
+                renderNode.Resources.DescriptorSet.SetShaderResourceView(group.DescriptorEntryStart + 1, instancingData.CulledWorldInverseBuffer);
             }
         }
     }
@@ -147,8 +180,49 @@ public class GrassRenderFeature : SubRenderFeature
 
             ref var grassData = ref renderObjectGrassData[renderMesh.StaticObjectNode];
 
-            if (grassData.IndirectBuffer == null)
+            if (grassData.IndirectBuffer == null || grassData.CulledWorldBuffer == null || grassData.CulledWorldInverseBuffer == null
+                || grassData.InstancesBuffer == null || _cullGrassShader == null || _setupIndirectDispatchShader == null)
                 continue;
+
+            // Prepare dispatch indirect buffer
+            context.CommandList.CopyCount(grassData.InstancesBuffer, _indirectDispatchTempBuffer, 0);
+
+            // We have to use a temporary buffer as DX11 does not allow us to bind the indirect args buffer directly
+            // at least as far as I have been able to figure out ...
+            _setupIndirectDispatchShader.Parameters.Set(SetupIndirectDispatchArgsKeys.IndirectArgsBuffer, _indirectDispatchTempBuffer);
+            _setupIndirectDispatchShader.Parameters.Set(SetupIndirectDispatchArgsKeys.ThreadsPerGroup, 64u);
+
+            _setupIndirectDispatchShader.ThreadGroupCounts = new(1, 1, 1);
+            _setupIndirectDispatchShader.ThreadNumbers = new(1, 1, 1);
+
+            _setupIndirectDispatchShader.Draw(context, "Grass.SetupIndirectDispatch");
+
+            context.CommandList.Copy(_indirectDispatchTempBuffer, _indirectDispatchBuffer);
+
+            // Cull instances
+            grassData.CulledWorldBuffer.InitialCounterOffset = 0;
+            grassData.CulledWorldInverseBuffer.InitialCounterOffset = 0;
+
+            _frustumPlanes[0] = new(renderView.Frustum.LeftPlane.Normal, renderView.Frustum.LeftPlane.D);
+            _frustumPlanes[1] = new(renderView.Frustum.RightPlane.Normal, renderView.Frustum.RightPlane.D);
+            _frustumPlanes[2] = new(renderView.Frustum.TopPlane.Normal, renderView.Frustum.TopPlane.D);
+            _frustumPlanes[3] = new(renderView.Frustum.BottomPlane.Normal, renderView.Frustum.BottomPlane.D);
+            _frustumPlanes[4] = new(renderView.Frustum.NearPlane.Normal, renderView.Frustum.NearPlane.D);
+            _frustumPlanes[5] = new(renderView.Frustum.FarPlane.Normal, renderView.Frustum.FarPlane.D);
+
+            _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.BoundingRadius, grassData.BoundingRadius);
+            _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.FrustumPlanes, _frustumPlanes);
+
+            _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.Instances, grassData.InstancesBuffer);
+            _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.OutputWorld, grassData.CulledWorldBuffer);
+            _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.OutputWorldInverse, grassData.CulledWorldInverseBuffer);
+
+            _cullGrassShader.IndirectBuffer = _indirectDispatchBuffer;
+            _cullGrassShader.ThreadNumbers = new(64, 1, 1);
+            _cullGrassShader.Draw(context, "Grass.Cull");
+
+            // Copy culled count to indirect draw buffer
+            context.CommandList.CopyCount(grassData.CulledWorldBuffer, grassData.IndirectBuffer, 4);
         }
     }
 }

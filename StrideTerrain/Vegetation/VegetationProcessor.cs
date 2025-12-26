@@ -68,6 +68,9 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
                     continue;
             }
 
+            if (data.ImpostorMaterial?.Passes == null || data.ImpostorMaterial.Passes.Count == 0)
+                continue;
+
             data.ImpostorMaterial!.Passes[0].Parameters.Set(MaterialImpostorDisplacementFeatureKeys.Positions, data.PositionsBuffer);
             data.ImpostorMaterial.Passes[0].Parameters.Set(MaterialImpostorDisplacementFeatureKeys.LodDistance, component.ImpostorLodDistance);
 

@@ -162,7 +162,7 @@ public class WeatherRenderFeature : RootRenderFeature
 
             context.RenderContext.Tags.TryGetValue(CubeMapRenderer.IsRenderingCubemap, out var isRenderingCubeMap);
             if (!isRenderingCubeMap)
-                RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, renderView, renderObject.Sun);
+                RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, skyLuminanceLut, renderView, renderObject.Sun);
 
             _depthShaderResourceView = null;
             //context.RenderContext.Allocator.ReleaseReference(aerialPerspectiveRenderTarget);
@@ -255,7 +255,7 @@ public class WeatherRenderFeature : RootRenderFeature
     }
 
     private void RenderVolumetricLightDirectional(RenderDrawContext context, AtmosphereParameters atmosphere, FogParameters fog, Vector3 sunDirection, Color3 sunColor,
-        Vector3 cameraPosition, Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut, RenderView renderView, RenderLight? light)
+        Vector3 cameraPosition, Matrix invViewProjection, Vector2 invViewSize, Texture transmittanceLut, Texture skyLuminanceLut, RenderView renderView, RenderLight? light)
     {
         if (_depthShaderResourceView == null || _renderVolumetricLightDirectional == null || light == null)
             return;
@@ -331,6 +331,7 @@ public class WeatherRenderFeature : RootRenderFeature
         _renderVolumetricLightDirectional.Parameters.Set(TransformationKeys.ProjectionInverse, projectionInverse);
 
         _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.TransmittanceLUT, transmittanceLut);
+        //_renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.SkyLuminanceLUT, skyLuminanceLut);
         _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.DepthTexture, _depthShaderResourceView);
         _renderVolumetricLightDirectional.Parameters.Set(TerrainDataKeys.TerrainShadowMap, terrain?.GpuTextureManager?.ShadowMap);
         _renderVolumetricLightDirectional.Parameters.Set(VolumetricLightDiretionalKeys.Atmosphere, atmosphere);

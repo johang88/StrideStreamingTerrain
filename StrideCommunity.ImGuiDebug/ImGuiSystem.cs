@@ -55,8 +55,12 @@ public class ImGuiSystem : GameSystemBase
 
     private Dictionary<Keys, ImGuiKey> _keys = [];
 
-    public ImGuiSystem([NotNull] IServiceRegistry registry, [NotNull] GraphicsDeviceManager graphicsDeviceManager, InputManager inputManager = null) : base(registry)
+    public Action AddFonts = null;
+
+    public ImGuiSystem([NotNull] IServiceRegistry registry, [NotNull] GraphicsDeviceManager graphicsDeviceManager, InputManager inputManager = null, Action addFonts = null) : base(registry)
     {
+        AddFonts = addFonts;
+
         input = inputManager ?? Services.GetService<InputManager>();
         Debug.Assert(input != null, "ImGuiSystem: InputManager must be available!");
 
@@ -214,9 +218,16 @@ public class ImGuiSystem : GameSystemBase
     unsafe void CreateFontTexture()
     {
         _io.Fonts.Clear();
-        // font data, important
-        var text = _io.Fonts.AddFontDefault();
-        text.Scale = Scale;
+
+        if (AddFonts!= null)
+        {
+            AddFonts();
+        }
+        else
+        {
+            var text = _io.Fonts.AddFontDefault();
+            text.Scale = Scale;
+        }
 
         byte* pixelData;
         int width;
