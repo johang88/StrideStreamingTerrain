@@ -22,6 +22,6 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
         public static readonly ValueParameterKey<float> VTMaxAniso = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> VTResolution = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<Vector3> VTCameraPosition = ParameterKeys.NewValue<Vector3>();
-        public static readonly ObjectParameterKey<Texture> IndirectionTexture = ParameterKeys.NewObject<Texture>();
+        public static readonly ValueParameterKey<Vector4> ClipmapOriginsPacked = ParameterKeys.NewValue<Vector4>();
     }
 }

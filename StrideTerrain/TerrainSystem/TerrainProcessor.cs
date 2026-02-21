@@ -112,7 +112,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 #endif
                 data.GpuTextureManager = new GpuTextureManager(data.TerrainData, graphicsDevice, TerrainRuntimeData.RuntimeTextureSize, data.StreamingManager);
                 data.MeshManager = new MeshManager(data, graphicsDevice, data.GpuTextureManager);
-                data.VirtualTexturingSystem ??= new(Services, graphicsDevice, graphicsDevice.Presenter.Description.BackBufferWidth, graphicsDevice.Presenter.Description.BackBufferHeight);
+                data.VirtualTexturingSystem ??= new(Services, graphicsDevice);
 
                 // Setup model.
                 data.ModelComponent = entity.GetOrCreate<ModelComponent>();
@@ -194,13 +194,13 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             parameters.Set(TerrainVirtualTextureKeys.VTCameraPosition, cameraPosition);
 
             // Update virtual texturing
-            if (data.VirtualTexturingSystem != null && camera != null)
+            if (data.VirtualTexturingSystem != null)
             {
                 data.VirtualTexturingSystem.TileRenderer.MaterialDiffuseRoughnessArray = parameters.Get(TerrainMaterialSamplingKeys.DiffuseRoughnessArray);
                 data.VirtualTexturingSystem.TileRenderer.MaterialNormalArray = parameters.Get(TerrainMaterialSamplingKeys.NormalArray);
-                data.VirtualTexturingSystem.Update(context.GetThreadContext(), camera, data);
+                data.VirtualTexturingSystem.Update(context.GetThreadContext(), cameraPosition, data);
 
-                parameters.Set(TerrainVirtualTextureKeys.IndirectionTexture, data.VirtualTexturingSystem.PhysicalAtlas.IndirectionTexture);
+                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked, data.VirtualTexturingSystem.ClipmapOriginsPacked);
                 parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalDiffuse, data.VirtualTexturingSystem.PhysicalAtlas.DiffuseAtlas);
                 parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalRoughness, data.VirtualTexturingSystem.PhysicalAtlas.RoughnessAtlas);
                 parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalNormal, data.VirtualTexturingSystem.PhysicalAtlas.NormalAtlas);
@@ -237,11 +237,6 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             if (CollapsingHeader("Heightmap"))
             {
                 Image(Data.GpuTextureManager.Heightmap.AtlasTexture, 512, 512);
-            }
-
-            if (CollapsingHeader("VT Indirection"))
-            {
-                Image(Data.VirtualTexturingSystem.PhysicalAtlas.IndirectionTexture, 512, 512);
             }
 
             if (CollapsingHeader("VT Diffuse"))

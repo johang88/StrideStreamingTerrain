@@ -1,4 +1,4 @@
-﻿namespace StrideTerrain.TerrainSystem.Effects.Material
+namespace StrideTerrain.TerrainSystem.Effects.Material
 {
     shader TerrainVirtualTextureSampling : TerrainVirtualTexture
     {
@@ -25,96 +25,46 @@
         VTMaterialSample SampleVirtualTerrain(float3 worldPosition, float3 worldNormal)
         {
             VTMaterialSample result;
-    
+
             //--- Step 1: Compute desired mip level ---
             float mipLevelF = ComputeVTMipLevel(worldPosition);
             int mipLevel = int(floor(mipLevelF));
-            float mipFrac = frac(mipLevelF);  // for trilinear blending
-    
+
             //--- Step 2: Page address at chosen mip ---
             VTPageAddress addr = ComputePageAddress(worldPosition, mipLevel);
-    
-            //--- Step 3: Page table lookup ---
-            VTPageInfo pageInfo = LookupPageTable(addr);
-    
-            //--- Step 4: Handle missing tiles with mip fallback ---
-            // If the requested tile is not valid, walk up the mip chain
-            [unroll]
-            for (int fallback = 0; fallback < 4 && !pageInfo.valid; fallback++)
-            {
-                mipLevel = min(mipLevel + 1, VT_MIP_COUNT - 1);
-                addr = ComputePageAddress(worldPosition, mipLevel);
-                pageInfo = LookupPageTable(addr);
-            }
-    
-            // If still not valid, return a default (should never happen if coarsest mip is always resident)
-            if (!pageInfo.valid)
+
+            //--- Step 3: Compute physical UV (toroidal clipmap — no indirection lookup) ---
+            float2 physUV = ComputePhysicalUV(addr);
+
+            //--- Step 4: Out-of-range → return neutral gray ---
+            if (physUV.x < 0)
             {
                 result.Diffuse   = float3(0.5, 0.5, 0.5);
                 result.Roughness = 0.5;
                 result.Normal    = worldNormal;
                 return result;
             }
-    
-            //--- Step 5: Compute physical UV ---
-            float2 physUV = ComputePhysicalUV(addr, pageInfo);
 
-            //--- Step 6: Sample physical atlases ---
-            // Use explicit gradients to ensure correct filtering despite UV discontinuities
-            // Recompute gradients in physical atlas space
+            //--- Step 5: Compute gradients and clamp to prevent cross-tile filtering ---
             float2 dUVdx_phys = ddx(physUV);
             float2 dUVdy_phys = ddy(physUV);
-    
-            // Clamp gradients to prevent sampling across tile boundaries
+
             float maxGrad = VT_TILE_SIZE / VT_ATLAS_SIZE * 0.5;
             dUVdx_phys = clamp(dUVdx_phys, -maxGrad, maxGrad);
             dUVdy_phys = clamp(dUVdy_phys, -maxGrad, maxGrad);
 
+            //--- Step 6: Sample physical atlases ---
             float4 diffuseRaw = PhysicalDiffuse.SampleGrad(
-                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys
-            );
+                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys);
             result.Diffuse = diffuseRaw.rgb;
-    
+
             float2 normalRaw = PhysicalNormal.SampleGrad(
-                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys
-            );
+                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys);
             result.Normal = DecodeOctahedral(normalRaw);
-    
+
             result.Roughness = PhysicalRoughness.SampleGrad(
-                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys
-            );
-    
-            //--- Step 7: Optional trilinear blend with next coarser mip ---
-            // Only if the finer mip was actually resident and blending is desired
-            // (Expensive — skip if mipFrac < threshold or if perf-constrained)
-            #ifdef VT_TRILINEAR
-            if (mipFrac > 0.1 && pageInfo.mipDelta == 0.0)
-            {
-                VTPageAddress addrCoarse = ComputePageAddress(worldPosition, mipLevel + 1);
-                VTPageInfo pageCoarse = LookupPageTable(addrCoarse);
-        
-                if (pageCoarse.valid)
-                {
-                    float2 physUVCoarse = ComputePhysicalUV(addrCoarse, pageCoarse);
-            
-                    float3 diffuseCoarse = PhysicalDiffuse.SampleGrad(
-                        PhysicalSampler, physUVCoarse, dUVdx_phys, dUVdy_phys
-                    ).rgb;
-                    float2 normalCoarse = PhysicalNormal.SampleGrad(
-                        PhysicalSampler, physUVCoarse, dUVdx_phys, dUVdy_phys
-                    );
-                    float roughCoarse = PhysicalRoughness.SampleGrad(
-                        PhysicalSampler, physUVCoarse, dUVdx_phys, dUVdy_phys
-                    );
-            
-                    result.Diffuse   = lerp(result.Diffuse, diffuseCoarse, mipFrac);
-                    result.Normal    = normalize(lerp(result.Normal, 
-                                                      DecodeOctahedral(normalCoarse), mipFrac));
-                    result.Roughness = lerp(result.Roughness, roughCoarse, mipFrac);
-                }
-            }
-            #endif
-    
+                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys);
+
             return result;
         }
 

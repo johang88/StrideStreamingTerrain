@@ -1,4 +1,3 @@
-﻿using SharpFont;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
@@ -13,33 +12,40 @@ namespace StrideTerrain.TerrainSystem.Rendering.VirtualTexuring;
 
 /// <summary>
 /// Renders terrain material into physical atlas tiles.
-/// Each tile is rendered as a fullscreen quad over the tile's world-space region,
-/// evaluating EvaluateTerrainMaterial() per texel.
+/// Each tile is rendered as a fullscreen triangle over the tile's world-space region
+/// (including a border expansion so the 4-pixel padding contains real neighbour data).
 /// </summary>
 public class TileRenderer : DynamicEffectRenderer
 {
     private readonly PhysicalAtlas _atlas;
 
-    // Staging render targets (uncompressed, tile-sized)
-    private readonly Texture _stagingDiffuse;  // RGBA8, 264×264
-    private readonly Texture _stagingNormal;   // RG16F, 264×264
-    private readonly Texture _stagingRoughness;// R8, 264×264
+    private readonly Texture _stagingDiffuse;    // RGBA8 sRGB, TileSizePadded×TileSizePadded
+    private readonly Texture _stagingNormal;     // RG16F
+    private readonly Texture _stagingRoughness;  // R8
 
     public Texture? MaterialDiffuseRoughnessArray { get; set; }
     public Texture? MaterialNormalArray { get; set; }
 
-    private Texture[] _renderTargets;
+    private readonly Texture[] _renderTargets;
 
     public TileRenderer(IServiceRegistry services, GraphicsDevice graphicsDevice, PhysicalAtlas atlas)
         : base(services, graphicsDevice, "TerrainMaterialTileRenderer")
     {
         _atlas = atlas;
 
-        int padded = VTConstants.TileSizePadded; // 264
+        int padded = VTConstants.TileSizePadded;
 
-        _stagingDiffuse = Texture.New2D(graphicsDevice, padded, padded, PixelFormat.R8G8B8A8_UNorm_SRgb, TextureFlags.RenderTarget | TextureFlags.ShaderResource);
-        _stagingNormal = Texture.New2D(graphicsDevice, padded, padded, PixelFormat.R16G16_Float, TextureFlags.RenderTarget | TextureFlags.ShaderResource);
-        _stagingRoughness = Texture.New2D(graphicsDevice, padded, padded, PixelFormat.R8_UNorm, TextureFlags.RenderTarget | TextureFlags.ShaderResource);
+        _stagingDiffuse = Texture.New2D(graphicsDevice, padded, padded,
+            PixelFormat.R8G8B8A8_UNorm_SRgb,
+            TextureFlags.RenderTarget | TextureFlags.ShaderResource);
+
+        _stagingNormal = Texture.New2D(graphicsDevice, padded, padded,
+            PixelFormat.R16G16_Float,
+            TextureFlags.RenderTarget | TextureFlags.ShaderResource);
+
+        _stagingRoughness = Texture.New2D(graphicsDevice, padded, padded,
+            PixelFormat.R8_UNorm,
+            TextureFlags.RenderTarget | TextureFlags.ShaderResource);
 
         _renderTargets = [_stagingDiffuse, _stagingNormal, _stagingRoughness];
     }
@@ -52,10 +58,7 @@ public class TileRenderer : DynamicEffectRenderer
         PipelineState.State.RasterizerState.CullMode = CullMode.None;
     }
 
-    /// <summary>
-    /// Render a batch of tiles into the physical atlas.
-    /// </summary>
-    public void RenderTiles(RenderDrawContext context, List<TileRequest> requests, RequestProcessor requestProcessor, TerrainRuntimeData data)
+    public void RenderTiles(RenderDrawContext context, List<TileRequest> requests, TerrainRuntimeData data)
     {
         if (MaterialDiffuseRoughnessArray == null || MaterialNormalArray == null)
             return;
@@ -66,24 +69,22 @@ public class TileRenderer : DynamicEffectRenderer
 
         foreach (var req in requests)
         {
-            long key = RequestProcessor.TileKey(req.TileX, req.TileY, req.MipLevel);
-            int slotIdx = _atlas.AllocateSlot(key);
+            int slotIdx = PhysicalAtlas.GetToroidalSlot(req.TileX, req.TileY, req.MipLevel);
 
-            // Compute world-space bounds for this tile
-            // Map directly to the tile's actual world extent. Border pixels (0-3 and 260-263) will fall
-            // slightly outside and sample from adjacent terrain regions naturally.
+            // World-space bounds for this tile, expanded by one border width on each side
+            // so the 4-pixel padding contains real terrain data from neighbouring tiles.
             float tileWorldSize = VTConstants.BaseTileWorld * MathF.Pow(2, req.MipLevel);
+            float borderWorld = tileWorldSize / VTConstants.TileSize * VTConstants.TileBorder;
 
-            float worldMinX = req.TileX * tileWorldSize;
-            float worldMinZ = req.TileY * tileWorldSize;
-            float worldMaxX = (req.TileX + 1) * tileWorldSize;
-            float worldMaxZ = (req.TileY + 1) * tileWorldSize;
+            float worldMinX = req.TileX * tileWorldSize - borderWorld;
+            float worldMinZ = req.TileY * tileWorldSize - borderWorld;
+            float worldMaxX = (req.TileX + 1) * tileWorldSize + borderWorld;
+            float worldMaxZ = (req.TileY + 1) * tileWorldSize + borderWorld;
 
-            //--- Step 1: Render to staging targets ---
+            //--- Render to staging targets ---
             commandList.SetRenderTargets(null, _renderTargets);
             commandList.SetViewport(new Viewport(0, 0, VTConstants.TileSizePadded, VTConstants.TileSizePadded));
 
-            // Set shader parameters
             Parameters.Set(TerrainMaterialTileRendererKeys.WorldBoundsMin, new Vector2(worldMinX, worldMinZ));
             Parameters.Set(TerrainMaterialTileRendererKeys.WorldBoundsMax, new Vector2(worldMaxX, worldMaxZ));
             Parameters.Set(TerrainMaterialSamplingKeys.DiffuseRoughnessArray, MaterialDiffuseRoughnessArray);
@@ -104,41 +105,29 @@ public class TileRenderer : DynamicEffectRenderer
             Parameters.Set(TerrainDataKeys.InvTerrainSize, 1.0f / (data.TerrainData.Header.Size * data.UnitsPerTexel));
 
             PrepareDraw(context);
-
-            // Draw fullscreen quad — the pixel shader evaluates the terrain material
             commandList.Draw(3);
 
-            //--- Step 2: Copy staging → atlas at the tile's slot region ---
+            //--- Copy staging → atlas slot ---
             var region = PhysicalAtlas.GetSlotRegion(slotIdx);
 
             commandList.CopyRegion(
                 _stagingDiffuse, 0,
-                new ResourceRegion(0, 0, 0,
-                    VTConstants.TileSizePadded, VTConstants.TileSizePadded, 1),
+                new ResourceRegion(0, 0, 0, VTConstants.TileSizePadded, VTConstants.TileSizePadded, 1),
                 _atlas.DiffuseAtlas, 0,
                 region.X, region.Y, 0);
 
             commandList.CopyRegion(
                 _stagingNormal, 0,
-                new ResourceRegion(0, 0, 0,
-                    VTConstants.TileSizePadded, VTConstants.TileSizePadded, 1),
+                new ResourceRegion(0, 0, 0, VTConstants.TileSizePadded, VTConstants.TileSizePadded, 1),
                 _atlas.NormalAtlas, 0,
                 region.X, region.Y, 0);
 
             commandList.CopyRegion(
                 _stagingRoughness, 0,
-                new ResourceRegion(0, 0, 0,
-                    VTConstants.TileSizePadded, VTConstants.TileSizePadded, 1),
+                new ResourceRegion(0, 0, 0, VTConstants.TileSizePadded, VTConstants.TileSizePadded, 1),
                 _atlas.RoughnessAtlas, 0,
                 region.X, region.Y, 0);
-
-            //--- Step 3: Update bookkeeping ---
-            _atlas.MarkResident(slotIdx, req.TileX, req.TileY, req.MipLevel);
-            requestProcessor.MarkResident(key);
         }
-
-        // Flush all indirection updates to GPU
-        _atlas.FlushIndirection(commandList);
     }
 
     public override void Dispose()

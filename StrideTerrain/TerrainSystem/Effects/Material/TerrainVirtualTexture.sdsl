@@ -1,53 +1,58 @@
-﻿namespace StrideTerrain.TerrainSystem.Effects.Material
+namespace StrideTerrain.TerrainSystem.Effects.Material
 {
     shader TerrainVirtualTexture : TerrainData, Texturing
     {
-        static const float  VT_TILE_SIZE       = 256.0;
-        static const float  VT_TILE_BORDER     = 4.0;
-        static const float  VT_TILE_SIZE_PADDED= 264.0;  // 256 + 2*4
-        static const float  VT_ATLAS_SIZE      = 8192.0;
-        static const float  VT_TILES_PER_AXIS  = 30.0;   // floor(8192/264)
-        static const int    VT_MIP_COUNT       = 9;
-        static const float  VT_BASE_TILE_WORLD = 0.5;     // mip 0 tile covers 0.5m
+        static const float  VT_TILE_SIZE        = 256.0;
+        static const float  VT_TILE_BORDER      = 4.0;
+        static const float  VT_TILE_SIZE_PADDED = 264.0;  // 256 + 2*4
+        static const float  VT_ATLAS_SIZE       = 8192.0;
+        static const int    VT_CLIPMAP_TILES    = 8;
+        static const int    VT_ATLAS_TILES_PER_ROW = 24;  // ceil(sqrt(9*64))
+        static const int    VT_MIP_COUNT        = 9;
+        static const float  VT_BASE_TILE_WORLD  = 0.5;    // mip 0 tile covers 0.5 m
 
         cbuffer PerMaterial.TerrainVT
         {
             stage float VTMipBias;
             stage float VTMaxAniso;
-            stage float VTResolution; // (TerrainSize / VT_BASE_TILE_WORLD) * VT_TILE_SIZE
+            stage float VTResolution;
             stage float3 VTCameraPosition;
         }
 
-        rgroup PerMaterial
+        // Clipmap origins: 2 mip levels packed per float4 to avoid HLSL 16-byte array element padding.
+        // Mip M origin: ClipmapOriginsPacked[M/2].xy (even M) or .zw (odd M)
+        cbuffer PerMaterial.TerrainVTClipmap
         {
-            stage Texture2DArray<float4> IndirectionTexture;
+            stage float4 ClipmapOriginsPacked[5];
+        }
+
+        int2 GetClipmapOrigin(int mip)
+        {
+            float4 p = ClipmapOriginsPacked[mip >> 1];
+            float2 o = (mip & 1) == 0 ? p.xy : p.zw;
+            return int2(o);
         }
 
         float ComputeVTMipLevel(float3 worldPos)
         {
-            float texelsPerMeter = VT_TILE_SIZE / VT_BASE_TILE_WORLD; // 512
-    
+            float texelsPerMeter = VT_TILE_SIZE / VT_BASE_TILE_WORLD;
+
             float2 dWorlddx = ddx(worldPos.xz);
             float2 dWorlddy = ddy(worldPos.xz);
-    
+
             float2 dTexdx = dWorlddx * texelsPerMeter;
             float2 dTexdy = dWorlddy * texelsPerMeter;
-    
-            float maxSqDeriv = max(dot(dTexdx, dTexdx), dot(dTexdy, dTexdy));
-            float mipLevel = 0.5 * log2(max(maxSqDeriv, 1.0)); // max with 1 to avoid negative/NaN
 
-            float dist = distance(worldPos, VTCameraPosition);
-            float distanceBias = log2(max(dist / VT_BASE_TILE_WORLD, 1.0));
-    
-            //mipLevel += VTMipBias + distanceBias;
+            float maxSqDeriv = max(dot(dTexdx, dTexdx), dot(dTexdy, dTexdy));
+            float mipLevel = 0.5 * log2(max(maxSqDeriv, 1.0));
 
             return clamp(mipLevel, 0.0, float(VT_MIP_COUNT - 1));
         }
 
         struct VTPageAddress
         {
-            int2   tileIndex;     // which tile in the virtual grid at this mip
-            float2 intraTileUV;   // [0..1] position within the tile
+            int2   tileIndex;    // which tile in the virtual grid at this mip
+            float2 intraTileUV;  // [0..1] position within the tile
             int    mipLevel;
         };
 
@@ -55,85 +60,43 @@
         {
             VTPageAddress addr;
             addr.mipLevel = mipLevel;
-    
-            // World-space size of one tile at this mip level
+
             float tileWorldSize = VT_BASE_TILE_WORLD * exp2(float(mipLevel));
-    
-            // Tile index (integer)
+
             float2 tileCoordF = worldPos.xz / tileWorldSize;
             addr.tileIndex = int2(floor(tileCoordF));
-    
-            // Fractional position within tile [0..1]
             addr.intraTileUV = frac(tileCoordF);
-    
+
             return addr;
         }
 
-        struct VTPageInfo
+        // Returns float2(-1,-1) when the tile is outside the clipmap window.
+        float2 ComputePhysicalUV(VTPageAddress addr)
         {
-            float2 physTileOrigin;   // UV origin of this tile in atlas [0..1]
-            float  mipDelta;         // how many mips coarser than requested
-            bool   valid;
-        };
+            int mip = addr.mipLevel;
+            int2 origin = GetClipmapOrigin(mip);
+            int2 relTile = addr.tileIndex - origin;
 
-        VTPageInfo LookupPageTable(VTPageAddress addr)
-        {
-            VTPageInfo info;
-    
-            // Indirection texture UV: tile index mapped to 512x512 texture
-            // We need to wrap/clamp tile indices to valid range
-            // For simplicity, use modular addressing within the clipmap
-            float2 indirUV = (float2(addr.tileIndex) + 0.5) / 512.0;
-    
-            // Sample indirection (point-filtered!)
-            float4 indirData = IndirectionTexture.SampleLevel(
-                PointSampler, 
-                float3(indirUV, float(addr.mipLevel)), 
-                0
-            );
-    
-            // Decode
-            float physTileX = indirData.r * 255.0;  // 0..29
-            float physTileY = indirData.g * 255.0;  // 0..29
-            float mipDelta  = indirData.b * 255.0;  // how many levels coarser
-            float flags     = indirData.a * 255.0;
-    
-            info.valid = (uint(flags) & (uint)1) != (uint)0;
-            info.mipDelta = mipDelta;
-    
-            // Physical tile origin in atlas UV space
-            // Each tile occupies VT_TILE_SIZE_PADDED texels, content starts at border offset
+            if (any(relTile < 0) || any(relTile >= VT_CLIPMAP_TILES))
+                return float2(-1, -1);  // out-of-range sentinel
+
+            // Toroidal slot index — handles negative tileIndex correctly
+            int2 clipIdx = int2(
+                ((addr.tileIndex.x % VT_CLIPMAP_TILES) + VT_CLIPMAP_TILES) % VT_CLIPMAP_TILES,
+                ((addr.tileIndex.y % VT_CLIPMAP_TILES) + VT_CLIPMAP_TILES) % VT_CLIPMAP_TILES);
+
+            int slotIdx = mip * VT_CLIPMAP_TILES * VT_CLIPMAP_TILES
+                        + clipIdx.y * VT_CLIPMAP_TILES + clipIdx.x;
+
+            int physTileX = slotIdx % VT_ATLAS_TILES_PER_ROW;
+            int physTileY = slotIdx / VT_ATLAS_TILES_PER_ROW;
+
             float tileStepUV = VT_TILE_SIZE_PADDED / VT_ATLAS_SIZE;
             float borderUV   = VT_TILE_BORDER / VT_ATLAS_SIZE;
-    
-            info.physTileOrigin = float2(physTileX, physTileY) * tileStepUV + borderUV;
-    
-            return info;
-        }
+            float2 physTileOrigin = float2(physTileX, physTileY) * tileStepUV + borderUV;
 
-        //-----------------------------------------------------------------------------
-        // Compute final physical atlas UV from page address + page info
-        //-----------------------------------------------------------------------------
-        float2 ComputePhysicalUV(VTPageAddress addr, VTPageInfo pageInfo)
-        {
-            // If the page table returned a coarser mip, we need to adjust the intra-tile UV
-            float2 uv = addr.intraTileUV;
-    
-            if (pageInfo.mipDelta > 0.0)
-            {
-                // The resident tile is coarser. Subdivide the intra-tile UV.
-                // At mipDelta=1, 2×2 virtual tiles map to 1 physical tile
-                // So we need to compute which sub-region of the coarser tile we're in
-                float scale = exp2(pageInfo.mipDelta);
-                float2 coarseTileUV = float2(addr.tileIndex) / scale;
-                uv = frac(coarseTileUV) * (1.0 / scale) + addr.intraTileUV / scale;
-            }
-    
-            // Map [0..1] intra-tile UV to physical atlas UV
             float tileSizeUV = VT_TILE_SIZE / VT_ATLAS_SIZE;
-            float2 physUV = pageInfo.physTileOrigin + uv * tileSizeUV;
-    
-            return physUV;
+            return physTileOrigin + addr.intraTileUV * tileSizeUV;
         }
     };
 }
