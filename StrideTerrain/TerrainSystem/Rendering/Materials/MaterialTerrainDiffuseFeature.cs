@@ -23,8 +23,7 @@ public class MaterialTerrainDiffuseFeature : MaterialFeature, IMaterialDiffuseFe
 
         context.AddStreamInitializer(MaterialShaderStage.Pixel, "TerrainMaterialStreamInitializer");
 
-        context.Parameters.Set(TerrainMaterialStreamInitializerKeys.DiffuseArray, DiffuseTextureArray);
-        context.Parameters.Set(TerrainMaterialStreamInitializerKeys.NormalArray, NormalTextureArray);
-        context.Parameters.Set(TerrainMaterialStreamInitializerKeys.RoughnessArray, RoughnessTextureArray);
+        context.Parameters.Set(TerrainMaterialSamplingKeys.DiffuseRoughnessArray, DiffuseTextureArray);
+        context.Parameters.Set(TerrainMaterialSamplingKeys.NormalArray, NormalTextureArray);
     }
 }

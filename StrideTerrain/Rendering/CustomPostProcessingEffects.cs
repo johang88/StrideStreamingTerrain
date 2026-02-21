@@ -244,7 +244,7 @@ public class CustomPostProcessingEffects : ImageEffect, IImageEffectRenderer, IP
         var bloomOutput = bloomInput;
 
         // Tone map
-        _toneMapShader.Parameters.Set(ExposureCommonKeys.Exposure, _exposure);
+        _toneMapShader!.Parameters.Set(ExposureCommonKeys.Exposure, _exposure);
         _toneMapShader.SetInput(0, currentInput);
         _toneMapShader.SetInput(1, bloomOutput);
         _toneMapShader.SetOutput(output);

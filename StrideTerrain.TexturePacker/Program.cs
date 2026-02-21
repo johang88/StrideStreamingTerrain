@@ -37,16 +37,112 @@ rootCommand.SetHandler((input, textureSize) =>
 
     using var textureTool = new TextureTool();
 
-    var diffuseTextures = new ConcurrentBag<(int Index, TexImage Texture)>();
+    var diffuseRoughnessTextures = new ConcurrentBag<(int Index, TexImage Texture)>();
     var normalTextures = new ConcurrentBag<(int Index, TexImage Texture)>();
-    var roughnessTextures = new ConcurrentBag<(int Index, TexImage Texture)>();
     var valid = true;
+
     Parallel.For(0, materials.Count, i =>
     {
         var material = materials[i];
-        diffuseTextures.Add((i, ValidateAndLoad(Path.Combine(input.FullName, material.Diffuse), TextureType.Diffuse)));
+
+        // Load and process diffuse + roughness together
+        diffuseRoughnessTextures.Add((i, LoadAndMergeDiffuseRoughness(
+            Path.Combine(input.FullName, material.Diffuse),
+            Path.Combine(input.FullName, material.Roughness))));
+
+        // Normal maps processed separately
         normalTextures.Add((i, ValidateAndLoad(Path.Combine(input.FullName, material.Normal), TextureType.Normal)));
-        roughnessTextures.Add((i, ValidateAndLoad(Path.Combine(input.FullName, material.Roughness), TextureType.Roughness)));
+
+        TexImage LoadAndMergeDiffuseRoughness(string diffusePath, string roughnessPath)
+        {
+            // Load both textures (sRGB for diffuse, linear for roughness)
+            var diffuse = textureTool.Load(diffusePath, isSRgb: true);
+            var roughness = textureTool.Load(roughnessPath, isSRgb: false);
+
+            // Decompress to raw pixel data
+            textureTool.Decompress(diffuse, isSRgb: true);
+            textureTool.Decompress(roughness, isSRgb: false);
+
+            // Validate square textures
+            if (diffuse.Width != diffuse.Height)
+            {
+                Console.WriteLine($"Non square texture {diffusePath}");
+                valid = false;
+                return diffuse;
+            }
+            if (roughness.Width != roughness.Height)
+            {
+                Console.WriteLine($"Non square texture {roughnessPath}");
+                valid = false;
+                return diffuse;
+            }
+
+            // Resize if needed
+            if (diffuse.Width != textureSize)
+            {
+                Console.WriteLine($"Resizing {diffusePath}");
+                textureTool.Resize(diffuse, textureSize, textureSize, Filter.Rescaling.Lanczos3);
+            }
+            if (roughness.Width != textureSize)
+            {
+                Console.WriteLine($"Resizing {roughnessPath}");
+                textureTool.Resize(roughness, textureSize, textureSize, Filter.Rescaling.Lanczos3);
+            }
+
+            // Merge: copy roughness R channel into diffuse A channel
+            Console.WriteLine($"Merging {diffusePath} + {roughnessPath}");
+            MergeRoughnessIntoAlpha(diffuse, roughness);
+
+            // Generate mip maps and compress
+            Console.WriteLine($"Generating mip maps for {diffusePath}");
+            textureTool.GenerateMipMaps(diffuse, Filter.MipMapGeneration.Box);
+
+            Console.WriteLine($"Compressing {diffusePath} (with roughness in alpha)");
+            textureTool.Compress(diffuse, PixelFormat.BC3_UNorm_SRgb, TextureQuality.Best);
+
+            roughness.Dispose();
+            return diffuse;
+        }
+
+        void MergeRoughnessIntoAlpha(TexImage diffuse, TexImage roughness)
+        {
+            int pixelCount = diffuse.Width * diffuse.Height;
+
+            // Determine bytes per pixel from format
+            int diffuseBpp = GetBytesPerPixel(diffuse.Format);
+            int roughnessBpp = GetBytesPerPixel(roughness.Format);
+
+            Console.WriteLine($"  Diffuse format: {diffuse.Format} ({diffuseBpp} bpp)");
+            Console.WriteLine($"  Roughness format: {roughness.Format} ({roughnessBpp} bpp)");
+
+            unsafe
+            {
+                byte* diffusePtr = (byte*)diffuse.Data.ToPointer();
+                byte* roughnessPtr = (byte*)roughness.Data.ToPointer();
+
+                for (int p = 0; p < pixelCount; p++)
+                {
+                    // Diffuse: write to alpha channel (4th byte in RGBA)
+                    // Roughness: read from R channel (1st byte)
+                    diffusePtr[p * diffuseBpp + 3] = roughnessPtr[p * roughnessBpp];
+                }
+            }
+        }
+
+        int GetBytesPerPixel(PixelFormat format)
+        {
+            return format switch
+            {
+                PixelFormat.R8G8B8A8_UNorm => 4,
+                PixelFormat.R8G8B8A8_UNorm_SRgb => 4,
+                PixelFormat.B8G8R8A8_UNorm => 4,
+                PixelFormat.B8G8R8A8_UNorm_SRgb => 4,
+                PixelFormat.R8_UNorm => 1,
+                PixelFormat.R32G32B32A32_Float => 16,
+                PixelFormat.R32G32B32_Float => 12,
+                _ => throw new NotSupportedException($"Unknown format: {format}")
+            };
+        }
 
         TexImage ValidateAndLoad(string path, TextureType textureType)
         {
@@ -65,11 +161,8 @@ rootCommand.SetHandler((input, textureSize) =>
                 textureTool.Resize(texture, textureSize, textureSize, Filter.Rescaling.Lanczos3);
             }
 
-            var outputFormat = PixelFormat.BC1_UNorm_SRgb;
-            if (textureType == TextureType.Normal)
-                outputFormat = PixelFormat.BC5_UNorm;
-            else if (textureType == TextureType.Roughness)
-                outputFormat = PixelFormat.BC4_UNorm;
+            // Normal maps use BC5 (two-channel)
+            var outputFormat = PixelFormat.BC5_UNorm;
 
             Console.WriteLine($"Generating mip maps for {path}");
             textureTool.GenerateMipMaps(texture, Filter.MipMapGeneration.Box);
@@ -89,16 +182,13 @@ rootCommand.SetHandler((input, textureSize) =>
     List<TexImage> Resolve(IEnumerable<(int Index, TexImage Texture)> textures)
         => textures.OrderBy(x => x.Index).Select(x => x.Texture).ToList();
 
-    Console.WriteLine($"Creating diffuse texture array");
-    var diffuseArray = textureTool.CreateTextureArray(Resolve(diffuseTextures));
+    Console.WriteLine($"Creating diffuse+roughness texture array");
+    var diffuseRoughnessArray = textureTool.CreateTextureArray(Resolve(diffuseRoughnessTextures));
     Console.WriteLine($"Creating normal texture array");
     var normalArray = textureTool.CreateTextureArray(Resolve(normalTextures));
-    Console.WriteLine($"Creating roughness texture array");
-    var roughnessArray = textureTool.CreateTextureArray(Resolve(roughnessTextures));
 
-    textureTool.Save(diffuseArray, outputPath + "_diffuse.dds");
+    textureTool.Save(diffuseRoughnessArray, outputPath + "_diffuse.dds");
     textureTool.Save(normalArray, outputPath + "_normal.dds");
-    textureTool.Save(roughnessArray, outputPath + "_roughness.dds");
 
     Console.WriteLine($"Completed in {(DateTime.UtcNow - start).TotalSeconds:0.00} seconds.");
 }, inputOption, textureSizeOption);

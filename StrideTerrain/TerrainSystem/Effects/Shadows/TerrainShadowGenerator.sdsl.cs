@@ -13,7 +13,6 @@ using Stride.Graphics;
 using Stride.Shaders;
 using Stride.Core.Mathematics;
 using Buffer = Stride.Graphics.Buffer;
-using StrideTerrain.TerrainSystem.Rendering.Shadows;
 
 namespace StrideTerrain.TerrainSystem.Effects.Shadows
 {

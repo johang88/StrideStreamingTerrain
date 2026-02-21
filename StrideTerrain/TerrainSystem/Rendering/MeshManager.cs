@@ -3,15 +3,16 @@ using Stride.Graphics;
 using Stride.Rendering;
 using System;
 using System.Buffers;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using Buffer = Stride.Graphics.Buffer;
+
 namespace StrideTerrain.TerrainSystem.Rendering;
 
 /// <summary>
 /// Manages all mesh related data for the terrain such as the actual mesh and buffers for chunk data.
 /// 
-/// It is also responsible for updating the lod levels relative to the main camera each frame so that they can be consumed by the 
-/// render feature as well as issuing streaming requests.
+/// Optimized for zero per-frame GC allocations.
 /// </summary>
 public class MeshManager : IDisposable
 {
@@ -20,15 +21,20 @@ public class MeshManager : IDisposable
 
     private readonly ChunkData[] _chunkData;
     private readonly BoundingBoxExt[] _chunkBounds;
-    private int _chunkCount = 0;
+    private int _chunkCount;
     private readonly int[] _sectorToChunkMap;
+
+    // Pre-allocated work buffers - reused every frame instead of ArrayPool rent/return
+    private readonly int[] _chunksToProcess;
+    private readonly int[] _chunksTemp;
 
     public readonly Buffer ChunkBuffer;
     public readonly Buffer SectorToChunkMapBuffer;
     public readonly Buffer ChunkInstanceDataBuffer;
 
-    public Span<int> SectorToChunkMap => _sectorToChunkMap.AsSpan();
-    public Span<ChunkData> ChunkData => _chunkData.AsSpan();
+    // Expose as ReadOnlySpan where mutation isn't needed externally
+    public ReadOnlySpan<int> SectorToChunkMap => _sectorToChunkMap;
+    public ReadOnlySpan<ChunkData> ChunkData => new ReadOnlySpan<ChunkData>(_chunkData, 0, _chunkCount);
 
     public bool IsReady => _chunkCount > 0;
 
@@ -53,9 +59,13 @@ public class MeshManager : IDisposable
         _chunkBounds = new BoundingBoxExt[maxChunks];
         _sectorToChunkMap = new int[maxChunks];
 
+        // Pre-allocate work buffers once
+        _chunksToProcess = new int[maxChunks];
+        _chunksTemp = new int[maxChunks];
+
         ChunkBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, Marshal.SizeOf<ChunkData>(), true);
         SectorToChunkMapBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, sizeof(int), true);
-        ChunkInstanceDataBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, Marshal.SizeOf<int>(), true);
+        ChunkInstanceDataBuffer = Buffer.Structured.New(graphicsDevice, maxChunks, sizeof(int), true);
 
         Mesh.Draw.DrawCount = _terrain.TerrainData.Header.ChunkSize * _terrain.TerrainData.Header.ChunkSize * 6;
     }
@@ -67,230 +77,301 @@ public class MeshManager : IDisposable
         ChunkInstanceDataBuffer.Dispose();
     }
 
-    public void Update(Vector3 cameraPosition, Span<float> lodLevels)
+    public void Update(in Vector3 cameraPosition, ReadOnlySpan<float> lodLevels)
     {
-        var terrainSize = _terrain.TerrainData.Header.Size;
-        var chunkSize = _terrain.TerrainData.Header.ChunkSize;
+        var terrainData = _terrain.TerrainData;
+        var header = terrainData.Header;
+        var terrainSize = header.Size;
+        var chunkSize = header.ChunkSize;
+        var unitsPerTexel = _terrain.UnitsPerTexel;
 
         var chunksPerRowLod0 = terrainSize / chunkSize;
-        var maxChunks = chunksPerRowLod0 * chunksPerRowLod0;
 
-        // Setup chunk lod, these are always based on the main camera position, frustum culling of the chunks are done in the render feature
-        var maxLod = _terrain.TerrainData.Header.MaxLod; // Max lod = single chunk
-        var maxLodSetting = maxLod;
-        if (_terrain.MaximumLod >= 0)
-            maxLodSetting = Math.Min(_terrain.MaximumLod, maxLodSetting);
-
+        var maxLod = header.MaxLod;
+        var maxLodSetting = _terrain.MaximumLod >= 0
+            ? Math.Min(_terrain.MaximumLod, maxLod)
+            : maxLod;
         var minLod = Math.Max(0, _terrain.MinimumLod);
 
-        var chunksToProcess = ArrayPool<int>.Shared.Rent(maxChunks);
-        var chunksTemp = ArrayPool<int>.Shared.Rent(maxChunks);
+        // Use pre-allocated buffers
+        var chunksToProcess = _chunksToProcess;
+        var chunksTemp = _chunksTemp;
         var chunkTempCount = 0;
-
         var chunkCount = 0;
 
+        // Initialize with top-level LOD chunks
         var lod = maxLod;
         var scale = 1 << lod;
         var chunksPerRowCurrentLod = terrainSize / (scale * chunkSize);
-        var chunksPerRowNextLod = chunksPerRowCurrentLod * 2;
-        for (var y = 0; y < chunksPerRowCurrentLod; y++)
+        var chunksPerRowNextLod = chunksPerRowCurrentLod << 1;
+
+        // Flatten initial grid population
+        var initialCount = chunksPerRowCurrentLod * chunksPerRowCurrentLod;
+        for (var i = 0; i < initialCount; i++)
         {
-            for (var x = 0; x < chunksPerRowCurrentLod; x++)
-            {
-                chunksToProcess[chunkCount++] = y * chunksPerRowCurrentLod + x;
-            }
+            chunksToProcess[i] = i;
         }
+        chunkCount = initialCount;
 
         _chunkCount = 0;
+
+        // Cache frequently accessed values
+        var gpuTextureManager = _gpuTextureManager;
+        var chunks = terrainData.Chunks;
 
         // Process all pending chunks
         while (chunkCount > 0)
         {
+            var chunkOffset = chunkSize * scale;
+            var halfChunkOffset = chunkOffset * 0.5f;
+            var extent = scale * unitsPerTexel * chunkSize * 0.5f;
+            var extentDoubled = extent * 2.0f;
+
+            // Calculate LOD distance once per level
+            float lodDistance;
+            if (lodLevels.Length == 0)
+            {
+                lodDistance = 50f;
+            }
+            else if (lod < lodLevels.Length)
+            {
+                lodDistance = lodLevels[lod];
+            }
+            else
+            {
+                lodDistance = lodLevels[^1] * (1 << lod);
+            }
+
+            // Pre-calculate camera rect bounds (same for all chunks at this LOD)
+            var camRectMinX = cameraPosition.X - lodDistance;
+            var camRectMaxX = cameraPosition.X + lodDistance;
+            var camRectMinZ = cameraPosition.Z - lodDistance;
+            var camRectMaxZ = cameraPosition.Z + lodDistance;
+
             for (var i = 0; i < chunkCount; i++)
             {
                 var chunk = chunksToProcess[i];
-
                 var positionX = chunk % chunksPerRowCurrentLod;
                 var positionZ = chunk / chunksPerRowCurrentLod;
 
-                scale = 1 << lod;
-                var chunkOffset = chunkSize * scale;
+                var chunkIndex = terrainData.GetChunkIndex(lod, positionX, positionZ, chunksPerRowCurrentLod);
 
-                var chunkIndex = _terrain.TerrainData.GetChunkIndex(lod, positionX, positionZ, chunksPerRowCurrentLod);
+                // Calculate world position
+                var worldX = (positionX * chunkOffset + halfChunkOffset) * unitsPerTexel;
+                var worldZ = (positionZ * chunkOffset + halfChunkOffset) * unitsPerTexel;
 
-                var chunkWorldPosition = new Vector3(positionX * chunkOffset + (chunkOffset * 0.5f), 0, positionZ * chunkOffset + (chunkOffset * 0.5f)) * _terrain.UnitsPerTexel;
+                // Inline rectangle intersection check (avoid RectangleF allocation/method call)
+                var chunkMinX = worldX - extent;
+                var chunkMaxX = worldX + extent;
+                var chunkMinZ = worldZ - extent;
+                var chunkMaxZ = worldZ + extent;
 
-                var extent = scale * _terrain.UnitsPerTexel * chunkSize * 0.5f;
-                var maxHeight = _terrain.TerrainData.Header.MaxHeight; // TODO: Should use max height for chunk but there is some issue with it ...
-                var heightRange = maxHeight;
-                var halfHeightRange = heightRange * 0.5f;
-
-                var bounds = new BoundingBoxExt
-                {
-                    Center = chunkWorldPosition + new Vector3(0, halfHeightRange, 0),
-                    Extent = new(extent, heightRange, extent)
-                };
-
-                var lodDistance = lodLevels.Length == 0 ? 50 : (lod < lodLevels.Length ? lodLevels[lod] : (lodLevels[^1] * (1 << lod)));
-
-                var rect = new RectangleF(chunkWorldPosition.X - extent, chunkWorldPosition.Z - extent, extent * 2.0f, extent * 2.0f);
-                var cameraRect = new RectangleF(cameraPosition.X - lodDistance, cameraPosition.Z - lodDistance, lodDistance * 2.0f, lodDistance * 2.0f);
-
-                // Split if desired, otherwise add instance for current lod level
-                cameraRect.Intersects(ref rect, out var shouldSplit);
+                var shouldSplit = chunkMinX < camRectMaxX && chunkMaxX > camRectMinX &&
+                                  chunkMinZ < camRectMaxZ && chunkMaxZ > camRectMinZ;
                 shouldSplit &= lod > minLod;
                 if (lod > maxLodSetting) shouldSplit = true;
 
                 // If max lod then skip if chunk is not resident yet
-                // Cannot happen for other lod's as the chunk wont be split if child chunks are not resident.
-                if (lod == maxLod && !_gpuTextureManager!.RequestChunk(_terrain.TerrainData.GetChunkIndex(lod, positionX, positionZ, chunksPerRowCurrentLod)))
+                if (lod == maxLod && !gpuTextureManager.RequestChunk(chunkIndex))
                     continue;
 
-                // Request streaming if desired, chunk will only be split into next lod if all children are resident.
+                // Check child chunk residency if splitting
                 if (shouldSplit)
                 {
-                    if (!_gpuTextureManager!.RequestChunk(_terrain.TerrainData.GetChunkIndex(lod - 1, positionZ * 2 * chunksPerRowNextLod + (positionX * 2)))) shouldSplit = false;
-                    if (!_gpuTextureManager!.RequestChunk(_terrain.TerrainData.GetChunkIndex(lod - 1, positionZ * 2 * chunksPerRowNextLod + (positionX * 2 + 1)))) shouldSplit = false;
-                    if (!_gpuTextureManager!.RequestChunk(_terrain.TerrainData.GetChunkIndex(lod - 1, (positionZ * 2 + 1) * chunksPerRowNextLod + (positionX * 2)))) shouldSplit = false;
-                    if (!_gpuTextureManager!.RequestChunk(_terrain.TerrainData.GetChunkIndex(lod - 1, (positionZ * 2 + 1) * chunksPerRowNextLod + (positionX * 2 + 1)))) shouldSplit = false;
+                    var childBaseX = positionX << 1;
+                    var childBaseZ = positionZ << 1;
+                    var childLod = lod - 1;
+
+                    // Check all 4 children - use bitwise AND to avoid short-circuit branch mispredictions
+                    var child0 = terrainData.GetChunkIndex(childLod, childBaseZ * chunksPerRowNextLod + childBaseX);
+                    var child1 = terrainData.GetChunkIndex(childLod, childBaseZ * chunksPerRowNextLod + childBaseX + 1);
+                    var child2 = terrainData.GetChunkIndex(childLod, (childBaseZ + 1) * chunksPerRowNextLod + childBaseX);
+                    var child3 = terrainData.GetChunkIndex(childLod, (childBaseZ + 1) * chunksPerRowNextLod + childBaseX + 1);
+
+                    var allResident = gpuTextureManager.RequestChunk(child0) &
+                                      gpuTextureManager.RequestChunk(child1) &
+                                      gpuTextureManager.RequestChunk(child2) &
+                                      gpuTextureManager.RequestChunk(child3);
+                    shouldSplit = allResident;
                 }
 
                 if (shouldSplit && lod > minLod)
                 {
-                    chunksTemp[chunkTempCount++] = positionZ * 2 * chunksPerRowNextLod + (positionX * 2);
-                    chunksTemp[chunkTempCount++] = positionZ * 2 * chunksPerRowNextLod + (positionX * 2 + 1);
-                    chunksTemp[chunkTempCount++] = (positionZ * 2 + 1) * chunksPerRowNextLod + (positionX * 2);
-                    chunksTemp[chunkTempCount++] = (positionZ * 2 + 1) * chunksPerRowNextLod + (positionX * 2 + 1);
+                    var childBaseX = positionX << 1;
+                    var childBaseZ = positionZ << 1;
+
+                    chunksTemp[chunkTempCount] = childBaseZ * chunksPerRowNextLod + childBaseX;
+                    chunksTemp[chunkTempCount + 1] = childBaseZ * chunksPerRowNextLod + childBaseX + 1;
+                    chunksTemp[chunkTempCount + 2] = (childBaseZ + 1) * chunksPerRowNextLod + childBaseX;
+                    chunksTemp[chunkTempCount + 3] = (childBaseZ + 1) * chunksPerRowNextLod + childBaseX + 1;
+                    chunkTempCount += 4;
                 }
                 else
                 {
+                    // Map all LOD0 sectors covered by this chunk
                     var ratioToLod0 = chunksPerRowLod0 / chunksPerRowCurrentLod;
                     var offsetX = ratioToLod0 * positionX;
                     var offsetZ = ratioToLod0 * positionZ;
-                    var w = offsetX + ratioToLod0;
-                    var h = offsetZ + ratioToLod0;
-                    for (var z = offsetZ; z < h; z++)
-                    {
-                        for (var x = offsetX; x < w; x++)
-                        {
-                            if (z < 0 || x < 0 || z >= chunksPerRowLod0 || x > chunksPerRowLod0)
-                                continue;
+                    var endX = offsetX + ratioToLod0;
+                    var endZ = offsetZ + ratioToLod0;
 
-                            var index = z * chunksPerRowLod0 + x;
-                            _sectorToChunkMap[index] = _chunkCount;
+                    // Clamp to valid range
+                    var startX = Math.Max(0, offsetX);
+                    var startZ = Math.Max(0, offsetZ);
+                    endX = Math.Min(chunksPerRowLod0, endX);
+                    endZ = Math.Min(chunksPerRowLod0, endZ);
+
+                    var currentChunkIndex = _chunkCount;
+                    for (var z = startZ; z < endZ; z++)
+                    {
+                        var rowOffset = z * chunksPerRowLod0;
+                        for (var x = startX; x < endX; x++)
+                        {
+                            _sectorToChunkMap[rowOffset + x] = currentChunkIndex;
                         }
                     }
 
-                    var textureIndex = _gpuTextureManager!.GetTextureIndex(chunkIndex);
+                    // Get texture coordinates
+                    var textureIndex = gpuTextureManager.GetTextureIndex(chunkIndex);
+                    var (tx, ty) = gpuTextureManager.Heightmap!.GetCoordinates(textureIndex);
 
-                    var (tx, ty) = _gpuTextureManager!.Heightmap!.GetCoordinates(textureIndex);
+                    // Build ChunkData with batched bit operations
+                    ref var chunkData = ref _chunkData[_chunkCount];
+                    chunkData.PackedUv = tx | (ty << 16);
+                    chunkData.PackedPositionXZ = (positionX * chunkOffset) | ((positionZ * chunkOffset) << 16);
 
-                    _chunkData[_chunkCount].UvX = (ushort)tx;
-                    _chunkData[_chunkCount].UvY = (ushort)ty;
+                    // Pack Data1 (East will be set later, ChunkX, ChunkZ)
+                    chunkData.Data1 = (positionX << 8) | (positionZ << 16);
 
-                    _chunkData[_chunkCount].LodLevel = (byte)lod;
-                    _chunkData[_chunkCount].ChunkX = (byte)positionX;
-                    _chunkData[_chunkCount].ChunkZ = (byte)positionZ;
-                    _chunkData[_chunkCount].PositionX = (ushort)(positionX * chunkOffset);
-                    _chunkData[_chunkCount].PositionZ = (ushort)(positionZ * chunkOffset);
-                    _chunkBounds[_chunkCount] = bounds;
+                    // Pack Data0 (LodLevel, North/South/West will be set later)
+                    chunkData.Data0 = (byte)lod;
+
+                    // Calculate bounds
+                    ref var chunkInfo = ref chunks[chunkIndex];
+                    var minHeight = chunkInfo.MinHeight;
+                    var maxHeight = chunkInfo.MaxHeight;
+                    var halfHeightRange = (maxHeight - minHeight) * 0.5f;
+
+                    _chunkBounds[_chunkCount] = new BoundingBoxExt
+                    {
+                        Center = new Vector3(worldX, minHeight + halfHeightRange, worldZ),
+                        Extent = new Vector3(extent, halfHeightRange, extent)
+                    };
+
                     _chunkCount++;
                 }
             }
 
-            // Copy pending chunks for processing
-            chunkCount = 0;
-            for (var i = 0; i < chunkTempCount; i++)
+            // Swap buffers for next iteration (avoid copy)
+            chunkCount = chunkTempCount;
+            if (chunkTempCount > 0)
             {
-                chunksToProcess[i] = chunksTemp[i];
-                chunkCount++;
+                // Copy is unavoidable here, but we minimize it
+                System.Buffer.BlockCopy(chunksTemp, 0, chunksToProcess, 0, chunkTempCount * sizeof(int));
             }
 
-            chunksPerRowCurrentLod *= 2;
-            chunksPerRowNextLod *= 2;
+            chunksPerRowCurrentLod <<= 1;
+            chunksPerRowNextLod <<= 1;
+            scale >>= 1;
             lod--;
-
             chunkTempCount = 0;
         }
 
-        ArrayPool<int>.Shared.Return(chunksToProcess);
-        ArrayPool<int>.Shared.Return(chunksTemp);
+        // Calculate LOD differences between chunks
+        CalculateLodDifferences(terrainSize, chunkSize, chunksPerRowLod0);
+    }
 
-        // Calculate lod differences between chunks
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private void CalculateLodDifferences(int terrainSize, int chunkSize, int chunksPerRowLod0)
+    {
         for (var i = 0; i < _chunkCount; i++)
         {
             ref var chunk = ref _chunkData[i];
-            scale = 1 << chunk.LodLevel;
+            var lodLevel = chunk.LodLevel;
+            var scale = 1 << lodLevel;
             var chunksPerRow = terrainSize / (scale * chunkSize);
+            var ratioToLod0 = chunksPerRowLod0 / chunksPerRow;
 
             var x = chunk.ChunkX;
             var z = chunk.ChunkZ;
 
-            var ratioToLod0 = chunksPerRowLod0 / chunksPerRow;
+            var north = GetLodDifferenceInline(x, z - 1, chunksPerRowLod0, ratioToLod0, lodLevel);
+            var south = GetLodDifferenceInline(x, z + 1, chunksPerRowLod0, ratioToLod0, lodLevel);
+            var east = GetLodDifferenceInline(x + 1, z, chunksPerRowLod0, ratioToLod0, lodLevel);
+            var west = GetLodDifferenceInline(x - 1, z, chunksPerRowLod0, ratioToLod0, lodLevel);
 
-            chunk.North = GetLodDifference(x, z - 1, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
-            chunk.South = GetLodDifference(x, z + 1, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
-            chunk.East = GetLodDifference(x + 1, z, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
-            chunk.West = GetLodDifference(x - 1, z, chunksPerRowLod0, ratioToLod0, chunk.LodLevel);
+            // Batch update Data0 and Data1 with neighbor LOD differences
+            chunk.Data0 = (chunk.Data0 & 0xFF) | (north << 8) | (south << 16) | (west << 24);
+            chunk.Data1 = (chunk.Data1 & ~0xFF) | east;
         }
     }
 
-    public void UpdateBuffers(CommandList commandList)
-    {
-        ChunkBuffer.SetData(commandList, (ReadOnlySpan<ChunkData>)_chunkData.AsSpan(0, _chunkCount));
-        SectorToChunkMapBuffer.SetData(commandList, (ReadOnlySpan<int>)_sectorToChunkMap.AsSpan());
-    }
-
-    public void PrepareDraw(CommandList commandList, RenderMesh renderMesh, RenderView renderView)
-    {
-        var frustum = new BoundingFrustum(ref renderView.ViewProjection);
-
-        var invView = Matrix.Invert(renderView.View);
-        var cameraPosition = invView.TranslationVector;
-
-        // Frustum cull instances
-        var maxChunks = _terrain.ChunksPerRowLod0 * _terrain.ChunksPerRowLod0;
-        renderMesh.InstanceCount = 0;
-        var chunkInstanceData = ArrayPool<int>.Shared.Rent(maxChunks);
-        var distances = ArrayPool<float>.Shared.Rent(maxChunks);
-        for (var i = 0; i < _chunkCount; i++)
-        {
-            if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref _chunkBounds[i], renderView.VisiblityIgnoreDepthPlanes))
-                continue;
-
-            chunkInstanceData[renderMesh.InstanceCount] = i;
-
-            var center = _chunkBounds[i].Center;
-            distances[renderMesh.InstanceCount] = Vector3.DistanceSquared(cameraPosition, center);
-
-            renderMesh.InstanceCount++;
-        }
-
-        // Sort indices by distance
-        distances.AsSpan(0, renderMesh.InstanceCount).Sort(chunkInstanceData.AsSpan(0, renderMesh.InstanceCount));
-
-        // Upload to GPU.
-        ChunkInstanceDataBuffer.SetData(commandList, (ReadOnlySpan<int>)chunkInstanceData.AsSpan(0, renderMesh.InstanceCount));
-
-        ArrayPool<int>.Shared.Return(chunkInstanceData);
-        ArrayPool<float>.Shared.Return(distances);
-    }
-
-    byte GetLodDifference(int x, int z, int chunksPerRow, int ratioToLod0, int lod)
+    [MethodImpl(MethodImplOptions.AggressiveInlining)]
+    private byte GetLodDifferenceInline(int x, int z, int chunksPerRow, int ratioToLod0, int lod)
     {
         x *= ratioToLod0;
         z *= ratioToLod0;
 
-        if (x < 0 || z < 0 || x >= chunksPerRow || z >= chunksPerRow)
+        if ((uint)x >= (uint)chunksPerRow || (uint)z >= (uint)chunksPerRow)
         {
             return 0;
         }
-        else
+
+        var chunkIndex = _sectorToChunkMap[z * chunksPerRow + x];
+        if (chunkIndex < 0)
+            return 0;
+
+        var neighborLod = _chunkData[chunkIndex].LodLevel;
+        return (byte)Math.Max(0, neighborLod - lod);
+    }
+
+    public void UpdateBuffers(CommandList commandList)
+    {
+        ChunkBuffer.SetData(commandList, new ReadOnlySpan<ChunkData>(_chunkData, 0, _chunkCount));
+        SectorToChunkMapBuffer.SetData(commandList, (ReadOnlySpan<int>)_sectorToChunkMap);
+    }
+
+    public int PrepareDraw(CommandList commandList, Matrix viewProjection, Matrix view, bool visiblityIgnoreDepthPlanes = false)
+    {
+        var frustum = new BoundingFrustum(ref viewProjection);
+
+        var invView = Matrix.Invert(view);
+        var cameraPosition = invView.TranslationVector;
+
+        var maxChunks = _terrain.ChunksPerRowLod0 * _terrain.ChunksPerRowLod0;
+        var instanceCount = 0;
+
+        // Use pre-allocated buffers from ArrayPool (or could add more permanent buffers to class)
+        var chunkInstanceData = ArrayPool<int>.Shared.Rent(maxChunks);
+        var distances = ArrayPool<float>.Shared.Rent(maxChunks);
+
+        try
         {
-            var chunkIndex = _sectorToChunkMap[z * chunksPerRow + x];
-            if (chunkIndex == -1)
-                return 0;
-            return (byte)Math.Max(0, _chunkData[chunkIndex].LodLevel - lod);
+            for (var i = 0; i < _chunkCount; i++)
+            {
+                ref readonly var bounds = ref _chunkBounds[i];
+                if (!VisibilityGroup.FrustumContainsBox(ref frustum, ref Unsafe.AsRef(in bounds), visiblityIgnoreDepthPlanes))
+                    continue;
+
+                chunkInstanceData[instanceCount] = i;
+                distances[instanceCount] = Vector3.DistanceSquared(cameraPosition, bounds.Center);
+                instanceCount++;
+            }
+
+            // Sort indices by distance
+            var distSpan = distances.AsSpan(0, instanceCount);
+            var idxSpan = chunkInstanceData.AsSpan(0, instanceCount);
+            distSpan.Sort(idxSpan);
+
+            // Upload to GPU
+            ChunkInstanceDataBuffer.SetData(commandList, (ReadOnlySpan<int>)idxSpan);
+
+            return instanceCount;
+        }
+        finally
+        {
+            ArrayPool<int>.Shared.Return(chunkInstanceData);
+            ArrayPool<float>.Shared.Return(distances);
         }
     }
 }

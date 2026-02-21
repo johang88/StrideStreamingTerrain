@@ -5,6 +5,7 @@ using Stride.Rendering;
 using StrideTerrain.Common;
 using StrideTerrain.TerrainSystem.Physics;
 using StrideTerrain.TerrainSystem.Rendering;
+using StrideTerrain.TerrainSystem.Rendering.VirtualTexuring;
 using StrideTerrain.TerrainSystem.Streaming;
 using System;
 
@@ -22,6 +23,7 @@ public sealed class TerrainRuntimeData : IDisposable
     public PhysicsManager? PhysicsManager;
     public GpuTextureManager? GpuTextureManager;
     public MeshManager? MeshManager;
+    public VirtualTexturingSystem? VirtualTexturingSystem;
 
     public float UnitsPerTexel => TerrainData.Header.UnitsPerTexel;
     public int MaximumLod;
@@ -169,6 +171,9 @@ public sealed class TerrainRuntimeData : IDisposable
 
         GpuTextureManager?.Dispose();
         GpuTextureManager = null;
+
+        VirtualTexturingSystem?.Dispose();
+        VirtualTexturingSystem = null;
     }
 }
 

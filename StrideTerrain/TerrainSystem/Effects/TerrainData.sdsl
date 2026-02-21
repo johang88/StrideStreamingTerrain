@@ -26,6 +26,7 @@
             stage float InvTerrainTextureSize;
             stage float TerrainTextureSize;
             stage float InvTerrainSize;
+            stage float TerrainSize;
             stage float InvShadowMapSize;
             stage float MaxHeight;
             stage float InvMaxHeight;

@@ -6,20 +6,4 @@
 // and re-save the associated .sdfx.
 // </auto-generated>
 
-using System;
-using Stride.Core;
-using Stride.Rendering;
-using Stride.Graphics;
-using Stride.Shaders;
-using Stride.Core.Mathematics;
-using Buffer = Stride.Graphics.Buffer;
-
-namespace StrideTerrain.TerrainSystem.Effects.Material
-{
-    public static partial class TerrainMaterialStreamInitializerKeys
-    {
-        public static readonly ObjectParameterKey<Texture> DiffuseArray = ParameterKeys.NewObject<Texture>();
-        public static readonly ObjectParameterKey<Texture> NormalArray = ParameterKeys.NewObject<Texture>();
-        public static readonly ObjectParameterKey<Texture> RoughnessArray = ParameterKeys.NewObject<Texture>();
-    }
-}
+// Nothing to generate

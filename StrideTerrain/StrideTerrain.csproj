@@ -70,7 +70,33 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Rendering\Effects\FullscreenTriangle.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Rendering\Effects\ToneMapASEC.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainDisplacement.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialSampling.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>TerrainMaterialSampling.sdsl</DependentUpon>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialDiffuseTileRenderer.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialTileRenderer.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
@@ -95,7 +121,28 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainVirtualTextureSampling.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainVirtualTextureFeedback.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Material\TerrainVirtualTexture.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	    <DependentUpon>TerrainVirtualTexture.sdsl</DependentUpon>
+	  </Compile>
 	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainShadowGenerator.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
@@ -223,8 +270,23 @@
 	  <None Update="Rendering\Effects\BloomBrightPass.sdsl">
 	    <LastGenOutput>BloomBrightPass.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="Rendering\Effects\FullscreenTriangle.sdsl">
+	    <LastGenOutput>FullscreenTriangle.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Rendering\Effects\ToneMapASEC.sdsl">
 	    <LastGenOutput>ToneMapASEC.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainDisplacement.sdsl">
+	    <LastGenOutput>TerrainDisplacement.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialSampling.sdsl">
+	    <LastGenOutput>TerrainMaterialSampling.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialDiffuseTileRenderer.sdsl">
+	    <LastGenOutput>TerrainMaterialDiffuseTileRenderer.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialTileRenderer.sdsl">
+	    <LastGenOutput>TerrainMaterialTileRenderer.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl">
 	    <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
@@ -238,8 +300,20 @@
 	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialStreams.sdsl">
 	    <LastGenOutput>TerrainMaterialStreams.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTextureSampling.sdsl">
+	    <LastGenOutput>TerrainVirtualTextureSampling.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTextureFeedback.sdsl">
+	    <LastGenOutput>TerrainVirtualTextureFeedback.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTexture.sdsl">
+	    <LastGenOutput>TerrainVirtualTexture.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl">
 	    <LastGenOutput>TerrainShadowBase.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowGenerator.sdsl">
+	    <LastGenOutput>TerrainShadowGenerator.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="TerrainSystem\Effects\TerrainData.sdsl">
 	    <LastGenOutput>TerrainData.sdsl.cs</LastGenOutput>

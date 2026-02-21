@@ -8,12 +8,17 @@ using Stride.Games;
 using Stride.Graphics;
 using Stride.Profiling;
 using Stride.Rendering;
+using StrideCommunity.ImGuiDebug;
 using StrideTerrain.Rendering;
+using StrideTerrain.TerrainSystem.Effects.Material;
 using StrideTerrain.TerrainSystem.Rendering;
+using StrideTerrain.TerrainSystem.Rendering.VirtualTexuring;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.InteropServices;
+using static Hexa.NET.ImGui.ImGui;
+using static StrideCommunity.ImGuiDebug.ImGuiExtension;
 
 namespace StrideTerrain.TerrainSystem;
 
@@ -21,14 +26,14 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 {
     private static readonly ProfilingKey ProfilingKeyUpdate = new("Terrain.Update");
     private static readonly ProfilingKey ProfilingKeyChunk = new("Terrain.Chunk");
-
+    
     private readonly Dictionary<RenderModel, TerrainRuntimeData> _modelToTerrainMap = [];
-
+    
     public VisibilityGroup VisibilityGroup { get; set; } = null!;
-
     public TerrainRuntimeData? TerrainData => _modelToTerrainMap.FirstOrDefault().Value;
-
     public Vector3? OverrideCameraPosition { get; set; }
+
+    private DebugInterface? _debugInterface;
 
     protected override TerrainRuntimeData GenerateComponentData([NotNull] Entity entity, [NotNull] TerrainComponent component)
         => new();
@@ -47,6 +52,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
     {
         base.Update(time);
 
+        _debugInterface ??= new(Services);
+
         var graphicsDevice = Services.GetSafeServiceAs<IGraphicsDeviceService>().GraphicsDevice;
         var graphicsContext = Services.GetSafeServiceAs<GraphicsContext>();
         var contentManager = Services.GetSafeServiceAs<ContentManager>();
@@ -61,12 +68,14 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             if (component.Material == null)
             {
                 data.IsInitialized = false;
+                _debugInterface.Data = null;
                 continue;
             }
 
             if (component.TerrainData == null || component.TerrainStreamingData == null)
             {
                 data.IsInitialized = false;
+                _debugInterface.Data = null;
                 continue;
             }
 
@@ -103,6 +112,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 #endif
                 data.GpuTextureManager = new GpuTextureManager(data.TerrainData, graphicsDevice, TerrainRuntimeData.RuntimeTextureSize, data.StreamingManager);
                 data.MeshManager = new MeshManager(data, graphicsDevice, data.GpuTextureManager);
+                data.VirtualTexturingSystem ??= new(Services, graphicsDevice, graphicsDevice.Presenter.Description.BackBufferWidth, graphicsDevice.Presenter.Description.BackBufferHeight);
 
                 // Setup model.
                 data.ModelComponent = entity.GetOrCreate<ModelComponent>();
@@ -116,6 +126,8 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 
                 data.TerrainDataUrl = component.TerrainData.Url;
                 data.IsInitialized = true;
+
+                _debugInterface.Data = data;
             }
         }
     }
@@ -172,25 +184,27 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             data.StreamingManager?.ProcessPendingCompletions(1);
             data.MeshManager?.Update(cameraPosition, CollectionsMarshal.AsSpan(component.LodDistances));
 
-            //var maxLoadedChunks = (TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize) * TerrainRuntimeData.RuntimeTextureSize / data.TerrainData.Header.ChunkTextureSize;
-            if (data.StreamingManager != null && data.GpuTextureManager != null)
+            // Bind virtual texturing settings for terrain material.
+            // TODO: Set in render feature and make it work for all materials that need to sample terrain.
+            var parameters = data.ModelComponent.Materials[0].Passes[0].Parameters;
+            parameters.Set(TerrainVirtualTextureKeys.VTMipBias, VTConstants.MipBias);
+            parameters.Set(TerrainVirtualTextureKeys.VTMaxAniso, 4.0f);
+            float terrainSize = data.TerrainData.Header.Size * data.UnitsPerTexel;
+            parameters.Set(TerrainVirtualTextureKeys.VTResolution, (terrainSize / VTConstants.BaseTileWorld) * VTConstants.TileSize);
+            parameters.Set(TerrainVirtualTextureKeys.VTCameraPosition, cameraPosition);
+
+            // Update virtual texturing
+            if (data.VirtualTexturingSystem != null && camera != null)
             {
-                //_spriteBatch ??= new(graphicsDevice);
+                data.VirtualTexturingSystem.TileRenderer.MaterialDiffuseRoughnessArray = parameters.Get(TerrainMaterialSamplingKeys.DiffuseRoughnessArray);
+                data.VirtualTexturingSystem.TileRenderer.MaterialNormalArray = parameters.Get(TerrainMaterialSamplingKeys.NormalArray);
+                data.VirtualTexturingSystem.Update(context.GetThreadContext(), camera, data);
 
-                //_spriteBatch.Begin(graphicsContext);
-                //_spriteBatch.Draw(data.GpuTextureManager.Heightmap.AtlasTexture, new RectangleF(512, 512, 512, 512), Color4.White);
-                //_spriteBatch.End();
-
-                //debugTextSystem.Print($"Pending streaming requests: {data.StreamingManager.PendingStreamingRequests}", new(10, 240), new Color4(1, 0, 0, 1));
-                //debugTextSystem.Print($"Pending streaming completions: {data.StreamingManager.PendingCompletions}", new(10, 260), new Color4(1, 0, 0, 1));
-                //debugTextSystem.Print($"Texture Atlas Free Slots: {data.GpuTextureManager.FreeSlots}", new(10, 280), new Color4(1, 0, 0, 1));
+                parameters.Set(TerrainVirtualTextureKeys.IndirectionTexture, data.VirtualTexturingSystem.PhysicalAtlas.IndirectionTexture);
+                parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalDiffuse, data.VirtualTexturingSystem.PhysicalAtlas.DiffuseAtlas);
+                parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalRoughness, data.VirtualTexturingSystem.PhysicalAtlas.RoughnessAtlas);
+                parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalNormal, data.VirtualTexturingSystem.PhysicalAtlas.NormalAtlas);
             }
-            //debugTextSystem.Print($"Resident chunks: {data.ResidentChunksCount}", new(10, 260), new Color4(1, 0, 0, 1));
-            //debugTextSystem.Print($"Active chunks: {data.ActiveChunks.Count}", new(10, 280), new Color4(1, 0, 0, 1));
-            //debugTextSystem.Print($"Pending chunks: {data.PendingChunks.Count}", new(10, 300), new Color4(1, 0, 0, 1));
-            //debugTextSystem.Print($"Max loaded chunks: {maxLoadedChunks}", new(10, 320), new Color4(1, 0, 0, 1));
-            //debugTextSystem.Print($"Physics chunks: {data.PhysicsEntities.Count}, Pool: {data.PhysicsEntityPool.Count}", new(10, 340), new Color4(1, 0, 0, 1));
-            //debugTextSystem.Print($"Camera: {data.CameraPosition.X:0.0f} {data.CameraPosition.Y:0.0f} {data.CameraPosition.Z:0.0f}", new(10, 360), new Color4(1, 0, 0, 1));
         }
     }
 
@@ -206,6 +220,45 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
         base.OnSystemRemove();
 
         VisibilityGroup.Tags.Remove(TerrainRenderFeature.ModelToTerrainMap);
+    }
+
+    class DebugInterface(IServiceRegistry services) : BaseWindow(services)
+    {
+        public TerrainRuntimeData? Data;
+
+        protected override void OnDestroy()
+        {
+        }
+
+        protected override void OnDraw(bool collapsed)
+        {
+            if (Data == null || Data.GpuTextureManager== null || Data.VirtualTexturingSystem == null) return;
+
+            if (CollapsingHeader("Heightmap"))
+            {
+                Image(Data.GpuTextureManager.Heightmap.AtlasTexture, 512, 512);
+            }
+
+            if (CollapsingHeader("VT Indirection"))
+            {
+                Image(Data.VirtualTexturingSystem.PhysicalAtlas.IndirectionTexture, 512, 512);
+            }
+
+            if (CollapsingHeader("VT Diffuse"))
+            {
+                Image(Data.VirtualTexturingSystem.PhysicalAtlas.DiffuseAtlas, 512, 512);
+            }
+
+            if (CollapsingHeader("VT Normal"))
+            {
+                Image(Data.VirtualTexturingSystem.PhysicalAtlas.NormalAtlas, 512, 512);
+            }
+
+            if (CollapsingHeader("VT Roughness"))
+            {
+                Image(Data.VirtualTexturingSystem.PhysicalAtlas.RoughnessAtlas, 512, 512);
+            }
+        }
     }
 }
 

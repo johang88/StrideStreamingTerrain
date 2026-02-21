@@ -51,7 +51,7 @@ public class WeatherTransparentRenderFeature :SubRenderFeature
 
                 renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableAerialPerspective, true);
                 renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableVolumetricSunLight, shouldRenderAtmosphereForRenderObject);
-                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableHeightFog, hasWeather && weather.Fog.Density > 0);
+                renderEffect.EffectValidator.ValidateParameter(WeatherForwardShadingEffectParameters.EnableHeightFog, hasWeather && weather!.Fog.Density > 0);
             }
         }
     }

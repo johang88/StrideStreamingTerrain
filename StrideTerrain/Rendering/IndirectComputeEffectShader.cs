@@ -94,7 +94,7 @@ public class IndirectComputeEffectShader : DrawEffect
     }
 }
 
-
+#pragma warning disable CS0649
 struct DispatchArgs
 {
     public uint ThreadGroupCountX;
@@ -102,3 +102,4 @@ struct DispatchArgs
     public uint ThreadGroupCountZ;
     public uint Padding;
 };
+#pragma warning restore CS0649

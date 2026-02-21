@@ -1,8 +1,11 @@
-﻿using Stride.Core.Mathematics;
+﻿using Stride.Core;
+using Stride.Core.Mathematics;
 using Stride.Engine;
 using Stride.Input;
+using StrideCommunity.ImGuiDebug;
 using StrideTerrain.Sample.Actors;
 using StrideTerrain.Sample.Game;
+using StrideTerrain.TerrainSystem;
 namespace StrideTerrain.Sample.Player;
 
 public class PlayerController : SyncScript

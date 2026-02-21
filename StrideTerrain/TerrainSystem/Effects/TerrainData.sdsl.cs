@@ -28,6 +28,7 @@ namespace StrideTerrain.TerrainSystem.Effects
         public static readonly ValueParameterKey<float> InvTerrainTextureSize = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> TerrainTextureSize = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> InvTerrainSize = ParameterKeys.NewValue<float>();
+        public static readonly ValueParameterKey<float> TerrainSize = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> InvShadowMapSize = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> MaxHeight = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> InvMaxHeight = ParameterKeys.NewValue<float>();

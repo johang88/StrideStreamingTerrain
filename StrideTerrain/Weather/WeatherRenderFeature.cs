@@ -161,8 +161,8 @@ public class WeatherRenderFeature : RootRenderFeature
             //RenderFog(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize);
 
             context.RenderContext.Tags.TryGetValue(CubeMapRenderer.IsRenderingCubemap, out var isRenderingCubeMap);
-            if (!isRenderingCubeMap)
-                RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, skyLuminanceLut, renderView, renderObject.Sun);
+            //if (!isRenderingCubeMap)
+            //    RenderVolumetricLightDirectional(context, atmosphere, fog, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, skyLuminanceLut, renderView, renderObject.Sun);
 
             _depthShaderResourceView = null;
             //context.RenderContext.Allocator.ReleaseReference(aerialPerspectiveRenderTarget);

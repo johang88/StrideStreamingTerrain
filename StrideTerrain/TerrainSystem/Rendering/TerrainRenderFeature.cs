@@ -20,8 +20,6 @@ public class TerrainRenderFeature : SubRenderFeature
     [DataMember] public RenderStage? OpaqueRenderStage { get; set; }
     [DataMember] public RenderStage? GBufferRenderStage { get; set; }
 
-    private bool _hadPrepass = false;
-
     private ConstantBufferOffsetReference _chunkSizeOffset;
 
     private RenderMesh? _renderMesh;
@@ -58,8 +56,6 @@ public class TerrainRenderFeature : SubRenderFeature
 
             break; // Currently only support single terrain
         }
-
-        _hadPrepass = false;
     }
 
     public override unsafe void Prepare(RenderDrawContext context)
@@ -115,6 +111,7 @@ public class TerrainRenderFeature : SubRenderFeature
                 perFrameTerrain->InvTerrainTextureSize = TerrainRuntimeData.InvRuntimeTextureSize;
                 perFrameTerrain->TerrainTextureSize = TerrainRuntimeData.RuntimeTextureSize;
                 perFrameTerrain->InvTerrainSize = 1.0f / (data.TerrainData.Header.Size * data.UnitsPerTexel);
+                perFrameTerrain->TerrainSize = (data.TerrainData.Header.Size * data.UnitsPerTexel);
 
                 perFrameTerrain->InvShadowMapSize = 0.0f;
                 if (data.GpuTextureManager!.ShadowMap != null)
@@ -174,15 +171,10 @@ public class TerrainRenderFeature : SubRenderFeature
             return;
         }
 
-        using (var profilingScope = context.QueryManager.BeginProfile(Color4.Black, ProflingKeyCull))
-
         // Prepare and upload instancing data for the draw call.
-        //if (!_hadPrepass)
-        {
-            data.MeshManager!.PrepareDraw(context.CommandList, _renderMesh, renderView);
-            _renderMesh.MaterialPass.Parameters.Set(MaterialTerrainDisplacementKeys.ChunkInstanceData, data.MeshManager.ChunkInstanceDataBuffer);
-        }
+        using var profilingScope = context.QueryManager.BeginProfile(Color4.Black, ProflingKeyCull);
 
-        _hadPrepass = true;
+        _renderMesh.InstanceCount = data.MeshManager!.PrepareDraw(context.CommandList, renderView.ViewProjection, renderView.View, renderView.VisiblityIgnoreDepthPlanes);
+        _renderMesh.MaterialPass.Parameters.Set(TerrainDisplacementKeys.ChunkInstanceData, data.MeshManager.ChunkInstanceDataBuffer);
     }
 }

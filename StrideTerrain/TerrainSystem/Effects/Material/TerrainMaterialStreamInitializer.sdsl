@@ -1,21 +1,8 @@
 ﻿namespace StrideTerrain.TerrainSystem.Effects.Material
 {
-    shader TerrainMaterialStreamInitializer : IStreamInitializer, TerrainMaterialStreams, TerrainStreams, TerrainData, NormalStream, PositionStream4, Texturing
+    shader TerrainMaterialStreamInitializer 
+        : IStreamInitializer, TerrainMaterialStreams, TerrainStreams, NormalStream, PositionStream4, TerrainMaterialSampling, TerrainVirtualTextureSampling
     {
-        rgroup PerMaterial
-        {
-            stage Texture2DArray DiffuseArray;
-            stage Texture2DArray NormalArray;
-            stage Texture2DArray RoughnessArray;
-        }
-
-        struct MaterialSample
-        {
-            float3 Diffuse;
-            float3 Normal;
-            float Roughness;
-        };
-
         override void ResetStream()
         {
             base.ResetStream();
@@ -24,11 +11,16 @@
             normal.xz = TerrainNormalMap.SampleLevel(LinearSampler, streams.TexCoord, 0).xy * 2.0f - 1.0f;
             normal.y = sqrt(max(0.0f, 1.0f - (normal.x * normal.x + normal.z * normal.z)));
 
-            normal = normalize(normal);
-
             streams.meshNormal = normal;
 
-            float2 positionFract = frac(streams.TexCoord * TerrainTextureSize - 0.5f);
+            VTMaterialSample materialSample = SampleVirtualTerrain(streams.PositionWS.xyz, streams.meshNormal.xyz);
+
+            streams.TerrainDiffuse = materialSample.Diffuse;
+            streams.TerrainRoughness = materialSample.Roughness;
+            streams.TerrainNormal = materialSample.Normal;
+            streams.normalWS = streams.TerrainNormal;
+
+            /*float2 positionFract = frac(streams.TexCoord * TerrainTextureSize - 0.5f);
             float4 fractionalWeights = float4(
                 (1.0f - positionFract.x) * (1.0f - positionFract.y),
                 positionFract.x * (1.0f - positionFract.y),
@@ -75,111 +67,21 @@
             streams.TerrainDiffuse = background.Diffuse;
             streams.TerrainRoughness = background.Roughness;
             streams.TerrainNormal = normalize(backgroundNormal);
-            streams.normalWS = streams.TerrainNormal;
-
-            const float3 LODColors[9] = {
-                float3(1.0, 0.0, 0.0),   // Red
-                float3(0.0, 1.0, 0.0),   // Green
-                float3(0.0, 0.0, 1.0),   // Blue
-                float3(1.0, 1.0, 0.0),   // Yellow
-                float3(1.0, 0.0, 1.0),   // Magenta
-                float3(0.0, 1.0, 1.0),   // Cyan
-                float3(1.0, 0.5, 0.0),   // Orange
-                float3(0.5, 0.0, 1.0),   // Purple
-                float3(0.5, 1.0, 0.5)    // Light green
-            };
+            streams.normalWS = streams.TerrainNormal;*/
+            
+            //const float3 LODColors[9] = {
+            //    float3(1.0, 0.0, 0.0),   // Red
+            //    float3(0.0, 1.0, 0.0),   // Green
+            //    float3(0.0, 0.0, 1.0),   // Blue
+            //    float3(1.0, 1.0, 0.0),   // Yellow
+            //    float3(1.0, 0.0, 1.0),   // Magenta
+            //    float3(0.0, 1.0, 1.0),   // Cyan
+            //    float3(1.0, 0.5, 0.0),   // Orange
+            //    float3(0.5, 0.0, 1.0),   // Purple
+            //    float3(0.5, 1.0, 0.5)    // Light green
+            //};
 
             //streams.TerrainDiffuse *= LODColors[streams.LodLevel % 9];
-        }
-
-        MaterialSample SampleBackground(uint4 backgroundTextureIndices, uint4 backgroundUvScaling, float3 triPlanarWeights, float3 normalWS, float3 positionWS, float4 fractionalWeights)
-        {
-            const float scaleValues[8] = { 0.33f, 0.166f, 0.05f, 0.025f, 0.0125f, 0.0075f, 0.00375f, 0.0f };
-
-            MaterialSample a = TriPlanarMapping(backgroundTextureIndices.x, scaleValues[backgroundUvScaling.x], triPlanarWeights, normalWS, positionWS);
-            MaterialSample b = TriPlanarMapping(backgroundTextureIndices.y, scaleValues[backgroundUvScaling.y], triPlanarWeights, normalWS, positionWS);
-            MaterialSample c = TriPlanarMapping(backgroundTextureIndices.z, scaleValues[backgroundUvScaling.z], triPlanarWeights, normalWS, positionWS);
-            MaterialSample d = TriPlanarMapping(backgroundTextureIndices.w, scaleValues[backgroundUvScaling.w], triPlanarWeights, normalWS, positionWS);
-
-            MaterialSample result;
-            result.Diffuse = a.Diffuse * fractionalWeights.x + b.Diffuse * fractionalWeights.y + c.Diffuse * fractionalWeights.z + d.Diffuse * fractionalWeights.w;
-            result.Normal = a.Normal * fractionalWeights.x + b.Normal * fractionalWeights.y + c.Normal * fractionalWeights.z + d.Normal * fractionalWeights.w;
-            result.Roughness = a.Roughness * fractionalWeights.x + b.Roughness * fractionalWeights.y + c.Roughness * fractionalWeights.z + d.Roughness * fractionalWeights.w;
-
-            return result;
-        }
-
-        float3 DecodeNormal(float3 normal)
-        {
-            normal.y = 1.0f - normal.y;
-            normal = (2.0f * normal) - 1.0f;
-            normal.z = sqrt(max(0.001f, 1.0f - (normal.x * normal.x + normal.y * normal.y)));
-            return normalize(normal);
-        }
-
-        MaterialSample SampleMaterialGrad(float2 uv, int index, float2 ddx, float2 ddy)
-        {
-            MaterialSample result;
-            result.Diffuse = DiffuseArray.SampleGrad(AnisotropicRepeatSampler, float3(uv, index), ddx, ddy).xyz;
-            result.Normal = NormalArray.SampleGrad(AnisotropicRepeatSampler, float3(uv, index), ddx, ddy).xyz;
-            result.Roughness = RoughnessArray.SampleGrad(AnisotropicRepeatSampler, float3(uv, index), ddx, ddy).x;
-
-            return result;
-        }
-
-        MaterialSample TriPlanarMapping(uint textureIndex, float uvScale, float3 triPlanarWeights, float3 normalWS, float3 positionWS)
-        {
-            MaterialSample output;
-            output.Diffuse = float3(0, 0, 0);
-            output.Normal = float3(0, 0, 0);
-            output.Roughness = 0;
-
-            if (triPlanarWeights.x > 0.0f)
-            {
-                float2 uv = float2(-positionWS.z, positionWS.y) * uvScale; //-z +y
-
-                if (normalWS.x < 0.0f)
-                    uv = 1.0f - uv;
-
-                float2 ddx_uv = ddx(uv);
-                float2 ddy_uv = ddy(uv);
-
-                MaterialSample result = SampleMaterialGrad(uv, textureIndex, ddx_uv, ddy_uv);
-                output.Diffuse = result.Diffuse * triPlanarWeights.x;
-                output.Roughness = result.Roughness * triPlanarWeights.x;
-                output.Normal = result.Normal * triPlanarWeights.x;
-            }
-
-            if (triPlanarWeights.y > 0.0f)
-            {
-                float2 uv = positionWS.xz * uvScale; // +xz
-                
-                float2 ddx_uv = ddx(uv);
-                float2 ddy_uv = ddy(uv);
-
-                MaterialSample result = SampleMaterialGrad(uv, textureIndex, ddx_uv, ddy_uv);
-                output.Diffuse = output.Diffuse + result.Diffuse * triPlanarWeights.y;
-                output.Roughness = output.Roughness + result.Roughness * triPlanarWeights.y;
-                output.Normal = output.Normal + result.Normal * triPlanarWeights.y;
-            }
-
-            if (triPlanarWeights.z > 0.0f)
-            {
-                float2 uv = -positionWS.xy * uvScale; //-xy
-
-                if (normalWS.z < 0.0f)
-                    uv.y = 1.0f - uv.y;
-
-                float2 ddx_uv = ddx(uv);
-                float2 ddy_uv = ddy(uv);
-
-                MaterialSample result = SampleMaterialGrad(uv, textureIndex, ddx_uv, ddy_uv);
-                output.Diffuse = output.Diffuse + result.Diffuse * triPlanarWeights.z;
-                output.Roughness = output.Roughness + result.Roughness * triPlanarWeights.z;
-                output.Normal = output.Normal + result.Normal * triPlanarWeights.z;
-            }
-
-            return output;
         }
     };
 }

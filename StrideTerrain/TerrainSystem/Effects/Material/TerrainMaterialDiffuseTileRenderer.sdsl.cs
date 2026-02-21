@@ -14,12 +14,11 @@ using Stride.Shaders;
 using Stride.Core.Mathematics;
 using Buffer = Stride.Graphics.Buffer;
 
-namespace StrideTerrain.TerrainSystem.Effects.Shadows
+namespace StrideTerrain.TerrainSystem.Effects.Material
 {
-    public static partial class TerrainAtmosphereShadowKeys
+    public static partial class TerrainMaterialDiffuseTileRendererKeys
     {
-        public static readonly ValueParameterKey<Vector4> TerrainWorldSize = ParameterKeys.NewValue<Vector4>();
-        public static readonly ValueParameterKey<int> UseTerrainShadowMap = ParameterKeys.NewValue<int>(0);
-        public static readonly ObjectParameterKey<Texture> TerrainShadowMap = ParameterKeys.NewObject<Texture>();
+        public static readonly ValueParameterKey<Vector2> WorldBoundsMin = ParameterKeys.NewValue<Vector2>();
+        public static readonly ValueParameterKey<Vector2> WorldBoundsMax = ParameterKeys.NewValue<Vector2>();
     }
 }
