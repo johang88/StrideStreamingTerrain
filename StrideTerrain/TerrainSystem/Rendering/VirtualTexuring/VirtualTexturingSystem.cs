@@ -16,7 +16,7 @@ namespace StrideTerrain.TerrainSystem.Rendering.VirtualTexuring;
 public class VirtualTexturingSystem : IDisposable
 {
     private const int Mips = VTConstants.MipCount;
-    private const int CT = VTConstants.ClipmapTiles;
+    private const int CT   = VTConstants.ClipmapTiles;
 
     public PhysicalAtlas PhysicalAtlas { get; }
     public TileRenderer TileRenderer { get; }
@@ -26,21 +26,33 @@ public class VirtualTexturingSystem : IDisposable
     private readonly int[,,] _slotTileX = new int[Mips, CT, CT];
     private readonly int[,,] _slotTileY = new int[Mips, CT, CT];
 
-    // Current clipmap tile origin per mip (top-left corner of the 8×8 window in tile space)
+    // Current clipmap tile origin per mip (top-left corner of the CT×CT window in tile space)
     private readonly Int2[] _currentOrigins = new Int2[Mips];
     private bool _firstUpdate = true;
 
-    // Dirty queue: tiles that need (re-)rendering, sorted ascending by priority (lowest = most urgent)
-    private readonly PriorityQueue<TileRequest, float> _dirtyQueue = new();
+    // One dirty queue per mip level. Each queue is sorted by distance (closest first).
+    // Keeping queues separate lets us drain a few tiles from every mip every frame so that
+    // all mips build up coverage simultaneously — avoiding the sharp coarse-right-after-fine
+    // band that appears when a single queue drains mips serially (coarse-first or fine-first).
+    private readonly PriorityQueue<TileRequest, float>[] _dirtyQueues =
+        new PriorityQueue<TileRequest, float>[Mips];
 
-    // Packed clipmap origins uploaded to the shader each frame.
-    // Two mip origins per Vector4 — mip M maps to element [M/2], in .xy (even M) or .zw (odd M).
-    public Vector4[] ClipmapOriginsPacked { get; } = new Vector4[5];
+    // Packed clipmap origins uploaded to the shader as 5 individual uniforms.
+    // Two mip origins per Vector4 — Packed0.xy=mip0, .zw=mip1 | Packed1.xy=mip2, .zw=mip3 | ...
+    private readonly Vector4[] _originsPacked = new Vector4[5];
+    public Vector4 ClipmapOriginsPacked0 => _originsPacked[0];
+    public Vector4 ClipmapOriginsPacked1 => _originsPacked[1];
+    public Vector4 ClipmapOriginsPacked2 => _originsPacked[2];
+    public Vector4 ClipmapOriginsPacked3 => _originsPacked[3];
+    public Vector4 ClipmapOriginsPacked4 => _originsPacked[4];
 
     public int MaxTilesPerFrame { get; set; } = 32;
 
     public VirtualTexturingSystem(IServiceRegistry services, GraphicsDevice graphicsDevice)
     {
+        for (int i = 0; i < Mips; i++)
+            _dirtyQueues[i] = new PriorityQueue<TileRequest, float>();
+
         PhysicalAtlas = new(graphicsDevice);
         TileRenderer = new(services, graphicsDevice, PhysicalAtlas);
 
@@ -72,7 +84,10 @@ public class VirtualTexturingSystem : IDisposable
             {
                 _currentOrigins[mip] = newOrigin;
 
-                // Queue every slot whose expected tile no longer matches what is stored
+                // Queue every slot whose expected tile no longer matches what is stored.
+                // IMPORTANT: index _slotTileX/Y by toroidal coords, not origin-relative coords.
+                // Using origin-relative indices would fail to recognise tiles that are already in
+                // the correct toroidal slot after the origin scrolls, causing spurious re-renders.
                 for (int cy = 0; cy < CT; cy++)
                 {
                     for (int cx = 0; cx < CT; cx++)
@@ -80,10 +95,13 @@ public class VirtualTexturingSystem : IDisposable
                         int expectedX = newOrigin.X + cx;
                         int expectedY = newOrigin.Y + cy;
 
-                        if (_slotTileX[mip, cy, cx] != expectedX || _slotTileY[mip, cy, cx] != expectedY)
+                        int toroX = ((expectedX % CT) + CT) % CT;
+                        int toroY = ((expectedY % CT) + CT) % CT;
+
+                        if (_slotTileX[mip, toroY, toroX] != expectedX || _slotTileY[mip, toroY, toroX] != expectedY)
                         {
-                            float priority = ComputePriority(expectedX, expectedY, mip, tileWorldSize, cameraXZ);
-                            _dirtyQueue.Enqueue(
+                            float priority = ComputeDistancePriority(expectedX, expectedY, tileWorldSize, cameraXZ);
+                            _dirtyQueues[mip].Enqueue(
                                 new TileRequest { TileX = expectedX, TileY = expectedY, MipLevel = mip },
                                 priority);
                         }
@@ -97,28 +115,57 @@ public class VirtualTexturingSystem : IDisposable
         // --- Step 2: Pack origins for the shader uniform ---
         PackOrigins();
 
-        // --- Step 3: Drain the dirty queue up to MaxTilesPerFrame ---
+        // --- Step 3: Drain per-mip queues, giving each mip an equal share of the frame budget ---
+        // This ensures all mips build coverage simultaneously so the shader always finds a valid
+        // tile at (or near) the correct mip level. A single merged queue would drain mips serially,
+        // leaving intermediate mips unrendered and causing hard coarse/fine boundaries in the fallback.
         var batch = new List<TileRequest>(MaxTilesPerFrame);
+        int budgetPerMip = Math.Max(1, MaxTilesPerFrame / Mips);
 
-        while (batch.Count < MaxTilesPerFrame && _dirtyQueue.Count > 0)
+        for (int mip = 0; mip < Mips && batch.Count < MaxTilesPerFrame; mip++)
         {
-            var req = _dirtyQueue.Dequeue();
+            int thisMipBudget = Math.Min(budgetPerMip, MaxTilesPerFrame - batch.Count);
+            int rendered = 0;
 
-            // Skip stale requests that scrolled out of the current window
-            var origin = _currentOrigins[req.MipLevel];
-            int relX = req.TileX - origin.X;
-            int relY = req.TileY - origin.Y;
-            if (relX < 0 || relX >= CT || relY < 0 || relY >= CT)
-                continue;
+            while (rendered < thisMipBudget && _dirtyQueues[mip].Count > 0)
+            {
+                var req = _dirtyQueues[mip].Dequeue();
 
-            batch.Add(req);
+                // Skip stale requests that scrolled out of the current window
+                var origin = _currentOrigins[mip];
+                int relX = req.TileX - origin.X;
+                int relY = req.TileY - origin.Y;
+                if (relX < 0 || relX >= CT || relY < 0 || relY >= CT)
+                    continue;
+
+                batch.Add(req);
+                rendered++;
+            }
+        }
+
+        // Give any unused budget to whichever mip still has pending tiles
+        if (batch.Count < MaxTilesPerFrame)
+        {
+            for (int mip = 0; mip < Mips && batch.Count < MaxTilesPerFrame; mip++)
+            {
+                while (batch.Count < MaxTilesPerFrame && _dirtyQueues[mip].Count > 0)
+                {
+                    var req = _dirtyQueues[mip].Dequeue();
+                    var origin = _currentOrigins[mip];
+                    int relX = req.TileX - origin.X;
+                    int relY = req.TileY - origin.Y;
+                    if (relX < 0 || relX >= CT || relY < 0 || relY >= CT)
+                        continue;
+                    batch.Add(req);
+                }
+            }
         }
 
         if (batch.Count > 0)
         {
             TileRenderer.RenderTiles(context, batch, terrainRuntimeData);
 
-            // Mark rendered slots as current
+            // Mark rendered slots as current (use toroidal indices to match dirty check)
             foreach (var req in batch)
             {
                 var origin = _currentOrigins[req.MipLevel];
@@ -126,8 +173,10 @@ public class VirtualTexturingSystem : IDisposable
                 int relY = req.TileY - origin.Y;
                 if (relX >= 0 && relX < CT && relY >= 0 && relY < CT)
                 {
-                    _slotTileX[req.MipLevel, relY, relX] = req.TileX;
-                    _slotTileY[req.MipLevel, relY, relX] = req.TileY;
+                    int toroX = ((req.TileX % CT) + CT) % CT;
+                    int toroY = ((req.TileY % CT) + CT) % CT;
+                    _slotTileX[req.MipLevel, toroY, toroX] = req.TileX;
+                    _slotTileY[req.MipLevel, toroY, toroX] = req.TileY;
                 }
             }
         }
@@ -142,26 +191,25 @@ public class VirtualTexturingSystem : IDisposable
 
             if ((mip & 1) == 0)
             {
-                ClipmapOriginsPacked[idx].X = origin.X;
-                ClipmapOriginsPacked[idx].Y = origin.Y;
+                _originsPacked[idx].X = origin.X;
+                _originsPacked[idx].Y = origin.Y;
             }
             else
             {
-                ClipmapOriginsPacked[idx].Z = origin.X;
-                ClipmapOriginsPacked[idx].W = origin.Y;
+                _originsPacked[idx].Z = origin.X;
+                _originsPacked[idx].W = origin.Y;
             }
         }
     }
 
-    private static float ComputePriority(int tileX, int tileY, int mip, float tileWorldSize, Vector2 cameraXZ)
+    // Within a per-mip queue, tiles closer to the camera are rendered first.
+    private static float ComputeDistancePriority(int tileX, int tileY, float tileWorldSize, Vector2 cameraXZ)
     {
-        // Lower value = higher priority: fine mips first, then closer to camera
         float tileCenterX = (tileX + 0.5f) * tileWorldSize;
         float tileCenterZ = (tileY + 0.5f) * tileWorldSize;
         float dx = tileCenterX - cameraXZ.X;
         float dz = tileCenterZ - cameraXZ.Y;
-        float dist = MathF.Sqrt(dx * dx + dz * dz);
-        return mip * 10000.0f + dist;
+        return MathF.Sqrt(dx * dx + dz * dz);
     }
 
     public void Dispose()

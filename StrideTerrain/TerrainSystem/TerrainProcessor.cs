@@ -200,7 +200,12 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 data.VirtualTexturingSystem.TileRenderer.MaterialNormalArray = parameters.Get(TerrainMaterialSamplingKeys.NormalArray);
                 data.VirtualTexturingSystem.Update(context.GetThreadContext(), cameraPosition, data);
 
-                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked, data.VirtualTexturingSystem.ClipmapOriginsPacked);
+                var vts = data.VirtualTexturingSystem;
+                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked0, vts.ClipmapOriginsPacked0);
+                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked1, vts.ClipmapOriginsPacked1);
+                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked2, vts.ClipmapOriginsPacked2);
+                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked3, vts.ClipmapOriginsPacked3);
+                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked4, vts.ClipmapOriginsPacked4);
                 parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalDiffuse, data.VirtualTexturingSystem.PhysicalAtlas.DiffuseAtlas);
                 parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalRoughness, data.VirtualTexturingSystem.PhysicalAtlas.RoughnessAtlas);
                 parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalNormal, data.VirtualTexturingSystem.PhysicalAtlas.NormalAtlas);

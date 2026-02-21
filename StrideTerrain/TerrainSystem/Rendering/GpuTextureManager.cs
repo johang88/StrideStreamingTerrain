@@ -142,7 +142,8 @@ public class GpuTextureManager : IDisposable
             return; // Should never happen.
 
         // Not super happy with this, should probably have a queue for chunks to make resident.
-        // But would need to copy over the data to a temp buffer in that case, so good enough for now!
+        // But would need to copy over the data to a temp buffer in that case, so good enough for now! 
+        // Or we could make IStreamingRequest Disposable and have that return it to the pool.
         // Also streaming callbacks are done on main thread so it should be fine!
         var graphicsContext = (GraphicsContext?)callbackData;
         if (graphicsContext == null)

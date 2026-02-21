@@ -36,7 +36,20 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
             //--- Step 3: Compute physical UV (toroidal clipmap — no indirection lookup) ---
             float2 physUV = ComputePhysicalUV(addr);
 
-            //--- Step 4: Out-of-range → return neutral gray ---
+            //--- Step 4: Fallback to coarser mips ---
+            // Walk up through all remaining mips until we find a valid resident tile.
+            // 8 steps covers the full mip range (VT_MIP_COUNT - 1 = 8) from any starting mip.
+            // Coarse mips are prioritised for rendering so mip 8 is available almost immediately,
+            // acting as a guaranteed fallback for horizontal/grazing-angle views.
+            [unroll(7)]
+            for (int fallback = 0; fallback < 7 && physUV.x < 0; fallback++)
+            {
+                mipLevel = min(mipLevel + 1, VT_MIP_COUNT - 1);
+                addr = ComputePageAddress(worldPosition, mipLevel);
+                physUV = ComputePhysicalUV(addr);
+            }
+
+            //--- Step 5: Still out of range → return neutral gray ---
             if (physUV.x < 0)
             {
                 result.Diffuse   = float3(0.5, 0.5, 0.5);
@@ -45,7 +58,7 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
                 return result;
             }
 
-            //--- Step 5: Compute gradients and clamp to prevent cross-tile filtering ---
+            //--- Step 6: Compute gradients and clamp to prevent cross-tile filtering ---
             float2 dUVdx_phys = ddx(physUV);
             float2 dUVdy_phys = ddy(physUV);
 
@@ -53,7 +66,7 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
             dUVdx_phys = clamp(dUVdx_phys, -maxGrad, maxGrad);
             dUVdy_phys = clamp(dUVdy_phys, -maxGrad, maxGrad);
 
-            //--- Step 6: Sample physical atlases ---
+            //--- Step 7: Sample physical atlases ---
             float4 diffuseRaw = PhysicalDiffuse.SampleGrad(
                 PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys);
             result.Diffuse = diffuseRaw.rgb;

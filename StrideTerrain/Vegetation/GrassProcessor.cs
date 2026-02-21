@@ -84,7 +84,7 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
         };
 
         var camera = sceneSystem.TryGetMainCamera();
-        if (camera == null)
+        if (camera == null || true)
             return;
 
         var terrainProcessor = sceneSystem.SceneInstance.Processors.Get<TerrainProcessor>();

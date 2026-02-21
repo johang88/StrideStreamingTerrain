@@ -7,8 +7,8 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
         static const float  VT_TILE_SIZE_PADDED = 264.0;  // 256 + 2*4
         static const float  VT_ATLAS_SIZE       = 8192.0;
         static const int    VT_CLIPMAP_TILES    = 8;
-        static const int    VT_ATLAS_TILES_PER_ROW = 24;  // ceil(sqrt(9*64))
-        static const int    VT_MIP_COUNT        = 9;
+        static const int    VT_ATLAS_TILES_PER_ROW = 22;  // ceil(sqrt(7*64))
+        static const int    VT_MIP_COUNT        = 7;
         static const float  VT_BASE_TILE_WORLD  = 0.5;    // mip 0 tile covers 0.5 m
 
         cbuffer PerMaterial.TerrainVT
@@ -19,16 +19,26 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
             stage float3 VTCameraPosition;
         }
 
-        // Clipmap origins: 2 mip levels packed per float4 to avoid HLSL 16-byte array element padding.
-        // Mip M origin: ClipmapOriginsPacked[M/2].xy (even M) or .zw (odd M)
+        // Clipmap origins: 2 mip levels packed per float4.
+        // Declared as separate uniforms (not an array) to avoid Stride/HLSL cbuffer array issues.
+        // Layout: Packed0.xy=mip0, .zw=mip1 | Packed1.xy=mip2, .zw=mip3 | ... | Packed4.xy=mip8
         cbuffer PerMaterial.TerrainVTClipmap
         {
-            stage float4 ClipmapOriginsPacked[5];
+            stage float4 ClipmapOriginsPacked0;
+            stage float4 ClipmapOriginsPacked1;
+            stage float4 ClipmapOriginsPacked2;
+            stage float4 ClipmapOriginsPacked3;
+            stage float4 ClipmapOriginsPacked4;
         }
 
         int2 GetClipmapOrigin(int mip)
         {
-            float4 p = ClipmapOriginsPacked[mip >> 1];
+            float4 p;
+            if      (mip <= 1) p = ClipmapOriginsPacked0;
+            else if (mip <= 3) p = ClipmapOriginsPacked1;
+            else if (mip <= 5) p = ClipmapOriginsPacked2;
+            else if (mip <= 7) p = ClipmapOriginsPacked3;
+            else               p = ClipmapOriginsPacked4;
             float2 o = (mip & 1) == 0 ? p.xy : p.zw;
             return int2(o);
         }
