@@ -99,7 +99,10 @@ public class GameSession : IDisposable
             await WaitUntil(() => terrainProcessor.TerrainData?.MeshManager?.IsReady == true);
             await WaitUntil(() => terrainProcessor.TerrainData?.GetAtlasUv(position.X, position.Z).Lod == 0);
             await WaitUntil(() => terrainProcessor.TerrainData?.PhysicsManager?.IsLoaded(position) == true);
+            await WaitUntil(() => terrainProcessor.TerrainData?.VirtualTexturingSystem != null);
             terrainProcessor.OverrideCameraPosition = null;
+            
+            terrainProcessor.TerrainData!.VirtualTexturingSystem!.InvalidateAll();
 
             AttachPlayerAndCamera();
 
@@ -147,7 +150,7 @@ public class GameSession : IDisposable
             }
 
             Player.Get<PlayerController>().CameraController = Camera.Get<ThirdPersonCameraController>();
-            Camera.Get<ThirdPersonCameraController>().Target = Player.Transform;
+            Camera.Get<ThirdPersonCameraController>().SetTarget(Player.Transform);
 
             _rootScene.Entities.Add(Player);
             _rootScene.Entities.Add(Camera);

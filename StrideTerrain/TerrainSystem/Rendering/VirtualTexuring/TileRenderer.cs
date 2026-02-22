@@ -87,6 +87,7 @@ public class TileRenderer : DynamicEffectRenderer
 
             Parameters.Set(TerrainMaterialTileRendererKeys.WorldBoundsMin, new Vector2(worldMinX, worldMinZ));
             Parameters.Set(TerrainMaterialTileRendererKeys.WorldBoundsMax, new Vector2(worldMaxX, worldMaxZ));
+            Parameters.Set(TerrainMaterialTileRendererKeys.MipLevel, req.MipLevel);
             Parameters.Set(TerrainMaterialSamplingKeys.DiffuseRoughnessArray, MaterialDiffuseRoughnessArray);
             Parameters.Set(TerrainMaterialSamplingKeys.NormalArray, MaterialNormalArray);
 

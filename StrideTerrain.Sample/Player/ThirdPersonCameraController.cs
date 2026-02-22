@@ -26,6 +26,16 @@ public class ThirdPersonCameraController : SyncScript
 
     public bool Enabled { get; set; } = true;
 
+    public void SetTarget(TransformComponent? target)
+    {
+        Target = target;
+
+        if (Target == null || !Enabled)
+            return;
+
+        Entity.Transform.Position = Target.Position;
+    }
+
     public override void Update()
     {
         if (Target == null || !Enabled)

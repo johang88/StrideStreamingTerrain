@@ -18,7 +18,12 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
 {
     public static partial class TerrainMaterialDiffuseTileRendererKeys
     {
+        public static readonly ValueParameterKey<Vector2> UvMin = ParameterKeys.NewValue<Vector2>();
+        public static readonly ValueParameterKey<Vector2> UvMax = ParameterKeys.NewValue<Vector2>();
         public static readonly ValueParameterKey<Vector2> WorldBoundsMin = ParameterKeys.NewValue<Vector2>();
         public static readonly ValueParameterKey<Vector2> WorldBoundsMax = ParameterKeys.NewValue<Vector2>();
+        public static readonly ValueParameterKey<int> AtlasSize = ParameterKeys.NewValue<int>();
+        public static readonly ObjectParameterKey<Texture> TerrainControlMap = ParameterKeys.NewObject<Texture>();
+        public static readonly ObjectParameterKey<Texture> DiffuseRoughnessArray = ParameterKeys.NewObject<Texture>();
     }
 }

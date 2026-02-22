@@ -13,15 +13,15 @@ public class PhysicalAtlas : IDisposable
 
     public PhysicalAtlas(GraphicsDevice device)
     {
-        DiffuseAtlas = Texture.New2D(device, 8192, 8192,
+        DiffuseAtlas = Texture.New2D(device, 16384, 16384,
             PixelFormat.R8G8B8A8_UNorm_SRgb,
             TextureFlags.ShaderResource | TextureFlags.RenderTarget);
 
-        NormalAtlas = Texture.New2D(device, 8192, 8192,
+        NormalAtlas = Texture.New2D(device, 16384, 16384,
             PixelFormat.R16G16_Float,
             TextureFlags.ShaderResource | TextureFlags.RenderTarget);
 
-        RoughnessAtlas = Texture.New2D(device, 8192, 8192,
+        RoughnessAtlas = Texture.New2D(device, 16384, 16384,
             PixelFormat.R8_UNorm,
             TextureFlags.ShaderResource | TextureFlags.RenderTarget);
     }

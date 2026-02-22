@@ -1,4 +1,6 @@
-﻿using Stride.Graphics;
+﻿using Stride.Core;
+using Stride.Graphics;
+using Stride.Rendering;
 using StrideTerrain.Common;
 using StrideTerrain.TerrainSystem.Streaming;
 using System;
@@ -14,6 +16,7 @@ public class GpuTextureManager : IDisposable
     public StreamingTextureAtlas Heightmap { get; private init; }
     public StreamingTextureAtlas NormalMap { get; private init; }
     public StreamingTextureAtlas ControlMap { get; private init; }
+    public StreamingTextureAtlas DiffuseRoughnessMap { get; private init; }
     public Texture ShadowMap { get; private init; }
 
     private readonly ChunkData[] _chunks;
@@ -27,17 +30,29 @@ public class GpuTextureManager : IDisposable
 
     public bool InvalidateShadowMap { get; set; }
 
+    /// <summary>
+    /// Chunk indices that became fully resident this frame. Cleared at the start of each Update().
+    /// </summary>
+    public List<int> NewlyResidentChunks { get; } = [];
+
+    public DiffuseRoughnessAtlasRenderer DiffuseRoughnessAtlasRenderer { get; }
+
     public int FreeSlots => _freeList.Count;
 
-    public GpuTextureManager(TerrainData terrain, GraphicsDevice graphicsDevice, int atlasSize, IStreamingManager streamingManager)
+    private readonly TerrainRuntimeData _terrain;
+
+    public GpuTextureManager(TerrainRuntimeData terrain, GraphicsDevice graphicsDevice, int atlasSize, IStreamingManager streamingManager, IServiceRegistry services)
     {
+        _terrain = terrain;
         _streamingManager = streamingManager;
+        DiffuseRoughnessAtlasRenderer = new(services, graphicsDevice);
 
-        var chunkTextureSize = Math.Max(terrain.Header.ChunkTextureSize, terrain.Header.NormalMapTextureSize);
+        var chunkTextureSize = Math.Max(terrain.TerrainData.Header.ChunkTextureSize, terrain.TerrainData.Header.NormalMapTextureSize);
 
-        Heightmap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UNorm, atlasSize, chunkTextureSize, terrain.Header.ChunkTextureSize);
-        NormalMap = new StreamingTextureAtlas(graphicsDevice, terrain.Header.CompressedNormalMap ? PixelFormat.BC5_UNorm : PixelFormat.R8G8_UNorm, atlasSize, chunkTextureSize, terrain.Header.NormalMapTextureSize);
-        ControlMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UInt, atlasSize, chunkTextureSize, terrain.Header.ChunkTextureSize);
+        Heightmap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UNorm, atlasSize, chunkTextureSize, terrain.TerrainData.Header.ChunkTextureSize);
+        NormalMap = new StreamingTextureAtlas(graphicsDevice, terrain.TerrainData.Header.CompressedNormalMap ? PixelFormat.BC5_UNorm : PixelFormat.R8G8_UNorm, atlasSize, chunkTextureSize, terrain.TerrainData.Header.NormalMapTextureSize);
+        ControlMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R16_UInt, atlasSize, chunkTextureSize, terrain.TerrainData.Header.ChunkTextureSize);
+        DiffuseRoughnessMap = new StreamingTextureAtlas(graphicsDevice, PixelFormat.R8G8B8A8_UNorm_SRgb, atlasSize, chunkTextureSize, terrain.TerrainData.Header.ChunkTextureSize, true);
         ShadowMap = Texture.New2D(graphicsDevice, TerrainRuntimeData.ShadowMapSize, TerrainRuntimeData.ShadowMapSize, PixelFormat.R10G10B10A2_UNorm, TextureFlags.UnorderedAccess | TextureFlags.RenderTarget | TextureFlags.ShaderResource);
 
         _freeList = new Queue<int>(Heightmap.ChunksPerRow * Heightmap.ChunksPerRow);
@@ -56,6 +71,7 @@ public class GpuTextureManager : IDisposable
 
     public void Dispose()
     {
+        DiffuseRoughnessMap?.Dispose();
         Heightmap?.Dispose();
         NormalMap?.Dispose();
         ControlMap?.Dispose();
@@ -75,8 +91,18 @@ public class GpuTextureManager : IDisposable
         return (ushort)(ControlMap.Data[i] | (ControlMap.Data[i + 1] << 8));
     }
 
-    public void Update(GraphicsContext graphicsContext)
+    public void Update(RenderContext context, GraphicsContext graphicsContext)
     {
+        foreach (var chunkIndex in NewlyResidentChunks)
+        {
+            if (!_chunkToTextureIndex.TryGetValue(chunkIndex, out var textureIndex))
+                return; // Should never happen.
+
+            DiffuseRoughnessAtlasRenderer.Draw(context.GetThreadContext(), chunkIndex, textureIndex, _terrain, DiffuseRoughnessMap);
+        }
+
+        NewlyResidentChunks.Clear();
+
         // Free chunks if possible and needed.
         if (_freeList.Count < 16)
         {
@@ -161,6 +187,7 @@ public class GpuTextureManager : IDisposable
         var chunk = _chunks[chunkDataIndex];
         chunk.State = ChunkState.Resident;
 
+        NewlyResidentChunks.Add(streamingRequest.ChunkIndex);
         InvalidateShadowMap = true;
     }
 

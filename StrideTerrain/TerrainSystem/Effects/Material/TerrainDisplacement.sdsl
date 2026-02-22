@@ -19,9 +19,10 @@
             float2 worldPosition = float2(UnpackPosition(ChunkBuffer[chunkIndex])) * UnitsPerTexel;
             int2 uv = UnpackUv(ChunkBuffer[chunkIndex]);
 
-            streams.LodLevel = data0 & 0xFF;
+            int lodLevel = (data0 & 0xFF);
+            streams.LodLevel = (float)lodLevel;
 
-            float scale = (1 << streams.LodLevel) * UnitsPerTexel;
+            float scale = (1 << lodLevel) * UnitsPerTexel;
 
             uint ldN = (data0 >> 8) & 0xFF;
             uint ldS = (data0 >> 16) & 0xFF;

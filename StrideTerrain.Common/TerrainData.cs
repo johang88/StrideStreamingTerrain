@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Reflection.PortableExecutable;
 using System.Runtime.InteropServices;
 
 namespace StrideTerrain.Common;
@@ -36,6 +37,31 @@ public struct TerrainData
 
     public readonly int GetChunkIndex(int lod, int x, int y, int chunksPerRow)
         => LodChunkOffsets[lod] + (y * chunksPerRow + x);
+
+    public readonly (float MinX, float MaxX, float MinZ, float MaxZ) GetChunkWorldBounds(int chunkIndex)
+    {
+        // Determine which LOD this chunk belongs to and its (cx, cz) grid position.
+        var lod = 0;
+        for (; lod < LodChunkOffsets.Length; lod++)
+        {
+            if (chunkIndex >= LodChunkOffsets[lod])
+                break;
+        }
+
+        int localIdx = chunkIndex - LodChunkOffsets[lod];
+        int chunksPerRow = GetNumberOfChunksPerRow(lod);
+        int cx = localIdx % chunksPerRow;
+        int cz = localIdx / chunksPerRow;
+
+        // World-space AABB of this chunk.
+        float chunkWorldSize = Header.ChunkSize * (1 << lod) * Header.UnitsPerTexel;
+        float minX = cx * chunkWorldSize;
+        float maxX = minX + chunkWorldSize;
+        float minZ = cz * chunkWorldSize;
+        float maxZ = minZ + chunkWorldSize;
+
+        return (minX, maxX, minZ, maxZ);
+    }
 
     public readonly void Write(BinaryWriter writer)
     {

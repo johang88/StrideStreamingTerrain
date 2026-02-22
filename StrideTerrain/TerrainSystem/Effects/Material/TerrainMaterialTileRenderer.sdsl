@@ -6,6 +6,7 @@
         {
             stage float2 WorldBoundsMin;
             stage float2 WorldBoundsMax;
+            stage float MipLevel;
         };
 
         stage override void PSMain()
@@ -95,7 +96,7 @@
                 normalWS, 
                 positionWS, 
                 fractionalWeights,
-                0
+                MipLevel
             );
 
             // Decode and transform normal to world space

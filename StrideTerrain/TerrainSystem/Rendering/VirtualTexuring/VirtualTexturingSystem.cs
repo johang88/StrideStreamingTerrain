@@ -2,6 +2,7 @@ using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
 using Stride.Rendering;
+using StrideTerrain.Common;
 using System;
 using System.Collections.Generic;
 
@@ -46,7 +47,7 @@ public class VirtualTexturingSystem : IDisposable
     public Vector4 ClipmapOriginsPacked3 => _originsPacked[3];
     public Vector4 ClipmapOriginsPacked4 => _originsPacked[4];
 
-    public int MaxTilesPerFrame { get; set; } = 32;
+    public int MaxTilesPerFrame { get; set; } = 64;
 
     public VirtualTexturingSystem(IServiceRegistry services, GraphicsDevice graphicsDevice)
     {
@@ -64,6 +65,22 @@ public class VirtualTexturingSystem : IDisposable
                     _slotTileX[m, cy, cx] = int.MinValue;
                     _slotTileY[m, cy, cx] = int.MinValue;
                 }
+    }
+
+    /// <summary>
+    /// Poisons every slot and marks the system as requiring a full re-render.
+    /// All tiles will be re-queued on the next <see cref="Update"/> call.
+    /// </summary>
+    public void InvalidateAll()
+    {
+        for (int m = 0; m < Mips; m++)
+            for (int cy = 0; cy < CT; cy++)
+                for (int cx = 0; cx < CT; cx++)
+                {
+                    _slotTileX[m, cy, cx] = int.MinValue;
+                    _slotTileY[m, cy, cx] = int.MinValue;
+                }
+        _firstUpdate = true;
     }
 
     public void Update(RenderDrawContext context, Vector3 cameraWorldPosition, TerrainRuntimeData terrainRuntimeData)
@@ -111,6 +128,52 @@ public class VirtualTexturingSystem : IDisposable
         }
 
         _firstUpdate = false;
+
+        // --- Step 1b: Invalidate tiles whose source terrain data just became resident ---
+        // ProcessPendingCompletions() runs between GpuTextureManager.Update() and here, so
+        // NewlyResidentChunks is already populated for this frame when we reach this point.
+        // We poison the slot and directly enqueue the tile so it is re-rendered this same frame
+        // rather than waiting until the camera moves and Step 1 detects the mismatch.
+        //var gpuManager = terrainRuntimeData.GpuTextureManager;
+        //if (gpuManager != null && gpuManager.NewlyResidentChunks.Count > 0)
+        //{
+        //    foreach (var chunkIdx in gpuManager.NewlyResidentChunks)
+        //    {
+        //        var (minX, maxX, minZ, maxZ) = terrainRuntimeData.TerrainData.GetChunkWorldBounds(chunkIdx);
+
+        //        // Poison and immediately re-enqueue every VT tile that overlaps this region.
+        //        for (int mip = 0; mip < Mips; mip++)
+        //        {
+        //            float tileWorldSize = VTConstants.BaseTileWorld * MathF.Pow(2, mip);
+        //            int tileMinX = (int)Math.Floor(minX / tileWorldSize);
+        //            int tileMinZ = (int)Math.Floor(minZ / tileWorldSize);
+        //            int tileMaxX = (int)Math.Ceiling(maxX / tileWorldSize);
+        //            int tileMaxZ = (int)Math.Ceiling(maxZ / tileWorldSize);
+
+        //            var origin = _currentOrigins[mip];
+        //            for (int tz = tileMinZ; tz < tileMaxZ; tz++)
+        //            {
+        //                for (int tx = tileMinX; tx < tileMaxX; tx++)
+        //                {
+        //                    int relX = tx - origin.X;
+        //                    int relZ = tz - origin.Y;
+        //                    if (relX < 0 || relX >= CT || relZ < 0 || relZ >= CT)
+        //                        continue;
+
+        //                    int toroX = ((tx % CT) + CT) % CT;
+        //                    int toroZ = ((tz % CT) + CT) % CT;
+        //                    _slotTileX[mip, toroZ, toroX] = int.MinValue;
+        //                    _slotTileY[mip, toroZ, toroX] = int.MinValue;
+
+        //                    float priority = ComputeDistancePriority(tx, tz, tileWorldSize, cameraXZ);
+        //                    _dirtyQueues[mip].Enqueue(
+        //                        new TileRequest { TileX = tx, TileY = tz, MipLevel = mip },
+        //                        priority);
+        //                }
+        //            }
+        //        }
+        //    }
+        //}
 
         // --- Step 2: Pack origins for the shader uniform ---
         PackOrigins();

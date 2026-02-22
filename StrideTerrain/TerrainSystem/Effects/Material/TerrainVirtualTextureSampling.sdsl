@@ -14,6 +14,7 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
             float3 Diffuse;
             float Roughness;
             float3 Normal;
+            bool IsValid;
         };
 
         stage SamplerState PhysicalSampler
@@ -22,62 +23,80 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
             MaxAnisotropy = 4;
         };
 
+        // Resolves a physical atlas UV for the given starting mip, walking to coarser mips
+        // if the tile is outside the clipmap window. Returns float2(-1,-1) on total miss.
+        float2 ResolvePhysUV(float3 worldPosition, int mip)
+        {
+            VTPageAddress addr = ComputePageAddress(worldPosition, mip);
+            float2 physUV = ComputePhysicalUV(addr);
+
+            [unroll(7)]
+            for (int fb = 0; fb < 7 && physUV.x < 0; fb++)
+            {
+                mip = min(mip + 1, VT_MIP_COUNT - 1);
+                addr = ComputePageAddress(worldPosition, mip);
+                physUV = ComputePhysicalUV(addr);
+            }
+
+            return physUV;
+        }
+
         VTMaterialSample SampleVirtualTerrain(float3 worldPosition, float3 worldNormal)
         {
             VTMaterialSample result;
 
             //--- Step 1: Compute desired mip level ---
             float mipLevelF = ComputeVTMipLevel(worldPosition);
-            int mipLevel = int(floor(mipLevelF));
+            int   mipFine   = int(floor(mipLevelF));
+            int   mipCoarse = min(mipFine + 1, VT_MIP_COUNT - 1);
+            float blend     = frac(mipLevelF);  // 0 = fully fine, 1 = fully coarse
 
-            //--- Step 2: Page address at chosen mip ---
-            VTPageAddress addr = ComputePageAddress(worldPosition, mipLevel);
+            //--- Step 2: Resolve physical UVs for both mip levels (with coarser fallback) ---
+            float2 physUV_fine   = ResolvePhysUV(worldPosition, mipFine);
+            float2 physUV_coarse = ResolvePhysUV(worldPosition, mipCoarse);
 
-            //--- Step 3: Compute physical UV (toroidal clipmap — no indirection lookup) ---
-            float2 physUV = ComputePhysicalUV(addr);
-
-            //--- Step 4: Fallback to coarser mips ---
-            // Walk up through all remaining mips until we find a valid resident tile.
-            // 8 steps covers the full mip range (VT_MIP_COUNT - 1 = 8) from any starting mip.
-            // Coarse mips are prioritised for rendering so mip 8 is available almost immediately,
-            // acting as a guaranteed fallback for horizontal/grazing-angle views.
-            [unroll(7)]
-            for (int fallback = 0; fallback < 7 && physUV.x < 0; fallback++)
+            //--- Step 3: Both out of range → debug/error color ---
+            if (physUV_fine.x < 0 && physUV_coarse.x < 0)
             {
-                mipLevel = min(mipLevel + 1, VT_MIP_COUNT - 1);
-                addr = ComputePageAddress(worldPosition, mipLevel);
-                physUV = ComputePhysicalUV(addr);
-            }
-
-            //--- Step 5: Still out of range → return neutral gray ---
-            if (physUV.x < 0)
-            {
-                result.Diffuse   = float3(0.5, 0.5, 0.5);
+                result.Diffuse   = float3(1.5, 0.5, 0.5);
                 result.Roughness = 0.5;
                 result.Normal    = worldNormal;
+                result.IsValid   = false;
                 return result;
             }
 
-            //--- Step 6: Compute gradients and clamp to prevent cross-tile filtering ---
-            float2 dUVdx_phys = ddx(physUV);
-            float2 dUVdy_phys = ddy(physUV);
+            // If one side is unavailable, use only the valid side
+            if (physUV_fine.x   < 0) blend = 1.0;
+            if (physUV_coarse.x < 0) blend = 0.0;
 
+            //--- Step 4: Compute and clamp gradients to prevent cross-tile filtering ---
             float maxGrad = VT_TILE_SIZE / VT_ATLAS_SIZE * 0.5;
-            dUVdx_phys = clamp(dUVdx_phys, -maxGrad, maxGrad);
-            dUVdy_phys = clamp(dUVdy_phys, -maxGrad, maxGrad);
 
-            //--- Step 7: Sample physical atlases ---
-            float4 diffuseRaw = PhysicalDiffuse.SampleGrad(
-                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys);
-            result.Diffuse = diffuseRaw.rgb;
+            float2 dUVdx_fine   = clamp(ddx(physUV_fine),   -maxGrad, maxGrad);
+            float2 dUVdy_fine   = clamp(ddy(physUV_fine),   -maxGrad, maxGrad);
+            float2 dUVdx_coarse = clamp(ddx(physUV_coarse), -maxGrad, maxGrad);
+            float2 dUVdy_coarse = clamp(ddy(physUV_coarse), -maxGrad, maxGrad);
 
-            float2 normalRaw = PhysicalNormal.SampleGrad(
-                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys);
-            result.Normal = DecodeOctahedral(normalRaw);
+            //--- Step 5: Sample fine mip ---
+            float4 diffuse_fine   = PhysicalDiffuse.SampleGrad(PhysicalSampler, physUV_fine, dUVdx_fine, dUVdy_fine);
+            float2 normalRaw_fine = PhysicalNormal.SampleGrad(PhysicalSampler, physUV_fine, dUVdx_fine, dUVdy_fine);
+            float roughness_fine  = PhysicalRoughness.SampleGrad(PhysicalSampler, physUV_fine, dUVdx_fine, dUVdy_fine);
 
-            result.Roughness = PhysicalRoughness.SampleGrad(
-                PhysicalSampler, physUV, dUVdx_phys, dUVdy_phys);
+            //--- Step 6: Sample coarse mip ---
+            float4 diffuse_coarse   = PhysicalDiffuse.SampleGrad(PhysicalSampler, physUV_coarse, dUVdx_coarse, dUVdy_coarse);
+            float2 normalRaw_coarse = PhysicalNormal.SampleGrad(PhysicalSampler, physUV_coarse, dUVdx_coarse, dUVdy_coarse);
+            float roughness_coarse  = PhysicalRoughness.SampleGrad(PhysicalSampler, physUV_coarse, dUVdx_coarse, dUVdy_coarse);
 
+            //--- Step 7: Blend between fine and coarse ---
+            result.Diffuse   = lerp(diffuse_fine.rgb, diffuse_coarse.rgb, blend);
+            result.Roughness = lerp(roughness_fine, roughness_coarse, blend);
+            // Decode both normals then blend in world space to avoid octahedral non-linearity
+            result.Normal = normalize(lerp(
+                DecodeOctahedral(normalRaw_fine),
+                DecodeOctahedral(normalRaw_coarse),
+                blend));
+
+            result.IsValid = true;
             return result;
         }
 

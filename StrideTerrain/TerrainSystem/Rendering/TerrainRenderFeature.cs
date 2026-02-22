@@ -135,9 +135,10 @@ public class TerrainRenderFeature : SubRenderFeature
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.GpuTextureManager!.Heightmap.AtlasTexture);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.GpuTextureManager!.NormalMap.AtlasTexture);
                 resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.GpuTextureManager!.ControlMap.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.GpuTextureManager!.ShadowMap);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 4, data.MeshManager.ChunkBuffer);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 5, data.MeshManager.SectorToChunkMapBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.GpuTextureManager!.DiffuseRoughnessMap.AtlasTexture);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 4, data.GpuTextureManager!.ShadowMap);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 5, data.MeshManager.ChunkBuffer);
+                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 6, data.MeshManager.SectorToChunkMapBuffer);
             }
 
             context.Tags.Set(Current, data);

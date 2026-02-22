@@ -1,16 +1,20 @@
-﻿using Stride.Graphics;
+﻿using SharpFont;
+using Stride.Graphics;
 using System;
 
 namespace StrideTerrain.TerrainSystem.Rendering;
 
-public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFormat pixelFormat, int size, int chunkSize, int chunkTextureSize) : IDisposable
+public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFormat pixelFormat, int size, int chunkSize, int chunkTextureSize, bool renderToStaging = false) : IDisposable
 {
     public readonly int Size = size;
     public readonly int ChunkSize = chunkSize;
     public readonly int ChunksPerRow = size / chunkSize;
+    public readonly int ChunkTextureSize = chunkTextureSize;
 
     public Texture AtlasTexture = Texture.New2D(graphicsDevice, size, size, pixelFormat);
-    public Texture StagingTexutre = Texture.New2D(graphicsDevice, chunkTextureSize, chunkTextureSize, pixelFormat, usage: GraphicsResourceUsage.Dynamic);
+    public Texture StagingTexutre = Texture.New2D(graphicsDevice, chunkTextureSize, chunkTextureSize, pixelFormat,
+        usage: renderToStaging ? GraphicsResourceUsage.Default : GraphicsResourceUsage.Dynamic,
+        textureFlags: (renderToStaging ? TextureFlags.RenderTarget : TextureFlags.None) | TextureFlags.ShaderResource);
 
     public int BytesPerPixel => pixelFormat switch
     {
@@ -18,6 +22,8 @@ public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFo
         PixelFormat.R16_UInt => 2,
         PixelFormat.BC5_UNorm => 0,
         PixelFormat.R8G8_UNorm => 0,
+        PixelFormat.R8G8B8A8_UNorm => 0,
+        PixelFormat.R8G8B8A8_UNorm_SRgb => 0,
         _ => throw new NotSupportedException($"Pixel format {pixelFormat} is not supported")
     };
 
@@ -27,6 +33,8 @@ public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFo
         PixelFormat.R16_UInt => 2,
         PixelFormat.BC5_UNorm => 0,
         PixelFormat.R8G8_UNorm => 0,
+        PixelFormat.R8G8B8A8_UNorm => 0,
+        PixelFormat.R8G8B8A8_UNorm_SRgb => 0,
         _ => throw new NotSupportedException($"Pixel format {pixelFormat} is not supported")
     })];
 
@@ -53,6 +61,12 @@ public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFo
         }
     }
 
+    public void UpdateChunkFromStaging(GraphicsContext graphicsContext, int textureIndex)
+    {
+        var (tx, ty) = GetCoordinates(textureIndex);
+        graphicsContext.CommandList.CopyRegion(StagingTexutre, 0, null, AtlasTexture, 0, tx, ty);
+    }
+
     private void CopyToLocalCache(Span<byte> data, int textureIndex)
     {
         var (tileX, tileY) = GetCoordinates(textureIndex);
@@ -60,12 +74,12 @@ public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFo
         int atlasStride = Size * BytesPerPixel;
         int tileOffset = tileY * atlasStride + tileX * BytesPerPixel;
 
-        for (int row = 0; row < chunkTextureSize; row++)
+        for (int row = 0; row < ChunkTextureSize; row++)
         {
             int dstOffset = tileOffset + row * atlasStride;
-            int srcOffset = row * chunkTextureSize * BytesPerPixel;
+            int srcOffset = row * ChunkTextureSize * BytesPerPixel;
 
-            var dataToCopy = data.Slice(srcOffset, chunkTextureSize * BytesPerPixel);
+            var dataToCopy = data.Slice(srcOffset, ChunkTextureSize * BytesPerPixel);
             var destination = Data.AsSpan(dstOffset);
             dataToCopy.CopyTo(destination);
         }
@@ -74,6 +88,6 @@ public sealed class StreamingTextureAtlas(GraphicsDevice graphicsDevice, PixelFo
     public void Dispose()
     {
         AtlasTexture.Dispose();
-        StagingTexutre.Dispose();
+        StagingTexutre?.Dispose();
     }
 }

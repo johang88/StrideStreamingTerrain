@@ -110,7 +110,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
 #if !GAME_EDITOR
                 data.PhysicsManager = new Physics.PhysicsManager(data, entity.Scene, data.StreamingManager);
 #endif
-                data.GpuTextureManager = new GpuTextureManager(data.TerrainData, graphicsDevice, TerrainRuntimeData.RuntimeTextureSize, data.StreamingManager);
+                data.GpuTextureManager = new GpuTextureManager(data, graphicsDevice, TerrainRuntimeData.RuntimeTextureSize, data.StreamingManager, Services);
                 data.MeshManager = new MeshManager(data, graphicsDevice, data.GpuTextureManager);
                 data.VirtualTexturingSystem ??= new(Services, graphicsDevice);
 
@@ -180,7 +180,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             // Update all managers.
             var cameraPosition = OverrideCameraPosition ?? camera!.GetWorldPosition();
             data.PhysicsManager?.Update(cameraPosition.X, cameraPosition.Z);
-            data.GpuTextureManager?.Update(graphicsContext);
+            data.GpuTextureManager?.Update(context, graphicsContext);
             data.StreamingManager?.ProcessPendingCompletions(1);
             data.MeshManager?.Update(cameraPosition, CollectionsMarshal.AsSpan(component.LodDistances));
 
@@ -194,9 +194,9 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             parameters.Set(TerrainVirtualTextureKeys.VTCameraPosition, cameraPosition);
 
             // Update virtual texturing
-            if (data.VirtualTexturingSystem != null)
+            if (data.VirtualTexturingSystem != null && data.GpuTextureManager != null)
             {
-                data.VirtualTexturingSystem.TileRenderer.MaterialDiffuseRoughnessArray = parameters.Get(TerrainMaterialSamplingKeys.DiffuseRoughnessArray);
+                data.GpuTextureManager.DiffuseRoughnessAtlasRenderer.MaterialDiffuseRoughnessArray = data.VirtualTexturingSystem.TileRenderer.MaterialDiffuseRoughnessArray = parameters.Get(TerrainMaterialSamplingKeys.DiffuseRoughnessArray);
                 data.VirtualTexturingSystem.TileRenderer.MaterialNormalArray = parameters.Get(TerrainMaterialSamplingKeys.NormalArray);
                 data.VirtualTexturingSystem.Update(context.GetThreadContext(), cameraPosition, data);
 
@@ -244,6 +244,11 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 Image(Data.GpuTextureManager.Heightmap.AtlasTexture, 512, 512);
             }
 
+            if (CollapsingHeader("Diffuse Roughness Atlas"))
+            {
+                Image(Data.GpuTextureManager.DiffuseRoughnessMap.AtlasTexture, 512, 512);
+            }
+
             if (CollapsingHeader("VT Diffuse"))
             {
                 Image(Data.VirtualTexturingSystem.PhysicalAtlas.DiffuseAtlas, 512, 512);
@@ -257,6 +262,11 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             if (CollapsingHeader("VT Roughness"))
             {
                 Image(Data.VirtualTexturingSystem.PhysicalAtlas.RoughnessAtlas, 512, 512);
+            }
+
+            if (Button("Invalidate VT"))
+            {
+                Data.VirtualTexturingSystem.InvalidateAll();
             }
         }
     }

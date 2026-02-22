@@ -20,5 +20,6 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
     {
         public static readonly ValueParameterKey<Vector2> WorldBoundsMin = ParameterKeys.NewValue<Vector2>();
         public static readonly ValueParameterKey<Vector2> WorldBoundsMax = ParameterKeys.NewValue<Vector2>();
+        public static readonly ValueParameterKey<float> MipLevel = ParameterKeys.NewValue<float>();
     }
 }
