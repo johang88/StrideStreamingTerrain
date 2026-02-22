@@ -7,7 +7,7 @@ public static class VTConstants
     public const int TileSizePadded = TileSize + TileBorder * 2;  // 264
     public const float BaseTileWorld = 0.5f;  // mip 0 tile covers 0.5 m
     public const int MipCount = 7;
-    public const int MipBias = -4;
+    public const float MipBias = -1f;
 
     // Clipmap constants
     public const int ClipmapTiles = 16;  // tiles per axis per mip level

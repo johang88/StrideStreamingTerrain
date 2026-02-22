@@ -102,8 +102,6 @@ public class GameSession : IDisposable
             await WaitUntil(() => terrainProcessor.TerrainData?.VirtualTexturingSystem != null);
             terrainProcessor.OverrideCameraPosition = null;
             
-            terrainProcessor.TerrainData!.VirtualTexturingSystem!.InvalidateAll();
-
             AttachPlayerAndCamera();
 
             // Keeps fallin gthrough the floor if we don't do it like this for some reaason ... even though everything should be loaded ...
@@ -112,6 +110,8 @@ public class GameSession : IDisposable
                 Player.Get<ActorController>().SetPositionAndRotation(position, rotation);
                 await ScriptSystem.NextFrame();
             }
+
+            terrainProcessor.TerrainData!.VirtualTexturingSystem!.InvalidateAll();
 
             Player.Get<ActorController>().SetPositionAndRotation(position, rotation);
 

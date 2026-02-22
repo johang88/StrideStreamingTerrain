@@ -54,7 +54,7 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
             float2 dTexdy = dWorlddy * texelsPerMeter;
 
             float maxSqDeriv = max(dot(dTexdx, dTexdx), dot(dTexdy, dTexdy));
-            float mipLevel = 0.5 * log2(max(maxSqDeriv, 1.0));
+            float mipLevel = 0.5 * log2(max(maxSqDeriv, 1.0)) + VTMipBias;
 
             return clamp(mipLevel, 0.0, float(VT_MIP_COUNT - 1));
         }

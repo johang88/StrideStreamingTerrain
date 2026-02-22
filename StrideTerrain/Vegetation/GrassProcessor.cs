@@ -88,7 +88,7 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
             return;
 
         var terrainProcessor = sceneSystem.SceneInstance.Processors.Get<TerrainProcessor>();
-        if (terrainProcessor == null)
+        if (terrainProcessor == null || true)
             return;
 
         var terrain = terrainProcessor.TerrainData;
