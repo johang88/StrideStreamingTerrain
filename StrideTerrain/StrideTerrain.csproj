@@ -30,6 +30,26 @@
 	</ItemGroup>
 	
 	<ItemGroup>
+	  <Compile Update="Rendering\Effects\CompressBC3.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\CompressBC1.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\BlockCompression.sdsl.cs">
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <DesignTime>True</DesignTime>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Rendering\Effects\CompressBC5.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Rendering\Effects\PostEffectCommon.sdsl.cs">
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <DesignTime>True</DesignTime>
@@ -246,6 +266,18 @@
 	  </Compile>
 	</ItemGroup>
 	<ItemGroup>
+	  <None Update="Rendering\Effects\CompressBC3.sdsl">
+	    <LastGenOutput>CompressBC3.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\CompressBC5.sdsl">
+	    <LastGenOutput>CompressBC5.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\CompressBC1.sdsl">
+	    <LastGenOutput>CompressBC1.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Rendering\Effects\BlockCompression.sdsl">
+	    <LastGenOutput>BlockCompression.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Rendering\Effects\PostEffectCommon.sdsl">
 	    <LastGenOutput>PostEffectCommon.sdsl.cs</LastGenOutput>
 	  </None>

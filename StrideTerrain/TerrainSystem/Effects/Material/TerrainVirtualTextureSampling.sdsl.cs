@@ -18,9 +18,8 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
 {
     public static partial class TerrainVirtualTextureSamplingKeys
     {
-        public static readonly ObjectParameterKey<Texture> PhysicalDiffuse = ParameterKeys.NewObject<Texture>();
+        public static readonly ObjectParameterKey<Texture> PhysicalDiffuseRoughness = ParameterKeys.NewObject<Texture>();
         public static readonly ObjectParameterKey<Texture> PhysicalNormal = ParameterKeys.NewObject<Texture>();
-        public static readonly ObjectParameterKey<Texture> PhysicalRoughness = ParameterKeys.NewObject<Texture>();
         public static readonly ObjectParameterKey<SamplerState> PhysicalSampler = ParameterKeys.NewObject<SamplerState>();
     }
 }

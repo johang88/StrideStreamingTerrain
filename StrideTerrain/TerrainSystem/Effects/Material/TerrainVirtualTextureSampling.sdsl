@@ -4,9 +4,8 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
     {
         rgroup PerMaterial
         {
-            stage Texture2D<float4> PhysicalDiffuse;
+            stage Texture2D<float4> PhysicalDiffuseRoughness;
             stage Texture2D<float2> PhysicalNormal;
-            stage Texture2D<float> PhysicalRoughness;
         }
 
         struct VTMaterialSample
@@ -78,18 +77,16 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
             float2 dUVdy_coarse = clamp(ddy(physUV_coarse), -maxGrad, maxGrad);
 
             //--- Step 5: Sample fine mip ---
-            float4 diffuse_fine   = PhysicalDiffuse.SampleGrad(PhysicalSampler, physUV_fine, dUVdx_fine, dUVdy_fine);
+            float4 diffuse_fine   = PhysicalDiffuseRoughness.SampleGrad(PhysicalSampler, physUV_fine, dUVdx_fine, dUVdy_fine);
             float2 normalRaw_fine = PhysicalNormal.SampleGrad(PhysicalSampler, physUV_fine, dUVdx_fine, dUVdy_fine);
-            float roughness_fine  = PhysicalRoughness.SampleGrad(PhysicalSampler, physUV_fine, dUVdx_fine, dUVdy_fine);
 
             //--- Step 6: Sample coarse mip ---
-            float4 diffuse_coarse   = PhysicalDiffuse.SampleGrad(PhysicalSampler, physUV_coarse, dUVdx_coarse, dUVdy_coarse);
+            float4 diffuse_coarse   = PhysicalDiffuseRoughness.SampleGrad(PhysicalSampler, physUV_coarse, dUVdx_coarse, dUVdy_coarse);
             float2 normalRaw_coarse = PhysicalNormal.SampleGrad(PhysicalSampler, physUV_coarse, dUVdx_coarse, dUVdy_coarse);
-            float roughness_coarse  = PhysicalRoughness.SampleGrad(PhysicalSampler, physUV_coarse, dUVdx_coarse, dUVdy_coarse);
 
             //--- Step 7: Blend between fine and coarse ---
             result.Diffuse   = lerp(diffuse_fine.rgb, diffuse_coarse.rgb, blend);
-            result.Roughness = lerp(roughness_fine, roughness_coarse, blend);
+            result.Roughness = lerp(diffuse_fine.a, diffuse_coarse.a, blend);
             // Decode both normals then blend in world space to avoid octahedral non-linearity
             result.Normal = normalize(lerp(
                 DecodeOctahedral(normalRaw_fine),

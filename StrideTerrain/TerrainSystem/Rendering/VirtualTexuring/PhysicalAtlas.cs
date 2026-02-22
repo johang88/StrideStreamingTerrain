@@ -4,27 +4,12 @@ using System;
 
 namespace StrideTerrain.TerrainSystem.Rendering.VirtualTexuring;
 
-public class PhysicalAtlas : IDisposable
+public class PhysicalAtlas(GraphicsDevice device) : IDisposable
 {
-    // Atlas textures
-    public Texture DiffuseAtlas { get; private set; }
-    public Texture RoughnessAtlas { get; private set; }
-    public Texture NormalAtlas { get; private set; }
-
-    public PhysicalAtlas(GraphicsDevice device)
-    {
-        DiffuseAtlas = Texture.New2D(device, 16384, 16384,
-            PixelFormat.R8G8B8A8_UNorm_SRgb,
-            TextureFlags.ShaderResource | TextureFlags.RenderTarget);
-
-        NormalAtlas = Texture.New2D(device, 16384, 16384,
-            PixelFormat.R16G16_Float,
-            TextureFlags.ShaderResource | TextureFlags.RenderTarget);
-
-        RoughnessAtlas = Texture.New2D(device, 16384, 16384,
-            PixelFormat.R8_UNorm,
-            TextureFlags.ShaderResource | TextureFlags.RenderTarget);
-    }
+    public Texture DiffuseRoughnessAtlas { get; private set; } = Texture.New2D(device, 16384, 16384,
+            PixelFormat.BC3_UNorm_SRgb, TextureFlags.ShaderResource);
+    public Texture NormalAtlas { get; private set; } = Texture.New2D(device, 16384, 16384,
+            PixelFormat.BC5_UNorm, TextureFlags.ShaderResource);
 
     /// <summary>
     /// Get the atlas pixel region for a slot (includes border).
@@ -53,8 +38,7 @@ public class PhysicalAtlas : IDisposable
 
     public void Dispose()
     {
-        DiffuseAtlas?.Dispose();
+        DiffuseRoughnessAtlas?.Dispose();
         NormalAtlas?.Dispose();
-        RoughnessAtlas?.Dispose();
     }
 }

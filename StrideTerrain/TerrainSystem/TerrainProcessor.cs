@@ -206,8 +206,7 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked2, vts.ClipmapOriginsPacked2);
                 parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked3, vts.ClipmapOriginsPacked3);
                 parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked4, vts.ClipmapOriginsPacked4);
-                parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalDiffuse, data.VirtualTexturingSystem.PhysicalAtlas.DiffuseAtlas);
-                parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalRoughness, data.VirtualTexturingSystem.PhysicalAtlas.RoughnessAtlas);
+                parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalDiffuseRoughness, data.VirtualTexturingSystem.PhysicalAtlas.DiffuseRoughnessAtlas);
                 parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalNormal, data.VirtualTexturingSystem.PhysicalAtlas.NormalAtlas);
             }
         }
@@ -249,19 +248,14 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
                 Image(Data.GpuTextureManager.DiffuseRoughnessMap.AtlasTexture, 512, 512);
             }
 
-            if (CollapsingHeader("VT Diffuse"))
+            if (CollapsingHeader("VT DiffuseRoughness"))
             {
-                Image(Data.VirtualTexturingSystem.PhysicalAtlas.DiffuseAtlas, 512, 512);
+                Image(Data.VirtualTexturingSystem.PhysicalAtlas.DiffuseRoughnessAtlas, 512, 512);
             }
 
             if (CollapsingHeader("VT Normal"))
             {
                 Image(Data.VirtualTexturingSystem.PhysicalAtlas.NormalAtlas, 512, 512);
-            }
-
-            if (CollapsingHeader("VT Roughness"))
-            {
-                Image(Data.VirtualTexturingSystem.PhysicalAtlas.RoughnessAtlas, 512, 512);
             }
 
             if (Button("Invalidate VT"))

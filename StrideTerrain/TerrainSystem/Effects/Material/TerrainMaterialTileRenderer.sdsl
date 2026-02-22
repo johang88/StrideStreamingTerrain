@@ -22,9 +22,9 @@
 
             TerrainMaterialSample res = SampleTerrain(positionWS);
 
-            streams.ColorTarget = float4(res.Diffuse, 1);
+            streams.ColorTarget = float4(res.Diffuse, res.Roughness);
             streams.ColorTarget1 = float4(EncodeOctahedral(res.NormalWS), 0, 0);
-            streams.ColorTarget2  = float4(res.Roughness, 0, 0, 0);
+            //streams.ColorTarget2  = float4(res.Roughness, 0, 0, 0);
         }
 
         float2 EncodeOctahedral(float3 n)
