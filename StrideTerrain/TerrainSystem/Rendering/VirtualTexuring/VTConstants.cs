@@ -10,8 +10,8 @@ public static class VTConstants
     public const float MipBias = -1f;
 
     // Clipmap constants
-    public const int ClipmapTiles = 16;  // tiles per axis per mip level
-    // Total slots = MipCount * ClipmapTiles^2 = 7 * 256 = 1792
-    // floor(16384 / 264) = 62 → fills atlas width; needs ceil(1792/62) = 29 rows → 29×264 = 7656 px tall
+    public const int ClipmapTiles = 22;  // tiles per axis per mip level
+    // Total slots = MipCount * ClipmapTiles^2 = 7 * 484 = 3388
+    // floor(16384 / 264) = 62 → fills atlas width; needs ceil(3388/62) = 55 rows → 55×264 = 14520 px tall (88% of 16384)
     public const int AtlasTilesPerRow = 62;
 }

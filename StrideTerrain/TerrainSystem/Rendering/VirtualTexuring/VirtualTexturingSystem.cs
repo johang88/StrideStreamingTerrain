@@ -35,8 +35,7 @@ public class VirtualTexturingSystem : IDisposable
     // Keeping queues separate lets us drain a few tiles from every mip every frame so that
     // all mips build up coverage simultaneously — avoiding the sharp coarse-right-after-fine
     // band that appears when a single queue drains mips serially (coarse-first or fine-first).
-    private readonly PriorityQueue<TileRequest, float>[] _dirtyQueues =
-        new PriorityQueue<TileRequest, float>[Mips];
+    private readonly PriorityQueue<TileRequest, float>[] _dirtyQueues = new PriorityQueue<TileRequest, float>[Mips];
 
     // Packed clipmap origins uploaded to the shader as 5 individual uniforms.
     // Two mip origins per Vector4 — Packed0.xy=mip0, .zw=mip1 | Packed1.xy=mip2, .zw=mip3 | ...

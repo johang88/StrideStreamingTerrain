@@ -6,7 +6,7 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
         static const float  VT_TILE_BORDER      = 4.0;
         static const float  VT_TILE_SIZE_PADDED = 264.0;  // 256 + 2*4
         static const float  VT_ATLAS_SIZE       = 16384.0;
-        static const int    VT_CLIPMAP_TILES    = 16;
+        static const int    VT_CLIPMAP_TILES    = 22;
         static const int    VT_ATLAS_TILES_PER_ROW = 62;  // floor(16384/264)
         static const int    VT_MIP_COUNT        = 7;
         static const float  VT_BASE_TILE_WORLD  = 0.5;    // mip 0 tile covers 0.5 m
