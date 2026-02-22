@@ -5,6 +5,7 @@ using Stride.Core.Storage;
 using Stride.Rendering;
 using StrideTerrain.TerrainSystem.Effects;
 using StrideTerrain.TerrainSystem.Effects.Material;
+using StrideTerrain.TerrainSystem.Rendering.VirtualTexuring;
 using System.Collections.Generic;
 
 namespace StrideTerrain.TerrainSystem.Rendering;
@@ -21,6 +22,7 @@ public class TerrainRenderFeature : SubRenderFeature
     [DataMember] public RenderStage? GBufferRenderStage { get; set; }
 
     private ConstantBufferOffsetReference _chunkSizeOffset;
+    private ConstantBufferOffsetReference _vtMipBiasOffset;
 
     private RenderMesh? _renderMesh;
 
@@ -29,6 +31,7 @@ public class TerrainRenderFeature : SubRenderFeature
         base.InitializeCore();
 
         _chunkSizeOffset = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameCBufferOffsetSlot(TerrainDataKeys.ChunkSize.Name);
+        _vtMipBiasOffset = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameCBufferOffsetSlot(TerrainVirtualTextureKeys.VTMipBias.Name);
     }
 
     public override void Extract()
@@ -97,48 +100,76 @@ public class TerrainRenderFeature : SubRenderFeature
 
             // Update per frame data
             var terrainLogicalGroupKey = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameLogicalGroup("Terrain");
+            var terrainVtLogicalGroupKey = ((RootEffectRenderFeature)RootRenderFeature).CreateFrameLogicalGroup("TerrainVT");
             foreach (var frameLayout in ((RootEffectRenderFeature)RootRenderFeature).FrameLayouts)
             {
-                var chunkSizeOffset = frameLayout.GetConstantBufferOffset(_chunkSizeOffset);
-                if (chunkSizeOffset == -1)
-                    continue;
-
                 var resourceGroup = frameLayout.Entry.Resources;
-                var mappedCB = resourceGroup.ConstantBuffer.Data;
 
-                var perFrameTerrain = (PerFrameTerrain*)((byte*)mappedCB + chunkSizeOffset);
-                perFrameTerrain->ChunkSize = (uint)data.TerrainData.Header.ChunkSize;
-                perFrameTerrain->InvTerrainTextureSize = TerrainRuntimeData.InvRuntimeTextureSize;
-                perFrameTerrain->TerrainTextureSize = TerrainRuntimeData.RuntimeTextureSize;
-                perFrameTerrain->InvTerrainSize = 1.0f / (data.TerrainData.Header.Size * data.UnitsPerTexel);
-                perFrameTerrain->TerrainSize = (data.TerrainData.Header.Size * data.UnitsPerTexel);
-
-                perFrameTerrain->InvShadowMapSize = 0.0f;
-                if (data.GpuTextureManager!.ShadowMap != null)
+                // PerFrame.Terrain
+                var chunkSizeOffset = frameLayout.GetConstantBufferOffset(_chunkSizeOffset);
+                if (chunkSizeOffset != -1)
                 {
-                    float invUnitsPerTexel = 1.0f / data.UnitsPerTexel;
-                    float invShadowMapsSize = invUnitsPerTexel * (1.0f / data.TerrainData.Header.Size);
+                    var mappedCB = resourceGroup.ConstantBuffer.Data;
 
-                    perFrameTerrain->InvShadowMapSize = invShadowMapsSize;
-                    perFrameTerrain->InvMaxHeight = 1.0f / data.TerrainData.Header.MaxHeight;
+                    var perFrameTerrain = (PerFrameTerrain*)((byte*)mappedCB + chunkSizeOffset);
+                    perFrameTerrain->ChunkSize = (uint)data.TerrainData.Header.ChunkSize;
+                    perFrameTerrain->InvTerrainTextureSize = TerrainRuntimeData.InvRuntimeTextureSize;
+                    perFrameTerrain->TerrainTextureSize = TerrainRuntimeData.RuntimeTextureSize;
+                    perFrameTerrain->InvTerrainSize = 1.0f / (data.TerrainData.Header.Size * data.UnitsPerTexel);
+                    perFrameTerrain->TerrainSize = (data.TerrainData.Header.Size * data.UnitsPerTexel);
+
+                    perFrameTerrain->InvShadowMapSize = 0.0f;
+                    if (data.GpuTextureManager!.ShadowMap != null)
+                    {
+                        float invUnitsPerTexel = 1.0f / data.UnitsPerTexel;
+                        float invShadowMapsSize = invUnitsPerTexel * (1.0f / data.TerrainData.Header.Size);
+
+                        perFrameTerrain->InvShadowMapSize = invShadowMapsSize;
+                        perFrameTerrain->InvMaxHeight = 1.0f / data.TerrainData.Header.MaxHeight;
+                    }
+
+                    perFrameTerrain->MaxHeight = data.TerrainData.Header.MaxHeight;
+                    perFrameTerrain->ChunksPerRow = (uint)data.ChunksPerRowLod0;
+                    perFrameTerrain->InvUnitsPerTexel = 1.0f / data.UnitsPerTexel;
+                    perFrameTerrain->UnitsPerTexel = data.UnitsPerTexel;
+
+                    var logicalGroup = frameLayout.GetLogicalGroup(terrainLogicalGroupKey);
+                    if (logicalGroup.Hash != ObjectId.Empty)
+                    {
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.GpuTextureManager!.Heightmap.AtlasTexture);
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.GpuTextureManager!.NormalMap.AtlasTexture);
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.GpuTextureManager!.ControlMap.AtlasTexture);
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.GpuTextureManager!.DiffuseRoughnessMap.AtlasTexture);
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 4, data.GpuTextureManager!.ShadowMap);
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 5, data.MeshManager.ChunkBuffer);
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 6, data.MeshManager.SectorToChunkMapBuffer);
+                    }
                 }
 
-                perFrameTerrain->MaxHeight = data.TerrainData.Header.MaxHeight;
-                perFrameTerrain->ChunksPerRow = (uint)data.ChunksPerRowLod0;
-                perFrameTerrain->InvUnitsPerTexel = 1.0f / data.UnitsPerTexel;
-                perFrameTerrain->UnitsPerTexel = data.UnitsPerTexel;
+                // PerFrame.TerrainVT
+                chunkSizeOffset = frameLayout.GetConstantBufferOffset(_vtMipBiasOffset);
+                if (chunkSizeOffset != -1)
+                {
+                    var mappedCB = resourceGroup.ConstantBuffer.Data;
 
-                var logicalGroup = frameLayout.GetLogicalGroup(terrainLogicalGroupKey);
-                if (logicalGroup.Hash == ObjectId.Empty)
-                    continue;
+                    var perFrameTerrainVT = (PerFrameTerrainVT*)((byte*)mappedCB + chunkSizeOffset);
 
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.GpuTextureManager!.Heightmap.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.GpuTextureManager!.NormalMap.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 2, data.GpuTextureManager!.ControlMap.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 3, data.GpuTextureManager!.DiffuseRoughnessMap.AtlasTexture);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 4, data.GpuTextureManager!.ShadowMap);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 5, data.MeshManager.ChunkBuffer);
-                resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 6, data.MeshManager.SectorToChunkMapBuffer);
+                    perFrameTerrainVT->VTMipBias = VTConstants.MipBias;
+                    perFrameTerrainVT->VTMaxAniso = VTConstants.MipBias;
+                    perFrameTerrainVT->VTResolution = VTConstants.MipBias;
+                    perFrameTerrainVT->ClipmapOriginsPacked0 = data.VirtualTexturingSystem!.ClipmapOriginsPacked0;
+                    perFrameTerrainVT->ClipmapOriginsPacked1 = data.VirtualTexturingSystem!.ClipmapOriginsPacked1;
+                    perFrameTerrainVT->ClipmapOriginsPacked2 = data.VirtualTexturingSystem!.ClipmapOriginsPacked2;
+                    perFrameTerrainVT->ClipmapOriginsPacked3 = data.VirtualTexturingSystem!.ClipmapOriginsPacked3;
+                    perFrameTerrainVT->ClipmapOriginsPacked4 = data.VirtualTexturingSystem!.ClipmapOriginsPacked4;
+
+                    var logicalGroup = frameLayout.GetLogicalGroup(terrainVtLogicalGroupKey);
+                    if (logicalGroup.Hash != ObjectId.Empty)
+                    {
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 0, data.VirtualTexturingSystem!.PhysicalAtlas.DiffuseRoughnessAtlas);
+                        resourceGroup.DescriptorSet.SetShaderResourceView(logicalGroup.DescriptorEntryStart + 1, data.VirtualTexturingSystem!.PhysicalAtlas.NormalAtlas);
+                    }
+                }
             }
 
             context.Tags.Set(Current, data);

@@ -2,7 +2,7 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
 {
     shader TerrainVirtualTextureSampling : TerrainVirtualTexture
     {
-        rgroup PerMaterial
+        rgroup PerFrame.TerrainVT
         {
             stage Texture2D<float4> PhysicalDiffuseRoughness;
             stage Texture2D<float2> PhysicalNormal;
@@ -95,6 +95,38 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
 
             result.IsValid = true;
             return result;
+        }
+
+        // Samples only the diffuse colour from the VT atlas at a given world position.
+        // Intended for non-terrain objects (foliage, rocks, debris) that need to tint
+        // or blend against the underlying terrain colour. Returns a neutral gray when
+        // the position falls outside the current clipmap window.
+        float3 SampleVirtualTerrainDiffuse(float3 worldPosition)
+        {
+            float mipLevelF = ComputeVTMipLevel(worldPosition);
+            int   mipFine   = int(floor(mipLevelF));
+            int   mipCoarse = min(mipFine + 1, VT_MIP_COUNT - 1);
+            float blend     = frac(mipLevelF);
+
+            float2 physUV_fine   = ResolvePhysUV(worldPosition, mipFine);
+            float2 physUV_coarse = ResolvePhysUV(worldPosition, mipCoarse);
+
+            if (physUV_fine.x < 0 && physUV_coarse.x < 0)
+                return float3(0.5, 0.5, 0.5);
+
+            if (physUV_fine.x   < 0) blend = 1.0;
+            if (physUV_coarse.x < 0) blend = 0.0;
+
+            float maxGrad = VT_TILE_SIZE / VT_ATLAS_SIZE * 0.5;
+            float2 dUVdx_fine   = clamp(ddx(physUV_fine),   -maxGrad, maxGrad);
+            float2 dUVdy_fine   = clamp(ddy(physUV_fine),   -maxGrad, maxGrad);
+            float2 dUVdx_coarse = clamp(ddx(physUV_coarse), -maxGrad, maxGrad);
+            float2 dUVdy_coarse = clamp(ddy(physUV_coarse), -maxGrad, maxGrad);
+
+            float3 fine   = PhysicalDiffuseRoughness.SampleGrad(PhysicalSampler, physUV_fine,   dUVdx_fine,   dUVdy_fine).rgb;
+            float3 coarse = PhysicalDiffuseRoughness.SampleGrad(PhysicalSampler, physUV_coarse, dUVdx_coarse, dUVdy_coarse).rgb;
+
+            return lerp(fine, coarse, blend);
         }
 
         float3 DecodeOctahedral(float2 f) {

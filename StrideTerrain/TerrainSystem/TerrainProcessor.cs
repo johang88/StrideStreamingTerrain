@@ -184,30 +184,15 @@ public class TerrainProcessor : EntityProcessor<TerrainComponent, TerrainRuntime
             data.StreamingManager?.ProcessPendingCompletions(1);
             data.MeshManager?.Update(cameraPosition, CollectionsMarshal.AsSpan(component.LodDistances));
 
-            // Bind virtual texturing settings for terrain material.
-            // TODO: Set in render feature and make it work for all materials that need to sample terrain.
-            var parameters = data.ModelComponent.Materials[0].Passes[0].Parameters;
-            parameters.Set(TerrainVirtualTextureKeys.VTMipBias, VTConstants.MipBias);
-            parameters.Set(TerrainVirtualTextureKeys.VTMaxAniso, 4.0f);
-            float terrainSize = data.TerrainData.Header.Size * data.UnitsPerTexel;
-            parameters.Set(TerrainVirtualTextureKeys.VTResolution, (terrainSize / VTConstants.BaseTileWorld) * VTConstants.TileSize);
-            parameters.Set(TerrainVirtualTextureKeys.VTCameraPosition, cameraPosition);
-
             // Update virtual texturing
             if (data.VirtualTexturingSystem != null && data.GpuTextureManager != null)
             {
+                // Ugly but works
+                var parameters = data.ModelComponent.Materials[0].Passes[0].Parameters;
                 data.GpuTextureManager.DiffuseRoughnessAtlasRenderer.MaterialDiffuseRoughnessArray = data.VirtualTexturingSystem.TileRenderer.MaterialDiffuseRoughnessArray = parameters.Get(TerrainMaterialSamplingKeys.DiffuseRoughnessArray);
                 data.VirtualTexturingSystem.TileRenderer.MaterialNormalArray = parameters.Get(TerrainMaterialSamplingKeys.NormalArray);
-                data.VirtualTexturingSystem.Update(context.GetThreadContext(), cameraPosition, data);
 
-                var vts = data.VirtualTexturingSystem;
-                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked0, vts.ClipmapOriginsPacked0);
-                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked1, vts.ClipmapOriginsPacked1);
-                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked2, vts.ClipmapOriginsPacked2);
-                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked3, vts.ClipmapOriginsPacked3);
-                parameters.Set(TerrainVirtualTextureKeys.ClipmapOriginsPacked4, vts.ClipmapOriginsPacked4);
-                parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalDiffuseRoughness, data.VirtualTexturingSystem.PhysicalAtlas.DiffuseRoughnessAtlas);
-                parameters.Set(TerrainVirtualTextureSamplingKeys.PhysicalNormal, data.VirtualTexturingSystem.PhysicalAtlas.NormalAtlas);
+                data.VirtualTexturingSystem.Update(context.GetThreadContext(), cameraPosition, data);
             }
         }
     }

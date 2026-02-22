@@ -11,19 +11,16 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
         static const int    VT_MIP_COUNT        = 7;
         static const float  VT_BASE_TILE_WORLD  = 0.5;    // mip 0 tile covers 0.5 m
 
-        cbuffer PerMaterial.TerrainVT
+        cbuffer PerFrame.TerrainVT
         {
             stage float VTMipBias;
             stage float VTMaxAniso;
             stage float VTResolution;
-            stage float3 VTCameraPosition;
-        }
-
-        // Clipmap origins: 2 mip levels packed per float4.
-        // Declared as separate uniforms (not an array) to avoid Stride/HLSL cbuffer array issues.
-        // Layout: Packed0.xy=mip0, .zw=mip1 | Packed1.xy=mip2, .zw=mip3 | ... | Packed4.xy=mip8
-        cbuffer PerMaterial.TerrainVTClipmap
-        {
+            stage float Padding0;
+            
+            // Clipmap origins: 2 mip levels packed per float4.
+            // Declared as separate uniforms (not an array) to avoid Stride/HLSL cbuffer array issues.
+            // Layout: Packed0.xy=mip0, .zw=mip1 | Packed1.xy=mip2, .zw=mip3 | ... | Packed4.xy=mip8
             stage float4 ClipmapOriginsPacked0;
             stage float4 ClipmapOriginsPacked1;
             stage float4 ClipmapOriginsPacked2;

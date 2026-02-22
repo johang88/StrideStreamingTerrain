@@ -21,8 +21,7 @@ namespace StrideTerrain.TerrainSystem.Effects.Material
         public static readonly ValueParameterKey<float> VTMipBias = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> VTMaxAniso = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<float> VTResolution = ParameterKeys.NewValue<float>();
-        public static readonly ValueParameterKey<Vector3> VTCameraPosition = ParameterKeys.NewValue<Vector3>();
-        // Two mip origins packed per float4: Packed0.xy=mip0, .zw=mip1, ..., Packed4.xy=mip8
+        public static readonly ValueParameterKey<float> Padding0 = ParameterKeys.NewValue<float>();
         public static readonly ValueParameterKey<Vector4> ClipmapOriginsPacked0 = ParameterKeys.NewValue<Vector4>();
         public static readonly ValueParameterKey<Vector4> ClipmapOriginsPacked1 = ParameterKeys.NewValue<Vector4>();
         public static readonly ValueParameterKey<Vector4> ClipmapOriginsPacked2 = ParameterKeys.NewValue<Vector4>();

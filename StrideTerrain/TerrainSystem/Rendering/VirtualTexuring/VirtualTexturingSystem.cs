@@ -37,6 +37,9 @@ public class VirtualTexturingSystem : IDisposable
     // band that appears when a single queue drains mips serially (coarse-first or fine-first).
     private readonly PriorityQueue<TileRequest, float>[] _dirtyQueues = new PriorityQueue<TileRequest, float>[Mips];
 
+    // Pre-allocated batch buffer — reused every frame to avoid per-frame heap allocations.
+    private readonly List<TileRequest> _batch = new(64);
+
     // Packed clipmap origins uploaded to the shader as 5 individual uniforms.
     // Two mip origins per Vector4 — Packed0.xy=mip0, .zw=mip1 | Packed1.xy=mip2, .zw=mip3 | ...
     private readonly Vector4[] _originsPacked = new Vector4[5];
@@ -181,12 +184,12 @@ public class VirtualTexturingSystem : IDisposable
         // This ensures all mips build coverage simultaneously so the shader always finds a valid
         // tile at (or near) the correct mip level. A single merged queue would drain mips serially,
         // leaving intermediate mips unrendered and causing hard coarse/fine boundaries in the fallback.
-        var batch = new List<TileRequest>(MaxTilesPerFrame);
+        _batch.Clear();
         int budgetPerMip = Math.Max(1, MaxTilesPerFrame / Mips);
 
-        for (int mip = 0; mip < Mips && batch.Count < MaxTilesPerFrame; mip++)
+        for (int mip = 0; mip < Mips && _batch.Count < MaxTilesPerFrame; mip++)
         {
-            int thisMipBudget = Math.Min(budgetPerMip, MaxTilesPerFrame - batch.Count);
+            int thisMipBudget = Math.Min(budgetPerMip, MaxTilesPerFrame - _batch.Count);
             int rendered = 0;
 
             while (rendered < thisMipBudget && _dirtyQueues[mip].Count > 0)
@@ -200,17 +203,17 @@ public class VirtualTexturingSystem : IDisposable
                 if (relX < 0 || relX >= CT || relY < 0 || relY >= CT)
                     continue;
 
-                batch.Add(req);
+                _batch.Add(req);
                 rendered++;
             }
         }
 
         // Give any unused budget to whichever mip still has pending tiles
-        if (batch.Count < MaxTilesPerFrame)
+        if (_batch.Count < MaxTilesPerFrame)
         {
-            for (int mip = 0; mip < Mips && batch.Count < MaxTilesPerFrame; mip++)
+            for (int mip = 0; mip < Mips && _batch.Count < MaxTilesPerFrame; mip++)
             {
-                while (batch.Count < MaxTilesPerFrame && _dirtyQueues[mip].Count > 0)
+                while (_batch.Count < MaxTilesPerFrame && _dirtyQueues[mip].Count > 0)
                 {
                     var req = _dirtyQueues[mip].Dequeue();
                     var origin = _currentOrigins[mip];
@@ -218,17 +221,17 @@ public class VirtualTexturingSystem : IDisposable
                     int relY = req.TileY - origin.Y;
                     if (relX < 0 || relX >= CT || relY < 0 || relY >= CT)
                         continue;
-                    batch.Add(req);
+                    _batch.Add(req);
                 }
             }
         }
 
-        if (batch.Count > 0)
+        if (_batch.Count > 0)
         {
-            TileRenderer.RenderTiles(context, batch, terrainRuntimeData);
+            TileRenderer.RenderTiles(context, _batch, terrainRuntimeData);
 
             // Mark rendered slots as current (use toroidal indices to match dirty check)
-            foreach (var req in batch)
+            foreach (var req in _batch)
             {
                 var origin = _currentOrigins[req.MipLevel];
                 int relX = req.TileX - origin.X;
