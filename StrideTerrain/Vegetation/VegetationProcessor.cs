@@ -51,7 +51,7 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
         var sceneSystem = Services.GetSafeServiceAs<SceneSystem>();
 
         var camera = sceneSystem.TryGetMainCamera();
-        if (camera == null)
+        if (camera == null || true)
             return;
 
         var cameraPosition = camera.GetWorldPosition();

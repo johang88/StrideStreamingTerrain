@@ -19,19 +19,21 @@ public class BloomSettings
     [DataMember, DefaultValue(5)] public int NumberOfDownSamples { get; set; } = 5;
     [DataMember, DefaultValue(2.0f)] public float BrightPassSteepness { get; set; } = 2.0f;
     [DataMember, DefaultValue(4.0f)] public float ThresholdOffset { get; set; } = 4.0f;
+    [DataMember, DefaultValue(1.0f)] public float Strength { get; set; } = 1.0f;
+    [DataMember, DefaultValue(1.0f)] public float Radius { get; set; } = 1.0f;
 }
 
 [DataContract]
 public class ExposureSettings
 {
-    [DefaultValue(true)] public bool AutoKey { get; set; } = true;
-    [DefaultValue(1.0f)] public float AutoKeyBiasPower { get; set; } = 1.0f;
-    [DefaultValue(0.08f)] public float Key { get; set; } = 0.08f;
-    [DefaultValue(1.0f / 64.0f)] public float MinExposure { get; set; } = 1.0f / 64.0f;
-    [DefaultValue(64.0f)] public float MaxExposure { get; set; } = 64.0f;
-    [DefaultValue(1.1f)] public float AdaptionSpeed { get; set; } = 1.1f;
-    [DefaultValue(2.0f)] public float Exposure { get; set; } = 2.0f;
-    [DefaultValue(true)] public bool AutoExposure { get; set; } = true;
+    [DataMember, DefaultValue(true)] public bool AutoKey { get; set; } = true;
+    [DataMember, DefaultValue(1.0f)] public float AutoKeyBiasPower { get; set; } = 1.0f;
+    [DataMember, DefaultValue(0.08f)] public float Key { get; set; } = 0.08f;
+    [DataMember, DefaultValue(1.0f / 64.0f)] public float MinExposure { get; set; } = 1.0f / 64.0f;
+    [DataMember, DefaultValue(64.0f)] public float MaxExposure { get; set; } = 64.0f;
+    [DataMember, DefaultValue(1.1f)] public float AdaptionSpeed { get; set; } = 1.1f;
+    [DataMember, DefaultValue(2.0f)] public float Exposure { get; set; } = 2.0f;
+    [DataMember, DefaultValue(true)] public bool AutoExposure { get; set; } = true;
 }
 
 [DataContract(nameof(CustomPostProcessingEffects))]
@@ -199,8 +201,9 @@ public class CustomPostProcessingEffects : ImageEffect, IImageEffectRenderer, IP
             _exposure!.SetData(context.CommandList, GetManualExposureSettings());
         }
 
-        // Bright Pass
-        var brightPassTexture = NewScopedRenderTarget2D(currentInput.Width, currentInput.Height, currentInput.Format, 1);
+        // Bright Pass — runs at half resolution; the bloom pyramid immediately
+        // downsamples further so the quality difference is negligible.
+        var brightPassTexture = NewScopedRenderTarget2D(currentInput.Width / 2, currentInput.Height / 2, currentInput.Format, 1);
         _brightPassShader!.Parameters.Set(ExposureCommonKeys.Exposure, _exposure);
         _brightPassShader.Parameters.Set(BloomBrightPassKeys.BrightPassSteepness, BloomSettings.BrightPassSteepness);
         _brightPassShader.Parameters.Set(BloomBrightPassKeys.ThresholdOffset, BloomSettings.ThresholdOffset);
@@ -231,8 +234,8 @@ public class CustomPostProcessingEffects : ImageEffect, IImageEffectRenderer, IP
             _bloomUpSample!.SetInput(0, bloomInput);
             _bloomUpSample.SetOutput(bloomRenderTarget);
 
-            _bloomUpSample.Parameters.Set(BloomUpSampleKeys.Strength, 1.0f);
-            _bloomUpSample.Parameters.Set(BloomUpSampleKeys.Radius, 1.0f);
+            _bloomUpSample.Parameters.Set(BloomUpSampleKeys.Strength, BloomSettings.Strength);
+            _bloomUpSample.Parameters.Set(BloomUpSampleKeys.Radius, BloomSettings.Radius);
 
             _bloomUpSample.Draw(context, $"Bloom up Sample {i}");
 
