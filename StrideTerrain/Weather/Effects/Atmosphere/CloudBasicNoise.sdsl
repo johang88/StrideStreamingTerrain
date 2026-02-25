@@ -1,0 +1,44 @@
+namespace StrideTerrain.Weather.Effects.Atmosphere
+{
+    // Generates a 128^3 3D texture with:
+    //   R = Perlin-Worley composite (base cloud shape)
+    //   G = Worley FBM (1x frequency)
+    //   B = Worley FBM (2x frequency)
+    //   A = Worley FBM (4x frequency)
+    shader CloudBasicNoise : Noise
+    {
+        stage RWTexture3D<float4> OutputTexture;
+
+        cbuffer NoiseParams
+        {
+            uint TextureSize;
+        }
+
+        override void Compute()
+        {
+            uint3 id = streams.DispatchThreadId.xyz;
+            if (id.x >= TextureSize || id.y >= TextureSize || id.z >= TextureSize)
+                return;
+
+            float sizeF = TextureSize;
+            float3 uvw = float3(id) / sizeF;
+            float3 p = uvw * sizeF;
+
+            // Perlin FBM (7 octaves for rich detail)
+            float perlin = PerlinFbm(p, sizeF, 7);
+            perlin = perlin * 0.5 + 0.5; // remap to [0,1]
+            perlin = saturate(perlin);
+
+            // Worley at different frequencies for erosion channels
+            float worley1 = WorleyFbm(p, sizeF, 3);
+            float worley2 = WorleyFbm(p * 2.0, sizeF * 2.0, 3);
+            float worley4 = WorleyFbm(p * 4.0, sizeF * 4.0, 3);
+
+            // Perlin-Worley composite: remap Perlin using Worley as the low bound
+            // This creates the characteristic puffy cumulus shape
+            float perlinWorley = saturate(Remap(perlin, worley1 * 0.4, 1.0, 0.0, 1.0));
+
+            OutputTexture[id] = float4(perlinWorley, worley1, worley2, worley4);
+        }
+    };
+}

@@ -1,0 +1,178 @@
+namespace StrideTerrain.Weather.Effects.Atmosphere
+{
+    // Pass 2: Full-resolution temporal reconstruction.
+    // Reads the sparse trace output (1/16 pixels fresh per frame) and the
+    // previous reconstruction result. Blends or reprojects to produce a
+    // complete cloud buffer every frame.
+    shader CloudReconstruct : ComputeShaderBase, AtmosphereBase
+    {
+        stage Texture2D<float4> TraceTexture;      // raw trace output (sparse, 1/16 fresh)
+        stage Texture2D<float4> HistoryTexture;     // previous frame's reconstruction
+        stage RWTexture2D<float4> OutputTexture;    // current frame reconstruction
+
+        struct CloudParameters
+        {
+            float Coverage;
+            float Density;
+            float BaseNoiseScale;
+            float DetailNoiseScale;
+
+            float ErosionStrength;
+            float WindSpeed;
+            float2 WindDirection;
+
+            float CloudLayerMin;
+            float CloudLayerMax;
+            float PhaseG;
+            float LightAbsorption;
+
+            uint StepCount;
+            uint LightStepCount;
+            float CirrusAmount;
+            float _Padding0;
+        };
+
+        cbuffer ReconstructParams
+        {
+            CloudParameters Clouds;
+            AtmosphereParameters Atmosphere;
+            float4x4 PrevViewProjection;
+            float4x4 InvViewProjection;
+            float3 CameraPosition;
+            float2 Resolution;
+            uint FrameIndex;
+            float TemporalBlendFactor;
+        }
+
+        // Same Bayer matrix as trace pass
+        int GetBayerIndex(uint2 pixelCoord)
+        {
+            uint x = pixelCoord.x % 4;
+            uint y = pixelCoord.y % 4;
+            uint idx = y * 4 + x;
+
+            if (idx ==  0) return  0;
+            if (idx ==  1) return  8;
+            if (idx ==  2) return  2;
+            if (idx ==  3) return 10;
+            if (idx ==  4) return 12;
+            if (idx ==  5) return  4;
+            if (idx ==  6) return 14;
+            if (idx ==  7) return  6;
+            if (idx ==  8) return  3;
+            if (idx ==  9) return 11;
+            if (idx == 10) return  1;
+            if (idx == 11) return  9;
+            if (idx == 12) return 15;
+            if (idx == 13) return  7;
+            if (idx == 14) return 13;
+            return  5;
+        }
+
+        override void Compute()
+        {
+            uint2 pixelCoord = streams.DispatchThreadId.xy;
+            uint resX = Resolution.x;
+            uint resY = Resolution.y;
+
+            if (pixelCoord.x >= resX || pixelCoord.y >= resY)
+                return;
+
+            float2 uv = (float2(pixelCoord) + 0.5) / Resolution;
+
+            // Was this pixel freshly traced this frame?
+            int bayerValue = GetBayerIndex(pixelCoord);
+            int frameSlot = (int)(FrameIndex % 16);
+            bool isFresh = (bayerValue == frameSlot);
+
+            // Read the current trace result (only valid for fresh pixels)
+            float4 traceResult = TraceTexture[pixelCoord];
+
+            // ── Reproject history ──
+            // Estimate cloud world position for reprojection
+            float4 unprojected = mul(float4(uv * float2(2.0, -2.0) - float2(1.0, -1.0), 0, 1), InvViewProjection);
+            unprojected.xyz /= unprojected.w;
+            float3 rayDir = normalize(unprojected.xyz - CameraPosition);
+
+            float3 planetCenter = Atmosphere.PlanetCenter * SKY_UNIT_TO_M;
+            float bottomRadiusM = Atmosphere.BottomRadius * SKY_UNIT_TO_M;
+            float midLayerHeight = (Clouds.CloudLayerMin + Clouds.CloudLayerMax) * 0.5;
+            float midRadius = bottomRadiusM + midLayerHeight;
+
+            float2 tMid = RaySphereIntersect(CameraPosition, rayDir, planetCenter, midRadius);
+            float reprojectDist = max(tMid.x, tMid.y);
+            if (reprojectDist <= 0.0)
+                reprojectDist = midLayerHeight;
+
+            float3 cloudWorldPos = CameraPosition + rayDir * reprojectDist;
+            float4 prevClip = mul(float4(cloudWorldPos, 1.0), PrevViewProjection);
+            float2 prevUV = (prevClip.xy / prevClip.w) * float2(0.5, -0.5) + 0.5;
+
+            bool historyValid = prevUV.x >= 0.0 && prevUV.x <= 1.0
+                             && prevUV.y >= 0.0 && prevUV.y <= 1.0
+                             && FrameIndex >= 1;
+
+            float4 historySample = float4(0, 0, 0, 1);
+            if (historyValid)
+            {
+                historySample = HistoryTexture.SampleLevel(SamplerLinearClamp, prevUV, 0);
+
+                // Neighborhood clamping from trace buffer to reject ghosting
+                // Use a wider window (5x5) since trace data is sparse
+                float4 neighborMin = float4(100000, 100000, 100000, 100000);
+                float4 neighborMax = float4(-100000, -100000, -100000, -100000);
+                int sampleCount = 0;
+
+                int maxX = (int)resX - 1;
+                int maxY = (int)resY - 1;
+                for (int dy = -2; dy <= 2; dy++)
+                {
+                    for (int dx = -2; dx <= 2; dx++)
+                    {
+                        int nx = clamp(pixelCoord.x + dx, 0, maxX);
+                        int ny = clamp(pixelCoord.y + dy, 0, maxY);
+                        float4 neighbor = TraceTexture[uint2(nx, ny)];
+
+                        // Only consider pixels that have been traced recently
+                        // (non-zero scattering or transmittance < 1 means it was traced)
+                        neighborMin = min(neighborMin, neighbor);
+                        neighborMax = max(neighborMax, neighbor);
+                    }
+                }
+
+                historySample = clamp(historySample, neighborMin, neighborMax);
+            }
+
+            // ── Combine ──
+            float4 finalResult;
+            if (isFresh)
+            {
+                if (historyValid)
+                {
+                    // Blend fresh trace with history
+                    finalResult = lerp(historySample, traceResult, TemporalBlendFactor);
+                }
+                else
+                {
+                    // No valid history, use fresh trace directly
+                    finalResult = traceResult;
+                }
+            }
+            else
+            {
+                if (historyValid)
+                {
+                    // Not freshly traced: use reprojected + clamped history
+                    finalResult = historySample;
+                }
+                else
+                {
+                    // No history and not traced: transparent
+                    finalResult = float4(0, 0, 0, 1);
+                }
+            }
+
+            OutputTexture[pixelCoord] = finalResult;
+        }
+    };
+}

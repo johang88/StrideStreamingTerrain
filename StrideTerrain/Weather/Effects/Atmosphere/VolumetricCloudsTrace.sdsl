@@ -1,0 +1,103 @@
+namespace StrideTerrain.Weather.Effects.Atmosphere
+{
+    // Pass 1: Traces only the active pixel for the current frame (1/16 pixels via Bayer).
+    // Writes raw ray march result. Inactive pixels are left untouched.
+    shader VolumetricCloudsTrace : ComputeShaderBase, VolumetricClouds
+    {
+        stage Texture2D<float4> TransmittanceLUT;
+        stage Texture2D<float4> SkyLuminanceLUT;
+        stage Texture3D<float4> BasicNoiseTexture;
+        stage Texture3D<float4> DetailNoiseTexture;
+        stage Texture2D<float4> WeatherMapTexture;
+        stage RWTexture2D<float4> OutputTexture;
+
+        cbuffer CloudTrace
+        {
+            CloudParameters Clouds;
+            AtmosphereParameters Atmosphere;
+            float4x4 InvViewProjection;
+            float3 SunDirection;
+            [Color] float3 SunColor;
+            float3 CameraPosition;
+            float2 Resolution;
+            uint FrameIndex;
+        }
+
+        // 4x4 Bayer matrix for 16-frame temporal interleaving
+        int GetBayerIndex(uint2 pixelCoord)
+        {
+            uint x = pixelCoord.x % 4;
+            uint y = pixelCoord.y % 4;
+            uint idx = y * 4 + x;
+
+            //  0  8  2 10
+            // 12  4 14  6
+            //  3 11  1  9
+            // 15  7 13  5
+            if (idx ==  0) return  0;
+            if (idx ==  1) return  8;
+            if (idx ==  2) return  2;
+            if (idx ==  3) return 10;
+            if (idx ==  4) return 12;
+            if (idx ==  5) return  4;
+            if (idx ==  6) return 14;
+            if (idx ==  7) return  6;
+            if (idx ==  8) return  3;
+            if (idx ==  9) return 11;
+            if (idx == 10) return  1;
+            if (idx == 11) return  9;
+            if (idx == 12) return 15;
+            if (idx == 13) return  7;
+            if (idx == 14) return 13;
+            return  5;
+        }
+
+        float HashPixel(uint2 coord, uint frame)
+        {
+            uint seed = coord.x * 1973 + coord.y * 9277 + frame * 26699;
+            seed = (seed ^ 61) ^ (seed >> 16);
+            seed *= 9;
+            seed = seed ^ (seed >> 4);
+            seed *= 668265261;
+            seed = seed ^ (seed >> 15);
+            float result = seed;
+            return result / 4294967295.0;
+        }
+
+        override void Compute()
+        {
+            uint2 pixelCoord = streams.DispatchThreadId.xy;
+            uint resX = Resolution.x;
+            uint resY = Resolution.y;
+
+            if (pixelCoord.x >= resX || pixelCoord.y >= resY)
+                return;
+
+            // Only trace the active pixel for this frame
+            int bayerValue = GetBayerIndex(pixelCoord);
+            int frameSlot = FrameIndex % 16;
+            if (bayerValue != frameSlot)
+                return;
+
+            float2 uv = (float2(pixelCoord) + 0.5) / Resolution;
+
+            // Reconstruct world ray
+            float4 unprojected = mul(float4(uv * float2(2.0, -2.0) - float2(1.0, -1.0), 0, 1), InvViewProjection);
+            unprojected.xyz /= unprojected.w;
+            float3 rayDir = normalize(unprojected.xyz - CameraPosition);
+
+            // Per-pixel temporal jitter
+            float jitter = HashPixel(pixelCoord, FrameIndex);
+
+            VolumetricCloudResult cloudResult = RayMarchClouds(
+                CameraPosition, rayDir,
+                SunDirection, SunColor,
+                Clouds, Atmosphere,
+                BasicNoiseTexture, DetailNoiseTexture, WeatherMapTexture,
+                TransmittanceLUT, SkyLuminanceLUT,
+                Time, jitter);
+
+            OutputTexture[pixelCoord] = float4(cloudResult.scattering, cloudResult.transmittance);
+        }
+    };
+}

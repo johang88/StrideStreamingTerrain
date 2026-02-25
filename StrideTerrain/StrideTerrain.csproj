@@ -239,7 +239,42 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\CloudBasicNoise.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\CloudDetailNoise.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\CloudReconstruct.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\CloudWeatherMap.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Weather\Effects\Atmosphere\LUT\AtmosphereCameraVolumeLut.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\Noise.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\VolumetricClouds.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\VolumetricCloudsTrace.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
@@ -389,8 +424,29 @@
 	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl">
 	    <LastGenOutput>AtmosphereRenderSky.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="Weather\Effects\Atmosphere\CloudBasicNoise.sdsl">
+	    <LastGenOutput>CloudBasicNoise.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\CloudDetailNoise.sdsl">
+	    <LastGenOutput>CloudDetailNoise.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\CloudReconstruct.sdsl">
+	    <LastGenOutput>CloudReconstruct.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\CloudWeatherMap.sdsl">
+	    <LastGenOutput>CloudWeatherMap.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Weather\Effects\Atmosphere\LUT\AtmosphereCameraVolumeLut.sdsl">
 	    <LastGenOutput>AtmosphereCameraVolumeLut.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\Noise.sdsl">
+	    <LastGenOutput>Noise.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\VolumetricClouds.sdsl">
+	    <LastGenOutput>VolumetricClouds.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\VolumetricCloudsTrace.sdsl">
+	    <LastGenOutput>VolumetricCloudsTrace.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Weather\Effects\Lights\VolumetricLightDiretional.sdsl">
 	    <LastGenOutput>VolumetricLightDiretional.sdsl.cs</LastGenOutput>

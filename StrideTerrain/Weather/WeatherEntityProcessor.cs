@@ -69,6 +69,7 @@ public class WeatherEntityProcessor : EntityProcessor<WeatherComponent, WeatherR
                 renderObject.SunColor = sunColor;
                 renderObject.Atmosphere = _activeAtmosphere.Atmosphere;
                 renderObject.Clouds = _activeAtmosphere.Clouds;
+                renderObject.WeatherMap = _activeAtmosphere.WeatherMap;
                 renderObject.Fog = _activeAtmosphere.Fog;
                 renderObject.Sun = lightProcessor?.GetRenderLight(_activeAtmosphere.Sun);
             }

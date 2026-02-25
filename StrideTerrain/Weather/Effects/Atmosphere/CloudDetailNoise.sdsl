@@ -1,0 +1,36 @@
+namespace StrideTerrain.Weather.Effects.Atmosphere
+{
+    // Generates a 32^3 3D texture with:
+    //   R = Worley FBM (1x frequency) - primary detail erosion
+    //   G = Worley FBM (2x frequency)
+    //   B = Worley FBM (4x frequency)
+    //   A = 1.0 (unused)
+    shader CloudDetailNoise : Noise
+    {
+        stage RWTexture3D<float4> OutputTexture;
+
+        cbuffer NoiseParams
+        {
+            uint TextureSize;
+        }
+
+        override void Compute()
+        {
+            uint3 id = streams.DispatchThreadId.xyz;
+            if (id.x >= TextureSize || id.y >= TextureSize || id.z >= TextureSize)
+                return;
+
+            float sizeF = TextureSize;
+            float3 p = float3(id);
+
+            float worley1 = WorleyFbm(p, sizeF, 3);
+            float worley2 = WorleyFbm(p * 2.0, sizeF * 2.0, 3);
+            float worley4 = WorleyFbm(p * 4.0, sizeF * 4.0, 3);
+
+            // Composite detail: weighted sum for a single detail erosion value
+            float detail = worley1 * 0.625 + worley2 * 0.25 + worley4 * 0.125;
+
+            OutputTexture[id] = float4(worley1, worley2, worley4, detail);
+        }
+    };
+}

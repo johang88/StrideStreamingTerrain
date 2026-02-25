@@ -6,13 +6,28 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
         stage Texture2D<float4> SkyLuminanceLUT;
         stage Texture2D<float4> MultiScatteringLUT;
         stage Texture2D<float4> SkyViewLUT;
+        stage Texture2D<float4> CloudAccumulationTexture;
 
 		struct CloudParameters
         {
-            float Scale;
-            float Speed;
-            float Cloudiness;
+            float Coverage;
+            float Density;
+            float BaseNoiseScale;
+            float DetailNoiseScale;
+
+            float ErosionStrength;
+            float WindSpeed;
+            float2 WindDirection;
+
+            float CloudLayerMin;
+            float CloudLayerMax;
+            float PhaseG;
+            float LightAbsorption;
+
+            uint StepCount;
+            uint LightStepCount;
             float CirrusAmount;
+            float _Padding0;
         };
 
         cbuffer Atmosphere
@@ -157,19 +172,14 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 				}
 			}
 
-			// --- Main cloud layer at 1000 m ---
-			CloudResult cloud = (CloudResult)0;
-			float t = TracePlane(CameraPosition, worldDirection, float3(0, 1000, 0), float3(0, -1, 0));
-			if (t > 0)
-			{
-				float3 cloudPos = CameraPosition + worldDirection * t;
-				cloud.density = CalculateClouds(cloudPos);
+			// --- Volumetric clouds from compute pre-pass ---
+			float2 cloudUV = pixelPosition * InvResolution;
+			float4 cloudAccum = CloudAccumulationTexture.SampleLevel(SamplerLinearClamp, cloudUV, 0);
+			float3 cloudScattering = cloudAccum.rgb;
+			float cloudTransmittance = cloudAccum.a;
 
-				float3 atmTransmittance = GetAtmosphericLightTransmittance(atmosphere, cloudPos, SunDirection, TransmittanceLUT);
-				float3 cloudColor = GetCloudLighting(cloudPos, SunDirection, SunColor * atmTransmittance, cloud.density);
-
-				totalColor = lerp(totalColor, cloudColor, cloud.density);
-			}
+			// Composite: sky is attenuated by cloud transmittance, then cloud scattering is added
+			totalColor = totalColor * cloudTransmittance + cloudScattering;
 
 			if (!RenderSun)
 			{
@@ -186,7 +196,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 				float3 sun = GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, TransmittanceLUT);
 
 				// Sun transmittance through cloud layers
-				float sunTau = cloud.density * 40.0 + cirrusDensity * 6.0;
+				float sunTau = -log(max(cloudTransmittance, 0.0001)) + cirrusDensity * 6.0;
 				sun *= exp(-sunTau);
 				totalColor += sun;
 			}
@@ -227,6 +237,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 			return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
 		}
 
+		// --- 2D noise functions kept for cirrus ---
 		float2 Hash(float2 p)
 		{
 			p = float2(dot(p, float2(127.1, 311.7)), dot(p, float2(269.5, 183.3)));
@@ -247,169 +258,14 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 			return dot(n, float3(70.0, 70.0, 70.0));
 		}
 
-		struct CloudResult
-		{
-			float density;
-		};
-
-		// Evaluates cloud density at a given world-space cloud-layer position.
-		// Returns density in [0, 1].
-		float CalculateClouds(float3 cloudPos)
-		{
-			const float2 cloudUV = cloudPos.xz * Clouds.Scale;
-			const float cloudTime = Time * Clouds.Speed;
-			const float2x2 m = float2x2(1.6, 1.2, -1.2, 1.6);
-			const uint quality = 6; // 6 octaves is a good quality/cost tradeoff
-
-			// --- Domain warp (flow distortion) ---
-			float2 warp = 0;
-			{
-				float2 uv = cloudUV * 0.5f;
-				float amount = 0.1;
-				for (uint i = 0; i < quality; i++)
-				{
-					warp += Noise(uv) * amount;
-					uv = mul(m, uv);
-					amount *= 0.4;
-				}
-			}
-
-			// --- Base shape: multi-octave FBM ---
-			float clouds = 0.0;
-			{
-				const float time = cloudTime * 0.2f;
-				float density = 1.1f;
-				float2 uv = cloudUV * 0.8f;
-				uv -= warp - time;
-				for (uint i = 0; i < quality; i++)
-				{
-					clouds += density * Noise(uv);
-					uv = mul(m, uv) + time;
-					density *= 0.6f;
-				}
-			}
-
-			// --- Detail erosion: ridged noise carves the soft cloud edges ---
-			{
-				float detail = 0.0;
-				const float time = cloudTime * 0.1f;
-				float weight = 0.8f;
-				float2 uv = cloudUV;
-				uv -= warp - time;
-				for (uint i = 0; i < quality; i++)
-				{
-					detail += abs(weight * Noise(uv));
-					uv = mul(m, uv) + time;
-					weight *= 0.7f;
-				}
-				// Subtract detail from soft edges only (dense core is preserved)
-				// Erosion scales WITH cloudiness: complex detail when overcast, smooth sparse shapes when clear
-				float erosion = 0.5 * pow(saturate(Clouds.Cloudiness), 1.5);
-				clouds -= detail * erosion * saturate(1.0 - clouds);
-			}
-
-			// --- Fine-detail turbulence ---
-			// High-frequency pass adds small-scale lumpiness; strength scales with cloudiness
-			// so sparse clouds stay cleanly shaped and detail builds up toward overcast.
-			{
-				float fineDetail = 0.0;
-				const float fdTime = cloudTime * 0.15f;
-				float weight = 0.5f;
-				float2 fdUV = cloudUV * 3.5f;
-				fdUV -= warp - fdTime;
-				for (uint i = 0; i < 4; i++)
-				{
-					fineDetail += weight * abs(Noise(fdUV));
-					fdUV = mul(m, fdUV) + fdTime;
-					weight *= 0.6f;
-				}
-				clouds -= fineDetail * 0.28f * pow(saturate(Clouds.Cloudiness), 1.5) * saturate(1.0f - clouds);
-			}
-
-			// --- Coverage remapping ---
-			// lerp between choppy cumulus and flat overcast based on cloudiness
-			clouds = lerp(clouds * 9.0f * Clouds.Cloudiness + 0.3f, clouds * 0.5f + 0.5f, pow(saturate(Clouds.Cloudiness), 8));
-			clouds = saturate(clouds - (1.0 - Clouds.Cloudiness));
-
-			// --- Horizon fade ---
-			clouds *= pow(saturate(1.0 - length(cloudPos.xz) * 0.00001f), 16);
-
-			// --- Interior texture ---
-			// The coverage remapping saturates interior FBM values to 1.0, which collapses
-			// all density variation inside the blob.  This pass re-introduces that variation
-			// by modulating the FINAL density after clamping, so the effect is always visible.
-			// Multiplying by `clouds` keeps clear-sky pixels untouched.
-			{
-				float interior = 0.0f;
-				float weight = 1.0f;
-				float2 uv = cloudUV * 1.8f + cloudTime * 0.07f;
-				for (uint i = 0; i < 6; i++)
-				{
-					interior += weight * Noise(uv);
-					uv = mul(m, uv);
-					weight *= 0.5f;
-				}
-				interior /= 1.9375f; // normalise: 1+0.5+0.25+0.125+0.0625+0.03125
-				// str scales with cloudiness so sparse clouds keep clean edges
-				float str = 0.6f * pow(saturate(Clouds.Cloudiness), 0.6f);
-				clouds = saturate(clouds + interior * str * clouds);
-			}
-
-			return clouds;
-		}
-
-		// Cloud lighting using dual-lobe Henyey-Greenstein scattering with a
-		// physically-motivated multiple-scatter base to keep clouds bright.
-		//
-		// Key insight: the density value here is a 2D coverage alpha (0-1), NOT a
-		// volumetric extinction coefficient in km^-1.  Applying Beer-Lambert directly
-		// to it collapses brightness to near-zero.  Instead we model the high-albedo
-		// multiple-scattering that makes real clouds appear bright from all angles, then
-		// add a directional phase contribution on top for silver linings and sunset glow.
-		float3 GetCloudLighting(float3 worldPos, float3 lightDir, float3 lightColor, float density)
-		{
-			float3 viewDir = normalize(CameraPosition - worldPos);
-			float cosAngle = dot(viewDir, lightDir); // +1 = camera looking toward sun
-
-			// Dual-lobe HG phase function.
-			// HgPhase() uses the -cosTheta convention internally, so:
-			//   g < 0  →  bright when cosAngle = +1  (forward scatter / silver lining)
-			//   g > 0  →  bright when cosAngle = -1  (backward scatter / underside glow)
-			float phaseForward  = HgPhase(-0.75, cosAngle); // silver lining toward sun
-			float phaseBackward = HgPhase( 0.35, cosAngle); // glow on lit underside
-			float phase = phaseForward * 0.5 + phaseBackward * 0.5;
-
-			// Multiple-scatter base: real cloud droplets have albedo ~0.99, so light
-			// bounces many times and illuminates the cloud nearly isotropically.
-			// Model this as a large isotropic constant + smaller directional lobe.
-			float multiScatterBase = 0.65;
-			float totalPhase = multiScatterBase + (1.0 - multiScatterBase) * phase;
-
-			// Gentle self-shadowing: thick cloud interiors are slightly darker than edges.
-			// Use a small coefficient — density is an alpha, not a physical thickness.
-			float selfShadow = exp(-density * 0.8);
-
-			// Subtle edge brightening: thin cloud edges catch slightly more direct light.
-			float edgeBright = 1.0 + 0.25 * (1.0 - density);
-
-			float3 directLight = lightColor * totalPhase * selfShadow * edgeBright;
-
-			// Ambient from sky (attenuated by density for approximate self-shadowing).
-			float3 skyAmbient = SkyLuminanceLUT.SampleLevel(SamplerLinearClamp, float2(0.5, 0.5), 0).rgb;
-			float3 ambient    = skyAmbient * selfShadow * 0.3;
-
-			return directLight + ambient;
-		}
-
 		// Evaluates thin cirrus cloud density at a given world-space position.
-		// Cirrus are high-altitude ice clouds with characteristic streaky wind-shear wisps.
-		// CirrusAmount (0-1) gates the overall visibility.
 		float CalculateCirrus(float3 cloudPos)
 		{
-			const float cloudTime = Time * Clouds.Speed * 0.25f;
+			const float cirrusScale = Clouds.BaseNoiseScale * 3.0;
+			const float cloudTime = Time * Clouds.WindSpeed * 0.001;
 
 			// Anisotropic UVs: strongly stretched along X to simulate wind-streak direction.
-			float2 uv = float2(cloudPos.x * Clouds.Scale * 0.08f, cloudPos.z * Clouds.Scale * 0.35f);
+			float2 uv = float2(cloudPos.x * cirrusScale * 0.08f, cloudPos.z * cirrusScale * 0.35f);
 			uv -= float2(cloudTime * 0.7f, cloudTime * 0.05f);
 
 			const float2x2 m = float2x2(1.6f, 1.2f, -1.2f, 1.6f);

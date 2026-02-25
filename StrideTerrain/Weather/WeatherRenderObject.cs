@@ -14,5 +14,6 @@ public class WeatherRenderObject : RenderObject
     public AtmosphereParameters Atmosphere;
     public FogParameters Fog;
     public CloudParameters Clouds;
+    public WeatherMapParameters WeatherMap = new();
     public RenderLight? Sun;
 }

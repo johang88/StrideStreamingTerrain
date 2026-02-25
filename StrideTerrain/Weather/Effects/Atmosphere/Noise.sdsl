@@ -1,0 +1,126 @@
+namespace StrideTerrain.Weather.Effects.Atmosphere
+{
+    shader Noise : ComputeShaderBase
+    {
+        // ── Tileable 3D hash ──
+        float3 Hash3D(float3 p, float period)
+        {
+            p = fmod(p, period);
+            p = float3(
+                dot(p, float3(127.1, 311.7, 74.7)),
+                dot(p, float3(269.5, 183.3, 246.1)),
+                dot(p, float3(113.5, 271.9, 124.6)));
+            return frac(sin(p) * 43758.5453123);
+        }
+
+        // ── Tileable Perlin noise ──
+        float3 QuinticInterp(float3 t)
+        {
+            return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+        }
+
+        float3 QuinticInterpDeriv(float3 t)
+        {
+            return 30.0 * t * t * (t * (t - 2.0) + 1.0);
+        }
+
+        float Perlin(float3 p, float period)
+        {
+            float3 pi = floor(p);
+            float3 pf = p - pi;
+
+            float3 w = QuinticInterp(pf);
+
+            // 8 corner gradients
+            float3 g000 = Hash3D(pi + float3(0, 0, 0), period) * 2.0 - 1.0;
+            float3 g100 = Hash3D(pi + float3(1, 0, 0), period) * 2.0 - 1.0;
+            float3 g010 = Hash3D(pi + float3(0, 1, 0), period) * 2.0 - 1.0;
+            float3 g110 = Hash3D(pi + float3(1, 1, 0), period) * 2.0 - 1.0;
+            float3 g001 = Hash3D(pi + float3(0, 0, 1), period) * 2.0 - 1.0;
+            float3 g101 = Hash3D(pi + float3(1, 0, 1), period) * 2.0 - 1.0;
+            float3 g011 = Hash3D(pi + float3(0, 1, 1), period) * 2.0 - 1.0;
+            float3 g111 = Hash3D(pi + float3(1, 1, 1), period) * 2.0 - 1.0;
+
+            float n000 = dot(g000, pf - float3(0, 0, 0));
+            float n100 = dot(g100, pf - float3(1, 0, 0));
+            float n010 = dot(g010, pf - float3(0, 1, 0));
+            float n110 = dot(g110, pf - float3(1, 1, 0));
+            float n001 = dot(g001, pf - float3(0, 0, 1));
+            float n101 = dot(g101, pf - float3(1, 0, 1));
+            float n011 = dot(g011, pf - float3(0, 1, 1));
+            float n111 = dot(g111, pf - float3(1, 1, 1));
+
+            float n = lerp(
+                lerp(lerp(n000, n100, w.x), lerp(n010, n110, w.x), w.y),
+                lerp(lerp(n001, n101, w.x), lerp(n011, n111, w.x), w.y),
+                w.z);
+
+            return n;
+        }
+
+        float PerlinFbm(float3 p, float period, int octaves)
+        {
+            float value = 0.0;
+            float amplitude = 0.5;
+            float freq = 1.0;
+
+            for (int i = 0; i < octaves; i++)
+            {
+                value += amplitude * Perlin(p * freq, period * freq);
+                freq *= 2.0;
+                amplitude *= 0.5;
+            }
+
+            return value;
+        }
+
+        // ── Tileable Worley (cellular) noise ──
+        float Worley(float3 p, float period)
+        {
+            float3 id = floor(p);
+            float3 fd = frac(p);
+
+            float minDist = 1000.0;
+
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    for (int z = -1; z <= 1; z++)
+                    {
+                        float3 offset = float3(x, y, z);
+                        float3 neighbor = id + offset;
+                        float3 featurePoint = Hash3D(neighbor, period);
+                        float3 diff = offset + featurePoint - fd;
+                        float dist = dot(diff, diff);
+                        minDist = min(minDist, dist);
+                    }
+                }
+            }
+
+            return sqrt(minDist);
+        }
+
+        float WorleyFbm(float3 p, float period, int octaves)
+        {
+            float value = 0.0;
+            float amplitude = 0.625;
+            float freq = 1.0;
+
+            for (int i = 0; i < octaves; i++)
+            {
+                value += amplitude * (1.0 - Worley(p * freq, period * freq));
+                freq *= 2.0;
+                amplitude *= 0.5;
+            }
+
+            return value;
+        }
+
+        // ── Utility ──
+        float Remap(float value, float oldMin, float oldMax, float newMin, float newMax)
+        {
+            return newMin + (value - oldMin) / (oldMax - oldMin) * (newMax - newMin);
+        }
+    };
+}

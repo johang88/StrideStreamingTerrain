@@ -16,20 +16,24 @@ using Buffer = Stride.Graphics.Buffer;
 
 namespace StrideTerrain.Weather.Effects.Atmosphere
 {
-    public static partial class AtmosphereRenderSkyKeys
+    public static partial class VolumetricCloudsTraceKeys
     {
         public static readonly ObjectParameterKey<Texture> TransmittanceLUT = ParameterKeys.NewObject<Texture>();
         public static readonly ObjectParameterKey<Texture> SkyLuminanceLUT = ParameterKeys.NewObject<Texture>();
-        public static readonly ObjectParameterKey<Texture> MultiScatteringLUT = ParameterKeys.NewObject<Texture>();
-        public static readonly ObjectParameterKey<Texture> SkyViewLUT = ParameterKeys.NewObject<Texture>();
-        public static readonly ObjectParameterKey<Texture> CloudAccumulationTexture = ParameterKeys.NewObject<Texture>();
-        public static readonly ValueParameterKey<AtmosphereParameters> Atmosphere = ParameterKeys.NewValue<AtmosphereParameters>();
-        public static readonly ValueParameterKey<FogParameters> Fog = ParameterKeys.NewValue<FogParameters>();
+        public static readonly ObjectParameterKey<Texture> HistoryTexture = ParameterKeys.NewObject<Texture>();
+        public static readonly ObjectParameterKey<Texture> BasicNoiseTexture = ParameterKeys.NewObject<Texture>();
+        public static readonly ObjectParameterKey<Texture> DetailNoiseTexture = ParameterKeys.NewObject<Texture>();
+        public static readonly ObjectParameterKey<Texture> WeatherMapTexture = ParameterKeys.NewObject<Texture>();
+        public static readonly ObjectParameterKey<Texture> OutputTexture = ParameterKeys.NewObject<Texture>();
         public static readonly ValueParameterKey<CloudParameters> Clouds = ParameterKeys.NewValue<CloudParameters>();
+        public static readonly ValueParameterKey<AtmosphereParameters> Atmosphere = ParameterKeys.NewValue<AtmosphereParameters>();
         public static readonly ValueParameterKey<Matrix> InvViewProjection = ParameterKeys.NewValue<Matrix>();
+        public static readonly ValueParameterKey<Matrix> PrevViewProjection = ParameterKeys.NewValue<Matrix>();
         public static readonly ValueParameterKey<Vector3> SunDirection = ParameterKeys.NewValue<Vector3>();
         public static readonly ValueParameterKey<Color3> SunColor = ParameterKeys.NewValue<Color3>();
         public static readonly ValueParameterKey<Vector3> CameraPosition = ParameterKeys.NewValue<Vector3>();
-        public static readonly ValueParameterKey<Vector2> InvResolution = ParameterKeys.NewValue<Vector2>();
+        public static readonly ValueParameterKey<Vector2> Resolution = ParameterKeys.NewValue<Vector2>();
+        public static readonly ValueParameterKey<uint> FrameIndex = ParameterKeys.NewValue<uint>();
+        public static readonly ValueParameterKey<float> TemporalBlendFactor = ParameterKeys.NewValue<float>();
     }
 }
