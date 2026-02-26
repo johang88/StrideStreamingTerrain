@@ -19,6 +19,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
     [DataContract]public partial class AtmosphereEffectParameters : ShaderMixinParameters
     {
         public static readonly PermutationParameterKey<bool> RenderSun = ParameterKeys.NewPermutation<bool>(true);
+        public static readonly PermutationParameterKey<bool> RenderClouds = ParameterKeys.NewPermutation<bool>(true);
         public static readonly PermutationParameterKey<bool> EnableHeightFog = ParameterKeys.NewPermutation<bool>(false);
     };
     internal static partial class ShaderMixins
@@ -27,7 +28,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
         {
             public void Generate(ShaderMixinSource mixin, ShaderMixinContext context)
             {
-                context.Mixin(mixin, "AtmosphereRenderSky", context.GetParam(AtmosphereEffectParameters.RenderSun), context.GetParam(AtmosphereEffectParameters.EnableHeightFog));
+                context.Mixin(mixin, "AtmosphereRenderSky", context.GetParam(AtmosphereEffectParameters.RenderSun), context.GetParam(AtmosphereEffectParameters.RenderClouds), context.GetParam(AtmosphereEffectParameters.EnableHeightFog));
             }
 
             [System.Runtime.CompilerServices.ModuleInitializer]

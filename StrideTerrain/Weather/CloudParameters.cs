@@ -36,17 +36,17 @@ public struct CloudParameters
 
     public CloudParameters()
     {
-        Coverage = 0.6f;
-        Density = 2.0f;
+        Coverage = 0.65f;
+        Density = 0.3f;
         BaseNoiseScale = 0.00005f;
         DetailNoiseScale = 0.0005f;
-        ErosionStrength = 0.25f;
+        ErosionStrength = 0.3f;
         WindSpeed = 10.0f;
         WindDirection = new Vector2(1.0f, 0.0f);
         CloudLayerMin = 1500.0f;
         CloudLayerMax = 4000.0f;
-        PhaseG = 0.8f;
-        LightAbsorption = 0.35f;
+        PhaseG = 0.75f;
+        LightAbsorption = 0.5f;
         StepCount = 64;
         LightStepCount = 6;
         CirrusAmount = 0.5f;

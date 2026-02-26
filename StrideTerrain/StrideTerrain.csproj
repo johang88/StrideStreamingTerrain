@@ -229,6 +229,11 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\Atmosphere.sdfx.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereBase.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -417,6 +422,9 @@
 	  </None>
 	  <None Update="Vegetation\Effects\MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl">
 	    <LastGenOutput>MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\Atmosphere.sdfx">
+	    <LastGenOutput>Atmosphere.sdfx.cs</LastGenOutput>
 	  </None>
 	  <None Update="Weather\Effects\Atmosphere\AtmosphereBase.sdsl">
 	    <LastGenOutput>AtmosphereBase.sdsl.cs</LastGenOutput>

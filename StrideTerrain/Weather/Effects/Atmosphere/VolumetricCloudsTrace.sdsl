@@ -1,7 +1,8 @@
 namespace StrideTerrain.Weather.Effects.Atmosphere
 {
-    // Pass 1: Traces only the active pixel for the current frame (1/16 pixels via Bayer).
-    // Writes raw ray march result. Inactive pixels are left untouched.
+    // Pass 1: Traces at quarter resolution — ALL pixels active every frame.
+    // Uses a 4x4 Bayer matrix to cycle which full-res sub-pixel each quarter-res
+    // texel represents, matching the Flower engine approach.
     shader VolumetricCloudsTrace : ComputeShaderBase, VolumetricClouds
     {
         stage Texture2D<float4> TransmittanceLUT;
@@ -19,75 +20,70 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             float3 SunDirection;
             [Color] float3 SunColor;
             float3 CameraPosition;
-            float2 Resolution;
+            float2 TraceResolution;    // quarter-res (width/4, height/4)
+            float2 FullResolution;     // full viewport resolution
             uint FrameIndex;
         }
 
-        // 4x4 Bayer matrix for 16-frame temporal interleaving
-        int GetBayerIndex(uint2 pixelCoord)
+        // Inverse Bayer lookup: given frame slot (0-15), return the (dx, dy) sub-pixel
+        // offset within a 4x4 tile. This is the inverse of the standard 4x4 Bayer matrix:
+        //  0  8  2 10
+        // 12  4 14  6
+        //  3 11  1  9
+        // 15  7 13  5
+        uint2 GetBayerOffset(uint slot)
         {
-            uint x = pixelCoord.x % 4;
-            uint y = pixelCoord.y % 4;
-            uint idx = y * 4 + x;
-
-            //  0  8  2 10
-            // 12  4 14  6
-            //  3 11  1  9
-            // 15  7 13  5
-            if (idx ==  0) return  0;
-            if (idx ==  1) return  8;
-            if (idx ==  2) return  2;
-            if (idx ==  3) return 10;
-            if (idx ==  4) return 12;
-            if (idx ==  5) return  4;
-            if (idx ==  6) return 14;
-            if (idx ==  7) return  6;
-            if (idx ==  8) return  3;
-            if (idx ==  9) return 11;
-            if (idx == 10) return  1;
-            if (idx == 11) return  9;
-            if (idx == 12) return 15;
-            if (idx == 13) return  7;
-            if (idx == 14) return 13;
-            return  5;
+            if (slot ==  0) return uint2(0, 0);
+            if (slot ==  1) return uint2(2, 2);
+            if (slot ==  2) return uint2(2, 0);
+            if (slot ==  3) return uint2(0, 2);
+            if (slot ==  4) return uint2(1, 1);
+            if (slot ==  5) return uint2(3, 3);
+            if (slot ==  6) return uint2(3, 1);
+            if (slot ==  7) return uint2(1, 3);
+            if (slot ==  8) return uint2(1, 0);
+            if (slot ==  9) return uint2(3, 2);
+            if (slot == 10) return uint2(3, 0);
+            if (slot == 11) return uint2(1, 2);
+            if (slot == 12) return uint2(0, 1);
+            if (slot == 13) return uint2(2, 3);
+            if (slot == 14) return uint2(2, 1);
+            return uint2(0, 3); // slot 15
         }
 
-        float HashPixel(uint2 coord, uint frame)
+        // Interleaved gradient noise (Jimenez 2014) — much better temporal
+        // distribution than white noise hash. Produces well-distributed values
+        // that minimize visible patterns when used as ray march jitter.
+        float InterleavedGradientNoise(float2 pixelCoord, uint frameIndex)
         {
-            uint seed = coord.x * 1973 + coord.y * 9277 + frame * 26699;
-            seed = (seed ^ 61) ^ (seed >> 16);
-            seed *= 9;
-            seed = seed ^ (seed >> 4);
-            seed *= 668265261;
-            seed = seed ^ (seed >> 15);
-            float result = seed;
-            return result / 4294967295.0;
+            pixelCoord += float(frameIndex) * 5.588238;
+            return frac(52.9829189 * frac(0.06711056 * pixelCoord.x + 0.00583715 * pixelCoord.y));
         }
 
         override void Compute()
         {
-            uint2 pixelCoord = streams.DispatchThreadId.xy;
-            uint resX = Resolution.x;
-            uint resY = Resolution.y;
+            uint2 quarterCoord = streams.DispatchThreadId.xy;
+            uint traceW = (uint)TraceResolution.x;
+            uint traceH = (uint)TraceResolution.y;
 
-            if (pixelCoord.x >= resX || pixelCoord.y >= resY)
+            if (quarterCoord.x >= traceW || quarterCoord.y >= traceH)
                 return;
 
-            // Only trace the active pixel for this frame
-            int bayerValue = GetBayerIndex(pixelCoord);
-            int frameSlot = FrameIndex % 16;
-            if (bayerValue != frameSlot)
-                return;
+            // Determine which full-res sub-pixel this quarter-res texel represents
+            uint bayerSlot = FrameIndex % 16;
+            uint2 bayerOffset = GetBayerOffset(bayerSlot);
+            uint2 fullResCoord = quarterCoord * 4 + bayerOffset;
 
-            float2 uv = (float2(pixelCoord) + 0.5) / Resolution;
+            // Compute UV in full-res space
+            float2 uv = (float2(fullResCoord) + 0.5) / FullResolution;
 
             // Reconstruct world ray
             float4 unprojected = mul(float4(uv * float2(2.0, -2.0) - float2(1.0, -1.0), 0, 1), InvViewProjection);
             unprojected.xyz /= unprojected.w;
             float3 rayDir = normalize(unprojected.xyz - CameraPosition);
 
-            // Per-pixel temporal jitter
-            float jitter = HashPixel(pixelCoord, FrameIndex);
+            // Per-pixel jitter using interleaved gradient noise
+            float jitter = InterleavedGradientNoise(float2(quarterCoord), FrameIndex);
 
             VolumetricCloudResult cloudResult = RayMarchClouds(
                 CameraPosition, rayDir,
@@ -97,7 +93,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
                 TransmittanceLUT, SkyLuminanceLUT,
                 Time, jitter);
 
-            OutputTexture[pixelCoord] = float4(cloudResult.scattering, cloudResult.transmittance);
+            OutputTexture[quarterCoord] = float4(cloudResult.scattering, cloudResult.transmittance);
         }
     };
 }

@@ -1,13 +1,14 @@
 namespace StrideTerrain.Weather.Effects.Atmosphere
 {
     // Generates a 2D weather map from user parameters.
-    // R = cloud coverage
+    // R = cloud coverage noise (raw, 0-1)
     // G = cloud type (0 = stratus, 1 = cumulus)
     // B = precipitation / density multiplier
     // A = unused (1.0)
     //
-    // Like Horizon Zero Dawn, this is procedurally generated from parameters
-    // rather than hand-authored, allowing runtime control.
+    // Coverage thresholding is NOT applied here — the global Coverage
+    // parameter is applied at runtime in SampleCloudDensity, matching
+    // the Horizon Zero Dawn / WickedEngine approach.
     shader CloudWeatherMap : Noise
     {
         stage RWTexture2D<float4> OutputTexture;
@@ -15,7 +16,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
         cbuffer WeatherParams
         {
             uint MapSize;
-            float Coverage;       // 0-1 global coverage
+            float Coverage;       // 0-1 global coverage (stored but not used for thresholding)
             float CoverageScale;  // world-space scale for coverage noise
             float TypeScale;      // world-space scale for cloud type noise
         }
@@ -33,15 +34,14 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             float2 p = uv * mapSizeF;
 
             // Coverage: multi-octave Perlin for large-scale variation
-            // Use 3D Perlin with z=0 for 2D tileable noise
             float coverageNoise = Perlin(float3(p * CoverageScale, 0.0), mapSizeF * CoverageScale);
             coverageNoise += 0.5 * Perlin(float3(p * CoverageScale * 2.0, 3.7), mapSizeF * CoverageScale * 2.0);
             coverageNoise += 0.25 * Perlin(float3(p * CoverageScale * 4.0, 7.3), mapSizeF * CoverageScale * 4.0);
             coverageNoise = coverageNoise * 0.5 + 0.5; // remap to [0,1]
 
-            // Apply global coverage control: remap so Coverage=0 means no clouds, Coverage=1 means full
-            float coverageThreshold = 1.0 - Coverage;
-            float coverage = saturate((coverageNoise - coverageThreshold) / max(Coverage, 0.01));
+            // Output raw noise — no coverage thresholding.
+            // The global Coverage parameter is applied in SampleCloudDensity.
+            float coverage = saturate(coverageNoise);
 
             // Cloud type: separate noise pattern for variety
             float typeNoise = Perlin(float3(p * TypeScale + 100.0, 13.5), mapSizeF * TypeScale);

@@ -86,6 +86,7 @@ public class WeatherRenderFeature : RootRenderFeature
         _renderSkyEffect = new("AtmosphereRenderSkyEffect");
         _renderSkyEffect.DisposeBy(this);
         _renderSkyEffect.Parameters.Set(AtmosphereEffectParameters.RenderSun, true);
+        _renderSkyEffect.Parameters.Set(AtmosphereEffectParameters.RenderClouds, true);
         _renderSkyEffect.DepthStencilState = new DepthStencilStateDescription(true, false)
         {
             DepthBufferFunction = CompareFunction.Equal
@@ -94,6 +95,7 @@ public class WeatherRenderFeature : RootRenderFeature
         _renderSkyEffectNoSun = new("AtmosphereRenderSkyEffect");
         _renderSkyEffectNoSun.DisposeBy(this);
         _renderSkyEffectNoSun.Parameters.Set(AtmosphereEffectParameters.RenderSun, false);
+        _renderSkyEffectNoSun.Parameters.Set(AtmosphereEffectParameters.RenderClouds, false);
         _renderSkyEffectNoSun.DepthStencilState = new DepthStencilStateDescription(true, false)
         {
             DepthBufferFunction = CompareFunction.Equal
@@ -232,8 +234,6 @@ public class WeatherRenderFeature : RootRenderFeature
 
             RenderSky(context, atmosphere, fog, clouds, sunDirection, sunColor, cameraPosition, invViewProjection, invViewSize, transmittanceLut, multiScatteredLuminanceLut, skyLuminanceLut, skyViewLut, cloudBuffer);
 
-            
-
             _depthShaderResourceView = null;
         }
     }
@@ -283,6 +283,8 @@ public class WeatherRenderFeature : RootRenderFeature
         var mapSize = weatherMap.MapSize;
 
         // Check if we need to regenerate
+        // Coverage is no longer baked into the map, but we track it to force
+        // shader recompilation when the user changes parameters in the editor.
         bool needsRegenerate = _weatherMapTexture == null
             || _weatherMapSize != mapSize
             || Math.Abs(_lastCoverage - clouds.Coverage) > 0.001f
@@ -320,20 +322,28 @@ public class WeatherRenderFeature : RootRenderFeature
     #endregion
 
     #region Volumetric Clouds
-    private void EnsureCloudBuffers(GraphicsDevice device, int width, int height)
+    private void EnsureCloudBuffers(GraphicsDevice device, int fullWidth, int fullHeight)
     {
-        if (_cloudTraceBuffer != null && _cloudTraceBuffer.Width == width && _cloudTraceBuffer.Height == height)
+        // Trace buffer is quarter-resolution
+        var traceW = Math.Max(1, fullWidth / 4);
+        var traceH = Math.Max(1, fullHeight / 4);
+
+        if (_cloudTraceBuffer != null && _cloudTraceBuffer.Width == traceW && _cloudTraceBuffer.Height == traceH
+            && _cloudReconstructA != null && _cloudReconstructA.Width == fullWidth && _cloudReconstructA.Height == fullHeight)
             return;
 
         _cloudTraceBuffer?.Dispose();
         _cloudReconstructA?.Dispose();
         _cloudReconstructB?.Dispose();
 
-        _cloudTraceBuffer = Texture.New2D(device, width, height, PixelFormat.R16G16B16A16_Float,
+        // Quarter-res trace buffer
+        _cloudTraceBuffer = Texture.New2D(device, traceW, traceH, PixelFormat.R16G16B16A16_Float,
             TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
-        _cloudReconstructA = Texture.New2D(device, width, height, PixelFormat.R16G16B16A16_Float,
+
+        // Full-res reconstruction ping-pong buffers
+        _cloudReconstructA = Texture.New2D(device, fullWidth, fullHeight, PixelFormat.R16G16B16A16_Float,
             TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
-        _cloudReconstructB = Texture.New2D(device, width, height, PixelFormat.R16G16B16A16_Float,
+        _cloudReconstructB = Texture.New2D(device, fullWidth, fullHeight, PixelFormat.R16G16B16A16_Float,
             TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
 
         // Reset temporal state on resize
@@ -363,7 +373,11 @@ public class WeatherRenderFeature : RootRenderFeature
         var reconstructWrite = _cloudPingPong ? _cloudReconstructB : _cloudReconstructA;
         var reconstructRead = _cloudPingPong ? _cloudReconstructA : _cloudReconstructB;
 
-        // ── Pass 1: Trace (sparse, 1/16 pixels) ──
+        var traceW = _cloudTraceBuffer.Width;
+        var traceH = _cloudTraceBuffer.Height;
+        var traceResolution = new Vector2(traceW, traceH);
+
+        // ── Pass 1: Trace (quarter-res, ALL pixels active) ──
         _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.OutputTexture, _cloudTraceBuffer);
         _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.TransmittanceLUT, transmittanceLut);
         _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.SkyLuminanceLUT, skyLuminanceLut);
@@ -376,14 +390,15 @@ public class WeatherRenderFeature : RootRenderFeature
         _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.SunDirection, sunDirection);
         _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.SunColor, sunColor);
         _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.CameraPosition, cameraPosition);
-        _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.Resolution, viewSize);
+        _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.TraceResolution, traceResolution);
+        _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.FullResolution, viewSize);
         _cloudTraceEffect.Parameters.Set(VolumetricCloudsTraceKeys.FrameIndex, _frameIndex);
         _cloudTraceEffect.Parameters.Set(GlobalKeys.Time, (float)context.RenderContext.Time.Total.TotalSeconds);
 
         _cloudTraceEffect.ThreadNumbers = new Int3(8, 8, 1);
         _cloudTraceEffect.ThreadGroupCounts = new Int3(
-            (int)Math.Ceiling(width / 8.0),
-            (int)Math.Ceiling(height / 8.0), 1);
+            (int)Math.Ceiling(traceW / 8.0),
+            (int)Math.Ceiling(traceH / 8.0), 1);
         _cloudTraceEffect.Draw(context, "Clouds.VolumetricTrace");
 
         // ── Pass 2: Reconstruct (full resolution) ──
@@ -395,9 +410,9 @@ public class WeatherRenderFeature : RootRenderFeature
         _cloudReconstructEffect.Parameters.Set(CloudReconstructKeys.PrevViewProjection, _prevViewProjection);
         _cloudReconstructEffect.Parameters.Set(CloudReconstructKeys.InvViewProjection, invViewProjection);
         _cloudReconstructEffect.Parameters.Set(CloudReconstructKeys.CameraPosition, cameraPosition);
-        _cloudReconstructEffect.Parameters.Set(CloudReconstructKeys.Resolution, viewSize);
+        _cloudReconstructEffect.Parameters.Set(CloudReconstructKeys.FullResolution, viewSize);
+        _cloudReconstructEffect.Parameters.Set(CloudReconstructKeys.TraceResolution, traceResolution);
         _cloudReconstructEffect.Parameters.Set(CloudReconstructKeys.FrameIndex, _frameIndex);
-        _cloudReconstructEffect.Parameters.Set(CloudReconstructKeys.TemporalBlendFactor, 0.05f);
 
         _cloudReconstructEffect.ThreadNumbers = new Int3(8, 8, 1);
         _cloudReconstructEffect.ThreadGroupCounts = new Int3(

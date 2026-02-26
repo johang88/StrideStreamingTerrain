@@ -3,6 +3,7 @@
     params AtmosphereEffectParameters
     {
         bool RenderSun = true;
+        bool RenderClouds = true;
         bool EnableHeightFog = false;
     }
 
@@ -10,6 +11,6 @@
     {
         using params AtmosphereEffectParameters;
 
-        mixin AtmosphereRenderSky<AtmosphereEffectParameters.RenderSun, AtmosphereEffectParameters.EnableHeightFog>;
+        mixin AtmosphereRenderSky<AtmosphereEffectParameters.RenderSun, AtmosphereEffectParameters.RenderClouds, AtmosphereEffectParameters.EnableHeightFog>;
     }
 }

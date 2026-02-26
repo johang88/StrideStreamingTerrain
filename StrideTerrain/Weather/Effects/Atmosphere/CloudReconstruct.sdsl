@@ -1,14 +1,14 @@
 namespace StrideTerrain.Weather.Effects.Atmosphere
 {
-    // Pass 2: Full-resolution temporal reconstruction.
-    // Reads the sparse trace output (1/16 pixels fresh per frame) and the
-    // previous reconstruction result. Blends or reprojects to produce a
-    // complete cloud buffer every frame.
+    // Pass 2: Full-resolution reconstruction from quarter-res trace.
+    // Each frame, one sub-pixel position (determined by 4x4 Bayer) was traced.
+    // Pixels matching that position read directly from the trace buffer.
+    // All other pixels use reprojected history (with variance clamping).
     shader CloudReconstruct : ComputeShaderBase, AtmosphereBase
     {
-        stage Texture2D<float4> TraceTexture;      // raw trace output (sparse, 1/16 fresh)
-        stage Texture2D<float4> HistoryTexture;     // previous frame's reconstruction
-        stage RWTexture2D<float4> OutputTexture;    // current frame reconstruction
+        stage Texture2D<float4> TraceTexture;      // quarter-res trace output (all pixels fresh)
+        stage Texture2D<float4> HistoryTexture;     // previous frame's full-res reconstruction
+        stage RWTexture2D<float4> OutputTexture;    // current frame full-res reconstruction
 
         struct CloudParameters
         {
@@ -39,57 +39,53 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             float4x4 PrevViewProjection;
             float4x4 InvViewProjection;
             float3 CameraPosition;
-            float2 Resolution;
+            float2 FullResolution;
+            float2 TraceResolution;
             uint FrameIndex;
-            float TemporalBlendFactor;
         }
 
-        // Same Bayer matrix as trace pass
-        int GetBayerIndex(uint2 pixelCoord)
+        // Same inverse Bayer lookup as trace pass
+        uint2 GetBayerOffset(uint slot)
         {
-            uint x = pixelCoord.x % 4;
-            uint y = pixelCoord.y % 4;
-            uint idx = y * 4 + x;
-
-            if (idx ==  0) return  0;
-            if (idx ==  1) return  8;
-            if (idx ==  2) return  2;
-            if (idx ==  3) return 10;
-            if (idx ==  4) return 12;
-            if (idx ==  5) return  4;
-            if (idx ==  6) return 14;
-            if (idx ==  7) return  6;
-            if (idx ==  8) return  3;
-            if (idx ==  9) return 11;
-            if (idx == 10) return  1;
-            if (idx == 11) return  9;
-            if (idx == 12) return 15;
-            if (idx == 13) return  7;
-            if (idx == 14) return 13;
-            return  5;
+            if (slot ==  0) return uint2(0, 0);
+            if (slot ==  1) return uint2(2, 2);
+            if (slot ==  2) return uint2(2, 0);
+            if (slot ==  3) return uint2(0, 2);
+            if (slot ==  4) return uint2(1, 1);
+            if (slot ==  5) return uint2(3, 3);
+            if (slot ==  6) return uint2(3, 1);
+            if (slot ==  7) return uint2(1, 3);
+            if (slot ==  8) return uint2(1, 0);
+            if (slot ==  9) return uint2(3, 2);
+            if (slot == 10) return uint2(3, 0);
+            if (slot == 11) return uint2(1, 2);
+            if (slot == 12) return uint2(0, 1);
+            if (slot == 13) return uint2(2, 3);
+            if (slot == 14) return uint2(2, 1);
+            return uint2(0, 3); // slot 15
         }
 
         override void Compute()
         {
             uint2 pixelCoord = streams.DispatchThreadId.xy;
-            uint resX = Resolution.x;
-            uint resY = Resolution.y;
+            uint fullW = (uint)FullResolution.x;
+            uint fullH = (uint)FullResolution.y;
 
-            if (pixelCoord.x >= resX || pixelCoord.y >= resY)
+            if (pixelCoord.x >= fullW || pixelCoord.y >= fullH)
                 return;
 
-            float2 uv = (float2(pixelCoord) + 0.5) / Resolution;
-
             // Was this pixel freshly traced this frame?
-            int bayerValue = GetBayerIndex(pixelCoord);
-            int frameSlot = (int)(FrameIndex % 16);
-            bool isFresh = (bayerValue == frameSlot);
+            uint bayerSlot = FrameIndex % 16;
+            uint2 bayerOffset = GetBayerOffset(bayerSlot);
+            uint2 withinTile = pixelCoord % 4;
+            bool isFresh = (withinTile.x == bayerOffset.x && withinTile.y == bayerOffset.y);
 
-            // Read the current trace result (only valid for fresh pixels)
-            float4 traceResult = TraceTexture[pixelCoord];
+            // Quarter-res coordinate for this pixel
+            uint2 quarterCoord = pixelCoord / 4;
 
-            // ── Reproject history ──
-            // Estimate cloud world position for reprojection
+            // ── Reproject to find history UV ──
+            float2 uv = (float2(pixelCoord) + 0.5) / FullResolution;
+
             float4 unprojected = mul(float4(uv * float2(2.0, -2.0) - float2(1.0, -1.0), 0, 1), InvViewProjection);
             unprojected.xyz /= unprojected.w;
             float3 rayDir = normalize(unprojected.xyz - CameraPosition);
@@ -112,67 +108,37 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
                              && prevUV.y >= 0.0 && prevUV.y <= 1.0
                              && FrameIndex >= 1;
 
-            float4 historySample = float4(0, 0, 0, 1);
-            if (historyValid)
-            {
-                historySample = HistoryTexture.SampleLevel(SamplerLinearClamp, prevUV, 0);
+            float4 result;
 
-                // Neighborhood clamping from trace buffer to reject ghosting
-                // Use a wider window (5x5) since trace data is sparse
-                float4 neighborMin = float4(100000, 100000, 100000, 100000);
-                float4 neighborMax = float4(-100000, -100000, -100000, -100000);
-                int sampleCount = 0;
-
-                int maxX = (int)resX - 1;
-                int maxY = (int)resY - 1;
-                for (int dy = -2; dy <= 2; dy++)
-                {
-                    for (int dx = -2; dx <= 2; dx++)
-                    {
-                        int nx = clamp(pixelCoord.x + dx, 0, maxX);
-                        int ny = clamp(pixelCoord.y + dy, 0, maxY);
-                        float4 neighbor = TraceTexture[uint2(nx, ny)];
-
-                        // Only consider pixels that have been traced recently
-                        // (non-zero scattering or transmittance < 1 means it was traced)
-                        neighborMin = min(neighborMin, neighbor);
-                        neighborMax = max(neighborMax, neighbor);
-                    }
-                }
-
-                historySample = clamp(historySample, neighborMin, neighborMax);
-            }
-
-            // ── Combine ──
-            float4 finalResult;
             if (isFresh)
             {
+                // This pixel was traced this frame — read from quarter-res trace.
+                // Blend lightly with reprojected history for temporal smoothing.
+                float4 traceResult = TraceTexture[quarterCoord];
+
                 if (historyValid)
                 {
-                    // Blend fresh trace with history
-                    finalResult = lerp(historySample, traceResult, TemporalBlendFactor);
+                    float4 historyColor = HistoryTexture.SampleLevel(SamplerLinearClamp, prevUV, 0);
+                    result = lerp(traceResult, historyColor, 0.85);
                 }
                 else
                 {
-                    // No valid history, use fresh trace directly
-                    finalResult = traceResult;
+                    result = traceResult;
                 }
+            }
+            else if (historyValid)
+            {
+                // Not freshly traced — use reprojected history directly (Flower-style).
+                result = HistoryTexture.SampleLevel(SamplerLinearClamp, prevUV, 0);
             }
             else
             {
-                if (historyValid)
-                {
-                    // Not freshly traced: use reprojected + clamped history
-                    finalResult = historySample;
-                }
-                else
-                {
-                    // No history and not traced: transparent
-                    finalResult = float4(0, 0, 0, 1);
-                }
+                // No valid history and not traced — bilinear sample from quarter-res trace
+                float2 traceUV = (float2(quarterCoord) + 0.5) / TraceResolution;
+                result = TraceTexture.SampleLevel(SamplerLinearClamp, traceUV, 0);
             }
 
-            OutputTexture[pixelCoord] = finalResult;
+            OutputTexture[pixelCoord] = result;
         }
     };
 }

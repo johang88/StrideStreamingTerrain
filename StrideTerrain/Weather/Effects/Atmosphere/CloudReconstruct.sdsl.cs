@@ -26,8 +26,8 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
         public static readonly ValueParameterKey<Matrix> PrevViewProjection = ParameterKeys.NewValue<Matrix>();
         public static readonly ValueParameterKey<Matrix> InvViewProjection = ParameterKeys.NewValue<Matrix>();
         public static readonly ValueParameterKey<Vector3> CameraPosition = ParameterKeys.NewValue<Vector3>();
-        public static readonly ValueParameterKey<Vector2> Resolution = ParameterKeys.NewValue<Vector2>();
+        public static readonly ValueParameterKey<Vector2> FullResolution = ParameterKeys.NewValue<Vector2>();
+        public static readonly ValueParameterKey<Vector2> TraceResolution = ParameterKeys.NewValue<Vector2>();
         public static readonly ValueParameterKey<uint> FrameIndex = ParameterKeys.NewValue<uint>();
-        public static readonly ValueParameterKey<float> TemporalBlendFactor = ParameterKeys.NewValue<float>();
     }
 }

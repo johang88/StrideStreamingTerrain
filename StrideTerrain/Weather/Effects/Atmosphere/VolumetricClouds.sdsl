@@ -99,34 +99,37 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             float weatherScale = 0.00002;
             float2 weatherUV = samplePos.xz * weatherScale;
             float4 weather = weatherMapTexture.SampleLevel(SamplerLinearWrap, weatherUV, 0);
-            float weatherCoverage = weather.r;
+            float rawWeatherCoverage = weather.r;  // raw noise [0,1] from weather map
             float cloudType = weather.g;
             float precipDensity = weather.b;
 
+            // Coverage remap: Coverage controls what fraction of the sky has clouds.
+            // At Coverage=0.5, only weather noise > 0.5 produces clouds.
+            // Areas that DO have clouds can reach full cloudCoverage (up to 1.0).
+            float cloudCoverage = Remap(rawWeatherCoverage, 1.0 - clouds.Coverage, 1.0, 0.0, 1.0);
+
             // Early out for uncovered areas
-            if (weatherCoverage < 0.01)
+            if (cloudCoverage < 0.01)
                 return 0.0;
 
             // ── Base shape from 3D noise texture ──
             float3 baseUV = samplePos * clouds.BaseNoiseScale;
             float4 basicNoise = basicNoiseTexture.SampleLevel(SamplerLinearWrap, baseUV, 0);
 
-            // R = Perlin-Worley composite [0,1], already shaped for clouds
-            float baseShape = basicNoise.r;
+            // R = Perlin-Worley composite (pre-dilated at bake time)
+            // Smooth and boost using Worley FBM with negative lower bound (WickedEngine).
+            // This pushes noisy low values up above the coverage threshold so they're
+            // cleanly cut off, eliminating speckly fragments.
+            float worleyFbm = basicNoise.g * 0.625 + basicNoise.b * 0.25 + basicNoise.a * 0.125;
+            float cloudSample = Remap(basicNoise.r, -(1.0 - worleyFbm), 1.0, 0.0, 1.0);
 
-            // Height gradient shaping based on cloud type from weather map
+            // Height gradient shaping
             float heightGrad = HeightGradient(heightFrac, cloudType);
+            cloudSample *= heightGrad;
 
-            // Combine: base shape modulated by height gradient
-            float shapedNoise = baseShape * heightGrad;
-
-            // Coverage: subtract threshold based on weather coverage
-            // Higher weatherCoverage = lower threshold = more cloud
-            float coverageThreshold = 1.0 - weatherCoverage;
-            float density = saturate(shapedNoise - coverageThreshold);
-
-            // Normalize so at full coverage the density range is usable
-            density = saturate(density / max(weatherCoverage, 0.1));
+            // HZD/WickedEngine coverage remap:
+            // coverage * remap(noise, 1-coverage, 1, 0, 1)
+            float density = cloudCoverage * Remap(cloudSample, 1.0 - cloudCoverage, 1.0, 0.0, 1.0);
 
             if (density < 0.01)
                 return 0.0;
@@ -143,15 +146,16 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             // Use pre-composited detail FBM (alpha channel)
             float detailFbm = detailNoise.a;
 
-            // Erode edges more than dense core
-            float erosionMask = 1.0 - density;
-            density -= detailFbm * clouds.ErosionStrength * erosionMask;
-            density = saturate(density);
+            // Detail erosion: dilate based on height (WickedEngine approach)
+            // At bottom of cloud: erode with inverted detail (carve into base)
+            // At top: erode with regular detail (wispy tops)
+            float detailModifier = lerp(1.0 - detailFbm, detailFbm, saturate(heightFrac * 10.0));
+            density = Remap(density, detailModifier * clouds.ErosionStrength, 1.0, 0.0, 1.0);
 
             // Precipitation: extra density in wet areas
             density = lerp(density, saturate(density * 1.5), precipDensity);
 
-            return density * clouds.Density;
+            return max(density, 0.0) * clouds.Density;
         }
 
         // ── Light march toward sun for self-shadowing ──

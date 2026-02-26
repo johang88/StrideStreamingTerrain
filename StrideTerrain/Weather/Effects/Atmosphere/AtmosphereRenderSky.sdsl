@@ -1,6 +1,6 @@
 namespace StrideTerrain.Weather.Effects.Atmosphere
 {
-    shader AtmosphereRenderSky<bool RenderSun, bool EnableHeightFog> : ImageEffectShader, AtmosphereBase, FogBase
+    shader AtmosphereRenderSky<bool RenderSun, bool RenderClouds, bool EnableHeightFog> : ImageEffectShader, AtmosphereBase, FogBase
     {
         stage Texture2D<float4> TransmittanceLUT;
         stage Texture2D<float4> SkyLuminanceLUT;
@@ -173,13 +173,17 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 			}
 
 			// --- Volumetric clouds from compute pre-pass ---
-			float2 cloudUV = pixelPosition * InvResolution;
-			float4 cloudAccum = CloudAccumulationTexture.SampleLevel(SamplerLinearClamp, cloudUV, 0);
-			float3 cloudScattering = cloudAccum.rgb;
-			float cloudTransmittance = cloudAccum.a;
+			float cloudTransmittance = 0.0f;
+			if (RenderClouds)
+			{
+				float2 cloudUV = pixelPosition * InvResolution;
+				float4 cloudAccum = CloudAccumulationTexture.SampleLevel(SamplerLinearClamp, cloudUV, 0);
+				float3 cloudScattering = cloudAccum.rgb;
+				cloudTransmittance = cloudAccum.a;
 
-			// Composite: sky is attenuated by cloud transmittance, then cloud scattering is added
-			totalColor = totalColor * cloudTransmittance + cloudScattering;
+				// Composite: sky is attenuated by cloud transmittance, then cloud scattering is added
+				totalColor = totalColor * cloudTransmittance + cloudScattering;
+			}
 
 			if (!RenderSun)
 			{
