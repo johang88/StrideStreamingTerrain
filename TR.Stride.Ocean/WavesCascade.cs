@@ -168,7 +168,7 @@ namespace TR.Stride.Ocean
 
             void GenerateMipMaps(TextureAndMips texture)
             {
-                var mipLevels = texture.Texture.MipLevels;
+                var mipLevels = texture.Texture.MipLevelCount;
                 for (var topMip = 0; topMip < mipLevels - 1;)
                 {
                     var SrcWidth = texture.Texture.Width >> topMip;
@@ -231,8 +231,8 @@ namespace TR.Stride.Ocean
             {
                 Texture = texture;
 
-                Mips = new Texture[Texture.MipLevels];
-                for (var i = 0; i < Texture.MipLevels; i++)
+                Mips = new Texture[Texture.MipLevelCount];
+                for (var i = 0; i < Texture.MipLevelCount; i++)
                 {
                     Mips[i] = Texture.ToTextureView(ViewType.MipBand, 0, i);
                 }

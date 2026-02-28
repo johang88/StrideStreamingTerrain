@@ -13,6 +13,7 @@ using System.Collections.Generic;
 using System.Threading;
 
 namespace StrideCommunity.ImGuiDebug;
+#pragma warning disable CS0649
 public class PerfMonitor : BaseWindow
 {
     public float GraphHeight = 48;
@@ -835,3 +836,4 @@ public class PerfMonitor : BaseWindow
         }
     }
 }
+#pragma warning restore CS0649

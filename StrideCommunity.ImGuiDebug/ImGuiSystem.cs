@@ -42,7 +42,6 @@ public class ImGuiSystem : GameSystemBase
     readonly GraphicsDeviceManager deviceManager;
     readonly GraphicsContext context;
     readonly EffectSystem effectSystem;
-    readonly DebugTextSystem debug;
     CommandList commandList;
 
     // device objects
@@ -202,15 +201,15 @@ public class ImGuiSystem : GameSystemBase
         };
 
         // finally set up the pipeline
-        var pipelineState = PipelineState.New(device, ref pipeline);
+        var pipelineState = PipelineState.New(device, pipeline);
         imPipeline = pipelineState;
 
         var is32Bits = false;
-        var indexBuffer = Stride.Graphics.Buffer.Index.New(device, INITIAL_INDEX_BUFFER_SIZE * sizeof(ushort), GraphicsResourceUsage.Dynamic);
+        var indexBuffer = Stride.Graphics.Buffer.Index.New(device, bufferSize: INITIAL_INDEX_BUFFER_SIZE * sizeof(ushort), GraphicsResourceUsage.Dynamic);
         var indexBufferBinding = new IndexBufferBinding(indexBuffer, is32Bits, 0);
         indexBinding = indexBufferBinding;
 
-        var vertexBuffer = Stride.Graphics.Buffer.Vertex.New(device, INITIAL_VERTEX_BUFFER_SIZE * imVertLayout.CalculateSize(), GraphicsResourceUsage.Dynamic);
+        var vertexBuffer = Stride.Graphics.Buffer.Vertex.New(device, bufferSize: INITIAL_VERTEX_BUFFER_SIZE * imVertLayout.CalculateSize(), GraphicsResourceUsage.Dynamic);
         var vertexBufferBinding = new VertexBufferBinding(vertexBuffer, layout, 0);
         vertexBinding = vertexBufferBinding;
     }
@@ -236,7 +235,7 @@ public class ImGuiSystem : GameSystemBase
         _io.Fonts.GetTexDataAsRGBA32(&pixelData, &width, &height, &bytesPerPixel);
 
         var newFontTexture = Texture.New2D(device, width, height, PixelFormat.R8G8B8A8_UNorm, TextureFlags.ShaderResource);
-        newFontTexture.SetData(commandList, new DataPointer(pixelData, (width * height) * bytesPerPixel));
+        newFontTexture.SetData(commandList, new ReadOnlySpan<byte>(pixelData, width * height * bytesPerPixel));
 
         fontTexture = newFontTexture;
     }
@@ -327,8 +326,8 @@ public class ImGuiSystem : GameSystemBase
         for (int n = 0; n < drawData.CmdListsCount; n++)
         {
             ImDrawListPtr cmdList = drawData.CmdLists[n];
-            vertexBinding.Buffer.SetData(commandList, new DataPointer(cmdList.VtxBuffer.Data, cmdList.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>()), vtxOffsetBytes);
-            indexBinding.Buffer.SetData(commandList, new DataPointer(cmdList.IdxBuffer.Data, cmdList.IdxBuffer.Size * sizeof(ushort)), idxOffsetBytes);
+            vertexBinding.Buffer.SetData(commandList, new ReadOnlySpan<byte>(cmdList.VtxBuffer.Data, cmdList.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>()), vtxOffsetBytes);
+            indexBinding.Buffer.SetData(commandList, new ReadOnlySpan<byte>(cmdList.IdxBuffer.Data, cmdList.IdxBuffer.Size * sizeof(ushort)), idxOffsetBytes);
             vtxOffsetBytes += cmdList.VtxBuffer.Size * Unsafe.SizeOf<ImDrawVert>();
             idxOffsetBytes += cmdList.IdxBuffer.Size * sizeof(ushort);
         }

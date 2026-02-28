@@ -57,8 +57,17 @@ public class GrassRenderFeature : SubRenderFeature
         };
         _setupIndirectDispatchShader.DisposeBy(this);
 
-        _indirectDispatchTempBuffer = Buffer.New(Context.GraphicsDevice, Marshal.SizeOf<DispatchArgs>(), BufferFlags.RawBuffer | BufferFlags.UnorderedAccess | BufferFlags.ShaderResource);
-        _indirectDispatchBuffer = Buffer.New(Context.GraphicsDevice, Marshal.SizeOf<DispatchArgs>(), BufferFlags.ArgumentBuffer);
+        _indirectDispatchTempBuffer = Buffer.New(Context.GraphicsDevice, new BufferDescription
+        {
+            BufferFlags = BufferFlags.RawBuffer | BufferFlags.UnorderedAccess | BufferFlags.ShaderResource,
+            SizeInBytes = Marshal.SizeOf<DispatchArgs>()
+        });
+
+        _indirectDispatchBuffer = Buffer.New(Context.GraphicsDevice, new BufferDescription
+        {
+            BufferFlags = BufferFlags.ArgumentBuffer,
+            SizeInBytes = Marshal.SizeOf<DispatchArgs>()
+        });
     }
 
     public override void Extract()
