@@ -4,33 +4,11 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
     // Each frame, one sub-pixel position (determined by 4x4 Bayer) was traced.
     // Pixels matching that position read directly from the trace buffer.
     // All other pixels use reprojected history (with variance clamping).
-    shader CloudReconstruct : ComputeShaderBase, AtmosphereBase
+    shader CloudReconstruct : ComputeShaderBase, AtmosphereBase, CloudBase
     {
         stage Texture2D<float4> TraceTexture;      // quarter-res trace output (all pixels fresh)
         stage Texture2D<float4> HistoryTexture;     // previous frame's full-res reconstruction
         stage RWTexture2D<float4> OutputTexture;    // current frame full-res reconstruction
-
-        struct CloudParameters
-        {
-            float Coverage;
-            float Density;
-            float BaseNoiseScale;
-            float DetailNoiseScale;
-
-            float ErosionStrength;
-            float WindSpeed;
-            float2 WindDirection;
-
-            float CloudLayerMin;
-            float CloudLayerMax;
-            float PhaseG;
-            float LightAbsorption;
-
-            uint StepCount;
-            uint LightStepCount;
-            float CirrusAmount;
-            float _Padding0;
-        };
 
         cbuffer ReconstructParams
         {

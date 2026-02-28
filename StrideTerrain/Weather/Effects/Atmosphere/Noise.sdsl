@@ -60,15 +60,16 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 
         float PerlinFbm(float3 p, float period, int octaves)
         {
+            float G = exp2(-0.85);
             float value = 0.0;
-            float amplitude = 0.5;
+            float amplitude = 10;
             float freq = 1.0;
 
             for (int i = 0; i < octaves; i++)
             {
                 value += amplitude * Perlin(p * freq, period * freq);
                 freq *= 2.0;
-                amplitude *= 0.5;
+                amplitude *= G;
             }
 
             return value;
@@ -80,7 +81,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             float3 id = floor(p);
             float3 fd = frac(p);
 
-            float minDist = 1000.0;
+            float minDist = 10000.0;
 
             for (int x = -1; x <= 1; x++)
             {

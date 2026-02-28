@@ -167,7 +167,6 @@ public class EditorGame : Game
             },
             Clouds = new()
             {
-                Cloudiness = 0
             }
         };
 

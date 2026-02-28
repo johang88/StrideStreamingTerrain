@@ -247,14 +247,17 @@ public class WeatherRenderFeature : RootRenderFeature
         if (_basicNoiseEffect == null || _detailNoiseEffect == null)
             return;
 
-        var device = context.GraphicsDevice;
+        if (_basicNoiseTexture == null || _detailNoiseTexture == null)
+        {
+            var device = context.GraphicsDevice;
 
-        // Create 3D textures
-        _basicNoiseTexture = Texture.New3D(device, BasicNoiseSize, BasicNoiseSize, BasicNoiseSize,
-            PixelFormat.R16G16B16A16_Float, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
+            // Create 3D textures
+            _basicNoiseTexture = Texture.New3D(device, BasicNoiseSize, BasicNoiseSize, BasicNoiseSize,
+                PixelFormat.R16G16B16A16_Float, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
 
-        _detailNoiseTexture = Texture.New3D(device, DetailNoiseSize, DetailNoiseSize, DetailNoiseSize,
-            PixelFormat.R16G16B16A16_Float, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
+            _detailNoiseTexture = Texture.New3D(device, DetailNoiseSize, DetailNoiseSize, DetailNoiseSize,
+                PixelFormat.R16G16B16A16_Float, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
+        }
 
         // Generate basic noise (128^3)
         _basicNoiseEffect.Parameters.Set(CloudBasicNoiseKeys.OutputTexture, _basicNoiseTexture);

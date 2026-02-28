@@ -1,0 +1,27 @@
+namespace StrideTerrain.Weather.Effects.Atmosphere
+{
+    shader CloudBase
+    {
+        struct CloudParameters
+        {
+            float Coverage;
+            float Density;
+            float BaseNoiseScale;
+            float DetailNoiseScale;
+
+            float ErosionStrength;
+            float WindSpeed;
+            float2 WindDirection;
+
+            float CloudLayerMin;
+            float CloudLayerMax;
+            float PhaseG;
+            float LightAbsorption;
+
+            uint StepCount;
+            uint LightStepCount;
+            float CirrusAmount;
+            float _Padding0;
+        };
+    };
+}

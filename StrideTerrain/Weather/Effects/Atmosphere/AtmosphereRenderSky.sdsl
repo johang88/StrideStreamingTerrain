@@ -1,34 +1,13 @@
 namespace StrideTerrain.Weather.Effects.Atmosphere
 {
-    shader AtmosphereRenderSky<bool RenderSun, bool RenderClouds, bool EnableHeightFog> : ImageEffectShader, AtmosphereBase, FogBase
+    shader AtmosphereRenderSky<bool RenderSun, bool RenderClouds, bool EnableHeightFog> 
+		: ImageEffectShader, AtmosphereBase, FogBase, CloudBase
     {
         stage Texture2D<float4> TransmittanceLUT;
         stage Texture2D<float4> SkyLuminanceLUT;
         stage Texture2D<float4> MultiScatteringLUT;
         stage Texture2D<float4> SkyViewLUT;
         stage Texture2D<float4> CloudAccumulationTexture;
-
-		struct CloudParameters
-        {
-            float Coverage;
-            float Density;
-            float BaseNoiseScale;
-            float DetailNoiseScale;
-
-            float ErosionStrength;
-            float WindSpeed;
-            float2 WindDirection;
-
-            float CloudLayerMin;
-            float CloudLayerMax;
-            float PhaseG;
-            float LightAbsorption;
-
-            uint StepCount;
-            uint LightStepCount;
-            float CirrusAmount;
-            float _Padding0;
-        };
 
         cbuffer Atmosphere
         {

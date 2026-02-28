@@ -244,6 +244,11 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\CloudBase.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Weather\Effects\Atmosphere\CloudBasicNoise.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -431,6 +436,9 @@
 	  </None>
 	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl">
 	    <LastGenOutput>AtmosphereRenderSky.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\CloudBase.sdsl">
+	    <LastGenOutput>CloudBase.sdsl.cs</LastGenOutput>
 	  </None>
 	  <None Update="Weather\Effects\Atmosphere\CloudBasicNoise.sdsl">
 	    <LastGenOutput>CloudBasicNoise.sdsl.cs</LastGenOutput>
