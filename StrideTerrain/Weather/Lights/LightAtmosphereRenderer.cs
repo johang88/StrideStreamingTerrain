@@ -113,7 +113,7 @@ public class LightAtmosphereRenderer : LightGroupRendererBase
             int specularCubemapLevels = 0;
             if (specularCubemap != null)
             {
-                specularCubemapLevels = specularCubemap.MipLevels;
+                specularCubemapLevels = specularCubemap.MipLevelCount;
             }
 
             context.RenderContext.Tags.TryGetValue(CubeMapRenderer.IsRenderingCubemap, out var isRenderingCubeMap);

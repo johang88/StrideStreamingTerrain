@@ -2,7 +2,7 @@
 	<Import Project="..\Common.props" />
 
 	<PropertyGroup>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>net10.0-windows</TargetFrameworks>
 		<Configurations>Debug;Release;DebugExGameEditor</Configurations>
 		<Nullable>enable</Nullable>
 	</PropertyGroup>

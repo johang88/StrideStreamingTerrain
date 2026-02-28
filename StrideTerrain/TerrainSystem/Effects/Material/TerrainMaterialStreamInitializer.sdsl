@@ -35,8 +35,18 @@
             );
 
             // https://www.reedbeta.com/blog/texture-gathers-and-coordinate-precision/
-            float2 controlMapUv = (floor(streams.TexCoord * TerrainTextureSize - 0.5) + 1.0) / TerrainTextureSize;
-            uint4 controlValues = (uint4)TerrainControlMap.Gather(PointSampler, controlMapUv);
+            float2 texelPos = streams.TexCoord * TerrainTextureSize - 0.5;
+            int2 baseCoord = int2(floor(texelPos));
+
+            // Clamp because we're sampling 2x2
+            baseCoord = clamp(baseCoord, int2(0,0), int2(TerrainTextureSize - 2, TerrainTextureSize - 2));
+
+            uint4 controlValues = uint4(
+                TerrainControlMap.Load(int3(baseCoord + int2(0,1), 0)),
+                TerrainControlMap.Load(int3(baseCoord + int2(1,1), 0)),
+                TerrainControlMap.Load(int3(baseCoord + int2(1,0), 0)),
+                TerrainControlMap.Load(int3(baseCoord + int2(0,0), 0))
+            );
 
             uint controlValueA = controlValues.w;
             uint controlValueB = controlValues.z;
@@ -146,8 +156,8 @@
 
             streams.meshNormal = normal;
 			
-			ApplyVirtualTexturing();
-            //ApplySplatMapAndAtlas();
+			//ApplyVirtualTexturing();
+            ApplySplatMapAndAtlas();
 
             //const float3 LODColors[9] = {
             //    float3(1.0, 0.0, 0.0),   // Red

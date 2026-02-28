@@ -30,14 +30,14 @@ public abstract class DynamicEffectRenderer
         var renderTargets = commandList.RenderTargets;
 
         PipelineState.State.Output.RenderTargetCount = commandList.RenderTargetCount;
-        PipelineState.State.Output.RenderTargetFormat0 = renderTargets[0]?.Format ?? PixelFormat.None;
-        PipelineState.State.Output.RenderTargetFormat1 = renderTargets[1]?.Format ?? PixelFormat.None;
-        PipelineState.State.Output.RenderTargetFormat2 = renderTargets[2]?.Format ?? PixelFormat.None;
-        PipelineState.State.Output.RenderTargetFormat3 = renderTargets[3]?.Format ?? PixelFormat.None;
-        PipelineState.State.Output.RenderTargetFormat4 = renderTargets[4]?.Format ?? PixelFormat.None;
-        PipelineState.State.Output.RenderTargetFormat5 = renderTargets[5]?.Format ?? PixelFormat.None;
-        PipelineState.State.Output.RenderTargetFormat6 = renderTargets[6]?.Format ?? PixelFormat.None;
-        PipelineState.State.Output.RenderTargetFormat7 = renderTargets[7]?.Format ?? PixelFormat.None;
+        PipelineState.State.Output.RenderTargetFormat0 = renderTargets.Length > 0 ? renderTargets[0].Format : PixelFormat.None;
+        PipelineState.State.Output.RenderTargetFormat1 = renderTargets.Length > 1 ? renderTargets[1].Format : PixelFormat.None;
+        PipelineState.State.Output.RenderTargetFormat2 = renderTargets.Length > 2 ? renderTargets[2].Format : PixelFormat.None;
+        PipelineState.State.Output.RenderTargetFormat3 = renderTargets.Length > 3 ? renderTargets[3].Format : PixelFormat.None;
+        PipelineState.State.Output.RenderTargetFormat4 = renderTargets.Length > 4 ? renderTargets[4].Format : PixelFormat.None;
+        PipelineState.State.Output.RenderTargetFormat5 = renderTargets.Length > 5 ? renderTargets[5].Format : PixelFormat.None;
+        PipelineState.State.Output.RenderTargetFormat6 = renderTargets.Length > 6 ? renderTargets[6].Format : PixelFormat.None;
+        PipelineState.State.Output.RenderTargetFormat7 = renderTargets.Length > 7 ? renderTargets[7].Format : PixelFormat.None;
         PipelineState.State.Output.DepthStencilFormat = commandList.DepthStencilBuffer?.Format ?? PixelFormat.None;
         PipelineState.State.PrimitiveType = PrimitiveType.TriangleList;
     }

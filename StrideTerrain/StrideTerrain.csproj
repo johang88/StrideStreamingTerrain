@@ -2,7 +2,7 @@
 	<Import Project="..\Common.props" />
 	
 	<PropertyGroup>
-		<TargetFrameworks>net8.0-windows</TargetFrameworks>
+		<TargetFrameworks>net10.0-windows</TargetFrameworks>
 		<Nullable>enable</Nullable>
 		<AllowUnsafeBlocks>true</AllowUnsafeBlocks>
 		<Configurations>Debug;Release;DebugExGameEditor</Configurations>
@@ -239,6 +239,16 @@
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
 	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereParametersBase.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereRenderAerialPerspective.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
 	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
@@ -305,6 +315,21 @@
 	    <AutoGen>True</AutoGen>
 	  </Compile>
 	  <Compile Update="Weather\Effects\WeatherFordwardRenderer.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\WeatherForwardRendererBase.sdsl.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\WeatherForwardShadingEffect.sdfx.cs">
+	    <DesignTime>True</DesignTime>
+	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
+	    <AutoGen>True</AutoGen>
+	  </Compile>
+	  <Compile Update="Weather\Effects\WeatherLightDirectionalGroup.sdsl.cs">
 	    <DesignTime>True</DesignTime>
 	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
 	    <AutoGen>True</AutoGen>
@@ -434,6 +459,12 @@
 	  <None Update="Weather\Effects\Atmosphere\AtmosphereBase.sdsl">
 	    <LastGenOutput>AtmosphereBase.sdsl.cs</LastGenOutput>
 	  </None>
+	  <None Update="Weather\Effects\Atmosphere\AtmosphereParametersBase.sdsl">
+	    <LastGenOutput>AtmosphereParametersBase.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderAerialPerspective.sdsl">
+	    <LastGenOutput>AtmosphereRenderAerialPerspective.sdsl.cs</LastGenOutput>
+	  </None>
 	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl">
 	    <LastGenOutput>AtmosphereRenderSky.sdsl.cs</LastGenOutput>
 	  </None>
@@ -476,6 +507,15 @@
 	  </None>
 	  <None Update="Weather\Effects\WeatherFordwardRenderer.sdsl">
 	    <LastGenOutput>WeatherFordwardRenderer.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\WeatherForwardRendererBase.sdsl">
+	    <LastGenOutput>WeatherForwardRendererBase.sdsl.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\WeatherForwardShadingEffect.sdfx">
+	    <LastGenOutput>WeatherForwardShadingEffect.sdfx.cs</LastGenOutput>
+	  </None>
+	  <None Update="Weather\Effects\WeatherLightDirectionalGroup.sdsl">
+	    <LastGenOutput>WeatherLightDirectionalGroup.sdsl.cs</LastGenOutput>
 	  </None>
 	</ItemGroup>
 </Project>

@@ -250,7 +250,7 @@ public partial class CustomForwardRenderer : SceneRendererBase, ISharedRenderer
 
             using (drawContext.PushRenderTargetsAndRestore())
             {
-                drawContext.CommandList.SetRenderTargets(currentDepthStencil, currentRenderTargets.Count, CollectionsMarshal.AsSpan(currentRenderTargets));
+                drawContext.CommandList.SetRenderTargets(currentDepthStencil, CollectionsMarshal.AsSpan(currentRenderTargets)[..currentRenderTargets.Count]);
 
                 //Clear?.Draw(drawContext);
 
@@ -292,7 +292,7 @@ public partial class CustomForwardRenderer : SceneRendererBase, ISharedRenderer
             }
         }
 
-        context.CommandList.SetRenderTargets(null, context.CommandList.RenderTargetCount, context.CommandList.RenderTargets);
+        context.CommandList.SetRenderTargets(null, context.CommandList.RenderTargets);
 
         var depthStencilROCached = context.Resolver.GetDepthStencilAsRenderTarget(depthStencil, this.depthStencilROCached);
         if (depthStencilROCached != this.depthStencilROCached)
@@ -301,7 +301,7 @@ public partial class CustomForwardRenderer : SceneRendererBase, ISharedRenderer
             this.depthStencilROCached?.Dispose();
             this.depthStencilROCached = depthStencilROCached;
         }
-        context.CommandList.SetRenderTargets(depthStencilROCached, context.CommandList.RenderTargetCount, context.CommandList.RenderTargets);
+        context.CommandList.SetRenderTargets(depthStencilROCached, context.CommandList.RenderTargets);
 
         return depthStencilSRV;
     }
