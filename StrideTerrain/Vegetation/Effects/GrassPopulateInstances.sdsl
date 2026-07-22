@@ -1,4 +1,4 @@
-﻿namespace StrideTerrain.Vegetation
+namespace StrideTerrain.Vegetation
 {
     shader GrassPopulateInstances : ComputeShaderBase, TerrainQuery, Math
     {
@@ -21,7 +21,8 @@
             float4 Rotation;
         };
 
-        stage AppendStructuredBuffer<GrassInstance> Instances;
+        stage RWStructuredBuffer<GrassInstance> Instances;
+        stage RWByteAddressBuffer InstancesCounter;
 
         override void Compute()
         {
@@ -30,88 +31,113 @@
             if (index >= InstanceCount)
                 return;
 
+            // Hex grid: rows packed at sqrt(3)/2 spacing, odd rows offset by half column
+            float colSpacing = CellSize;
+            float rowSpacing = CellSize * 0.8660254; // sqrt(3)/2
             float radius = Size * CellSize * 0.5;
 
-            // Snap camera position to the grid to keep grass "fixed"
-            float2 snappedCameraXZ = floor(CameraPosition.xz / CellSize) * CellSize;
+            // Camera's absolute grid cell
+            int cameraCol = (int)floor(CameraPosition.x / colSpacing);
+            int cameraRow = (int)floor(CameraPosition.z / rowSpacing);
 
-            // Local grid position relative to the snapped origin
-            float2 localPos = (tid.xy * CellSize) - radius;
+            // Snapped camera = grid-aligned origin for stable placement
+            float2 snappedCameraXZ = float2(cameraCol * colSpacing, cameraRow * rowSpacing);
 
-            float2 cellSeed = floor((snappedCameraXZ + localPos) / CellSize); 
-            cellSeed += Seed;
+            // This thread's absolute hex cell in world grid
+            int halfSize = (int)(Size / 2);
+            int absCol = cameraCol + (int)tid.x - halfSize;
+            int absRow = cameraRow + (int)tid.y - halfSize;
+
+            // Cell center in world space
+            float2 cellCenter;
+            cellCenter.x = absCol * colSpacing;
+            cellCenter.y = absRow * rowSpacing;
+
+            // Hex offset: shift odd rows by half a column
+            if ((abs(absRow) & 1) != 0)
+                cellCenter.x += colSpacing * 0.5;
+
+            // Per-cell seed from absolute grid coordinates — stable regardless of camera
+            float2 cellSeed = float2((float)absCol, (float)absRow) + Seed;
 
             float rndPosX = Hash21(cellSeed);
             float rndPosZ = Hash21(cellSeed.yx + 19.19);
             float rndScale = Hash21(cellSeed * 31.0);
             float rndRot = Hash21(cellSeed * 73.0);
 
-            float2 jitter = (float2(rndPosX, rndPosZ) - 0.5f) * CellSize;
-            localPos += jitter;
+            // Jitter within hex cell
+            float2 jitter = (float2(rndPosX, rndPosZ) - 0.5) * CellSize * 0.5;
+            float2 worldPosXZ = cellCenter + jitter;
 
-            // Clumping
+            // Distance cull relative to snapped camera
+            float2 localPos = worldPosXZ - snappedCameraXZ;
+            float distSq = dot(localPos, localPos);
+            if (distSq > radius * radius)
+                return;
+
+            // Distance fade — early out before expensive terrain queries
+            float3 position;
+            position.xz = worldPosXZ;
+
+            float distanceToCamera = distance(CameraPosition.xz, position.xz);
+            float startFadeRadius = radius * FadeStartFraction;
+            float fade = smoothstep(radius, startFadeRadius, distanceToCamera);
+            float scale = fade * lerp(MinScale, MaxScale, rndScale);
+
+            if (scale < 0.01f)
+                return;
+
+            // Clumping: layered value noise for organic density variation
             if (Clumpiness > 0.0f)
             {
-                // TODO: This does not look great
-                float2 clumpCell = floor((snappedCameraXZ + localPos) / ClumpSize);
+                float2 noiseCoord1 = worldPosXZ / ClumpSize + Seed * 5.7;
+                float2 noiseCoord2 = worldPosXZ / (ClumpSize * 0.4) + Seed * 13.3;
 
-                float2 clumpCenter = clumpCell * ClumpSize + ClumpSize * 0.5;
+                float density = ValueNoise(noiseCoord1) * 0.7 + ValueNoise(noiseCoord2) * 0.3;
 
-                float2 clumpSeed = clumpCell + Seed * 123.456;
-                float r = sqrt(Hash21(clumpSeed)) * (ClumpSize * 0.5);
-                float angle = Hash21(clumpSeed.yx) * 2.0*PI;
-                float2 circularOffset = float2(cos(angle), sin(angle)) * r;
+                // Higher Clumpiness = more area rejected
+                float threshold = Clumpiness * 0.6;
 
-                clumpCenter += circularOffset;
+                // Soft edge: scale tapers near clump boundaries
+                float clumpFade = saturate((density - threshold) / (1.0 - threshold));
+                scale *= clumpFade;
 
-                float localClumpiness = lerp(0.3, 1, Hash21(cellSeed + 839.23)) * Clumpiness;
-
-                localPos = lerp(localPos, clumpCenter - snappedCameraXZ, localClumpiness);
+                if (scale < 0.01f)
+                    return;
             }
 
-            // Final world-space position
-            float3 position;
-            position.xz = localPos + snappedCameraXZ;
-            position.y = 0;
-
+            // Terrain validity check — after all cheap culling
             float2 terrainUv = GetTerrainAtlasUv(position.x, position.z);
-
-            // Check if spawn location is valid
             uint backgroundTextureIndex = GetBackgroundTextureIndexAt(terrainUv);
-            
+
             bool isValid = false;
+            [unroll]
             for (int i = 0; i < 5; i++)
             {
                 if (ValidBackgroundTexturesIds[i] == backgroundTextureIndex)
-                {
                     isValid = true;
-                }
             }
 
             if (!isValid)
                 return;
 
-            // Adjust height, fade out at distance and randomize scale + rotation
+            // Height + rotation only for surviving instances
             position.y = GetTerrainHeightAt(terrainUv);
 
-            float distanceToCamera = distance(CameraPosition.xz, position.xz);
-
-            float startFadeRadius = radius * FadeStartFraction; 
-
-            float fade = smoothstep(radius, startFadeRadius, distanceToCamera);
-            float scale = fade * lerp(MinScale, MaxScale, rndScale);
-            float rotationAngle = (rndRot * 2.0f - 1.0f) * PI;
-
+            float rotationAngle = (rndRot * 2.0 - 1.0) * PI;
             float3 terrainNormal = RotateAlongTerrainNormal ? GetTerrainNormalAt(terrainUv) : float3(0, 1, 0);
 
-            // Build world matrix
-            float4 rotation = QuaternionMultiply(CreateRotationAxisYQuaternion(float3(0, 1, 0), rotationAngle), CreateQuaternionBetweenDirections(float3(0, 1, 0), terrainNormal));
+            float4 rotation = QuaternionMultiply(
+                CreateRotationAxisYQuaternion(float3(0, 1, 0), rotationAngle),
+                CreateQuaternionFromUpToNormal(terrainNormal));
 
             GrassInstance grassInstance;
             grassInstance.PositionScale = float4(position.xyz, scale);
             grassInstance.Rotation = rotation;
 
-            Instances.Append(grassInstance);
+            uint appendIndex;
+            InstancesCounter.InterlockedAdd(0, 1, appendIndex);
+            Instances[appendIndex] = grassInstance;
         }
 
         float Hash21(float2 p)
@@ -119,6 +145,23 @@
             p = frac(p * 0.1031);
             p += dot(p, p.yx + 33.33);
             return frac((p.x + p.y) * p.x * p.y);
+        }
+
+        // Smooth 2D value noise via bilinear interpolation of hash values
+        float ValueNoise(float2 p)
+        {
+            float2 i = floor(p);
+            float2 f = frac(p);
+
+            // Hermite interpolation for smooth transitions
+            float2 u = f * f * (3.0 - 2.0 * f);
+
+            float a = Hash21(i);
+            float b = Hash21(i + float2(1, 0));
+            float c = Hash21(i + float2(0, 1));
+            float d = Hash21(i + float2(1, 1));
+
+            return lerp(lerp(a, b, u.x), lerp(c, d, u.x), u.y);
         }
 
         float4 QuaternionMultiply(float4 left, float4 right)
@@ -157,30 +200,15 @@
             return result;
         }
 
-        float4 CreateQuaternionBetweenDirections(float3 source, float3 target)
+        // Specialized quaternion from (0,1,0) to target normal
+        float4 CreateQuaternionFromUpToNormal(float3 target)
         {
-            float4 result;
+            float real = 1.0 + target.y;
+            if (real < 1e-6f)
+                return float4(0, 0, 1, 0);
 
-            float sourceLength = length(source);
-            float targetLength = length(target);
-
-            float norms = sqrt((sourceLength * sourceLength) * (targetLength * targetLength)); // todo: this is stupid
-            float real = norms + dot(source, target);
-            if (real < 1e-6f * norms)
-            {
-                // If source and target are exactly opposite, rotate 180 degrees around an arbitrary orthogonal axis.
-                // Axis normalisation can happen later, when we normalise the quaternion.
-                result = abs(source.x) > abs(source.z) ? float4(-source.y, source.x, 0, 0) : float4(0, -source.z, source.y, 0);
-            }
-            else
-            {
-                float3 axis = cross(source, target);
-                result = float4(axis, real);
-            }
-
-            result = normalize(result);
-
-            return result;
+            float3 axis = float3(target.z, 0, -target.x);
+            return normalize(float4(axis, real));
         }
     };
 }

@@ -10,7 +10,10 @@
             stage StructuredBuffer<float4> Positions; // x,y,z,scale(half2)
         }
 
-        stage float LodDistance;
+        cbuffer PerMaterial
+        {
+            stage float LodDistance;
+        }
 
         override void Compute()
         {
@@ -68,19 +71,29 @@
             streams.meshNormal = streams.normalWS = normal;
             streams.meshTangent = float4(normalize(right), 1);
 
-            // UV
-            float angle = atan2(toCamera.x, toCamera.z);
+            // UV - fix angle mapping
+            float angle = atan2(toCamera.x, toCamera.z); // range [-PI, PI]
             if (angle < 0) angle += 6.2831853;
 
-            uint spriteIndex = (uint)(angle / (6.2831853 / 16.0));
-            float col = spriteIndex % 4;
-            float row = spriteIndex / 4;
+            // Add offset to align with UE's capture start angle
+            // UE typically starts capture at a half-frame offset
+            angle += 6.2831853 / 32.0; // half-frame offset
+            if (angle >= 6.2831853) angle -= 6.2831853;
 
+            uint spriteIndex = (uint)(angle / (6.2831853 / 16.0));
+            spriteIndex = min(spriteIndex, 15); // clamp safety
+
+            uint col = spriteIndex % 4;
+            uint row = spriteIndex / 4;
+
+            // Flip row if UE's grid is top-to-bottom but UVs are bottom-up
+            //row = 3 - row;
+             
             float2 uvBase = float2(col * 0.25, row * 0.25);
             streams.TexCoord = uvBase + quadUV * 0.25;
 
             // Cull if too close (triangle rejected becuase of nan)
-            if (length(Eye.xz - center.xz) < 64)
+            if (length(Eye.xz - center.xz) < LodDistance)
             {
                 streams.Position.y /= 0;
             }

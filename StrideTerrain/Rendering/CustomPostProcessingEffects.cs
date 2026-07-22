@@ -169,6 +169,7 @@ public class CustomPostProcessingEffects : ImageEffect, IImageEffectRenderer, IP
 
         var currentInput = input;
 
+        //ExposureSettings.AutoExposure = false;
         if (ExposureSettings.AutoExposure)
         {
             context.CommandList.ClearReadWrite(_histogram, UInt4.Zero);

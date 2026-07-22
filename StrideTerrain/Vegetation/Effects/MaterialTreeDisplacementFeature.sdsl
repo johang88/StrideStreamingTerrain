@@ -14,11 +14,8 @@
 
             float terrainHeightOrigin = GetTerrainHeightAt(GetTerrainAtlasUv(originXZ.x, originXZ.y));
             float terrainHeight = GetTerrainHeightAt(GetTerrainAtlasUv(streams.PositionWS.x, streams.PositionWS.z));
-            float diff = terrainHeightOrigin - terrainHeight;
-            if (diff > 0)
-            {
-                streams.PositionWS.y -= diff;
-            }
+            float diff = max(0, terrainHeightOrigin - terrainHeight);
+            //streams.PositionWS.y -= diff;
         }
     };
 }

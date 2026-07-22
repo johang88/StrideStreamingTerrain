@@ -51,7 +51,7 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
         var sceneSystem = Services.GetSafeServiceAs<SceneSystem>();
 
         var camera = sceneSystem.TryGetMainCamera();
-        if (camera == null || true)
+        if (camera == null)
             return;
 
         var cameraPosition = camera.GetWorldPosition();
@@ -71,12 +71,13 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
             if (data.ImpostorMaterial?.Passes == null || data.ImpostorMaterial.Passes.Count == 0)
                 continue;
 
+
             data.ImpostorMaterial!.Passes[0].Parameters.Set(MaterialImpostorDisplacementFeatureKeys.Positions, data.PositionsBuffer);
-            data.ImpostorMaterial.Passes[0].Parameters.Set(MaterialImpostorDisplacementFeatureKeys.LodDistance, component.ImpostorLodDistance);
+            data.ImpostorMaterial.Passes[0].Parameters.Set(MaterialImpostorDisplacementFeatureKeys.LodDistance, 0);
 
             // TODO: This should be improved and have multi lod support
             data.InstancingWorldMatrices.Clear();
-            var lodDistance = component.ImpostorLodDistance;
+            var lodDistance = 32;
             var lodDistanceSquared = lodDistance * lodDistance;
             var start = GetGridPosition(cameraPosition.X - lodDistance, cameraPosition.Z - lodDistance);
             var end = GetGridPosition(cameraPosition.X + lodDistance, cameraPosition.Z + lodDistance);

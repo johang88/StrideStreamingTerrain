@@ -17,8 +17,10 @@ public class GrassRenderFeature : SubRenderFeature
     {
         public Buffer? IndirectBuffer;
         public Buffer? InstancesBuffer;
+        public Buffer? InstancesCounterBuffer;
         public Buffer? CulledWorldBuffer;
         public Buffer? CulledWorldInverseBuffer;
+        public Buffer? CulledCounterBuffer;
         public int Size;
         public float BoundingRadius;
     }
@@ -91,7 +93,9 @@ public class GrassRenderFeature : SubRenderFeature
 
             if (!modelToGrassMap.TryGetValue(renderModel, out var renderGrass)
                 || renderGrass.IndirectBuffer == null || renderGrass.InstancesBuffer == null
-                || renderGrass.CulledWorldBuffer == null || renderGrass.CulledWorldInverseBuffer == null)
+                || renderGrass.InstancesCounterBuffer == null
+                || renderGrass.CulledWorldBuffer == null || renderGrass.CulledWorldInverseBuffer == null
+                || renderGrass.CulledCounterBuffer == null)
             {
                 continue;
             }
@@ -100,8 +104,10 @@ public class GrassRenderFeature : SubRenderFeature
 
             grassData.IndirectBuffer = renderGrass.IndirectBuffer;
             grassData.InstancesBuffer = renderGrass.InstancesBuffer;
+            grassData.InstancesCounterBuffer = renderGrass.InstancesCounterBuffer;
             grassData.CulledWorldBuffer = renderGrass.CulledWorldBuffer;
             grassData.CulledWorldInverseBuffer = renderGrass.CulledWorldInverseBuffer;
+            grassData.CulledCounterBuffer = renderGrass.CulledCounterBuffer;
             grassData.Size = renderGrass.Size;
             grassData.BoundingRadius = renderGrass.BoundingRadius;
 
@@ -190,11 +196,12 @@ public class GrassRenderFeature : SubRenderFeature
             ref var grassData = ref renderObjectGrassData[renderMesh.StaticObjectNode];
 
             if (grassData.IndirectBuffer == null || grassData.CulledWorldBuffer == null || grassData.CulledWorldInverseBuffer == null
-                || grassData.InstancesBuffer == null || _cullGrassShader == null || _setupIndirectDispatchShader == null)
+                || grassData.InstancesBuffer == null || grassData.InstancesCounterBuffer == null
+                || grassData.CulledCounterBuffer == null || _cullGrassShader == null || _setupIndirectDispatchShader == null)
                 continue;
 
-            // Prepare dispatch indirect buffer
-            context.CommandList.CopyCount(grassData.InstancesBuffer, _indirectDispatchTempBuffer, 0);
+            // Copy instance count from counter buffer to dispatch temp buffer
+            context.CommandList.CopyRegion(grassData.InstancesCounterBuffer, 0, new ResourceRegion(0, 0, 0, sizeof(uint), 1, 1), _indirectDispatchTempBuffer, 0);
 
             // We have to use a temporary buffer as DX11 does not allow us to bind the indirect args buffer directly
             // at least as far as I have been able to figure out ...
@@ -208,9 +215,8 @@ public class GrassRenderFeature : SubRenderFeature
 
             context.CommandList.Copy(_indirectDispatchTempBuffer, _indirectDispatchBuffer);
 
-            // Cull instances
-            grassData.CulledWorldBuffer.InitialCounterOffset = 0;
-            grassData.CulledWorldInverseBuffer.InitialCounterOffset = 0;
+            // Clear culled counter before cull dispatch
+            grassData.CulledCounterBuffer.SetData(context.CommandList, stackalloc uint[] { 0 });
 
             _frustumPlanes[0] = new(renderView.Frustum.LeftPlane.Normal, renderView.Frustum.LeftPlane.D);
             _frustumPlanes[1] = new(renderView.Frustum.RightPlane.Normal, renderView.Frustum.RightPlane.D);
@@ -225,13 +231,14 @@ public class GrassRenderFeature : SubRenderFeature
             _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.Instances, grassData.InstancesBuffer);
             _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.OutputWorld, grassData.CulledWorldBuffer);
             _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.OutputWorldInverse, grassData.CulledWorldInverseBuffer);
+            _cullGrassShader.Parameters.Set(GrassCullInstancesKeys.CulledCounter, grassData.CulledCounterBuffer);
 
             _cullGrassShader.IndirectBuffer = _indirectDispatchBuffer;
             _cullGrassShader.ThreadNumbers = new(64, 1, 1);
             _cullGrassShader.Draw(context, "Grass.Cull");
 
-            // Copy culled count to indirect draw buffer
-            context.CommandList.CopyCount(grassData.CulledWorldBuffer, grassData.IndirectBuffer, 4);
+            // Copy culled count to indirect draw buffer (instance count at offset 4)
+            context.CommandList.CopyRegion(grassData.CulledCounterBuffer, 0, new ResourceRegion(0, 0, 0, sizeof(uint), 1, 1), grassData.IndirectBuffer, 0, 4);
         }
     }
 }

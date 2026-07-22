@@ -31,5 +31,6 @@ namespace StrideTerrain.Vegetation
         public static readonly ValueParameterKey<float> ClumpSize = ParameterKeys.NewValue<float>(32.0f);
         public static readonly ValueParameterKey<uint> ValidBackgroundTexturesIds = ParameterKeys.NewValue<uint>();
         public static readonly ObjectParameterKey<Buffer> Instances = ParameterKeys.NewObject<Buffer>();
+        public static readonly ObjectParameterKey<Buffer> InstancesCounter = ParameterKeys.NewObject<Buffer>();
     }
 }

@@ -51,7 +51,8 @@ public class SampleGame : Stride.Engine.Game
         var deviceManager = (GraphicsDeviceManager)graphicsDeviceManager;
         deviceManager.PreferredDepthStencilFormat = PixelFormat.D32_Float_S8X24_UInt;
 
+        GraphicsDeviceManager.DeviceCreationFlags &= ~DeviceCreationFlags.Debug;
+
         //Profiler.EnableAll();
-        //GraphicsDeviceManager.DeviceCreationFlags |= DeviceCreationFlags.Debug;
     }
 }

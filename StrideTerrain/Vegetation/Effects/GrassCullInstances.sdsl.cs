@@ -23,5 +23,6 @@ namespace StrideTerrain.Vegetation
         public static readonly ObjectParameterKey<Buffer> Instances = ParameterKeys.NewObject<Buffer>();
         public static readonly ObjectParameterKey<Buffer> OutputWorld = ParameterKeys.NewObject<Buffer>();
         public static readonly ObjectParameterKey<Buffer> OutputWorldInverse = ParameterKeys.NewObject<Buffer>();
+        public static readonly ObjectParameterKey<Buffer> CulledCounter = ParameterKeys.NewObject<Buffer>();
     }
 }
