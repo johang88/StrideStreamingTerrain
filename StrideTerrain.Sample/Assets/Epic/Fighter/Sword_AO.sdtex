@@ -1,0 +1,6 @@
+!Texture
+Id: adea9291-c07a-449f-8a61-e82cf1d54da6
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Sword_AO.png
+Type: !GrayscaleTextureType {}

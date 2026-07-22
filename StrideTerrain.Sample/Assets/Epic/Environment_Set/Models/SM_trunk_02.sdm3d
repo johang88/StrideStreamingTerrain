@@ -1,0 +1,17 @@
+﻿!Model
+Id: dab121d1-51d1-4111-bdb4-3684a99b7f69
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_trunk_02.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    c559a951ce56bd4246903a487a614ad9:
+        Name: MI_trunks2
+        MaterialInstance:
+            Material: 0aa45d9e-2cd8-44c7-b779-f3db625d7700:Epic/Environment_Set/Models/M_Trunk_02
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    ? f2a7900336d1196346e8a2040be379c4~../../../../Resources/Epic/Environment_Set/Models/SM_trunk_02.FBX
+    : fd138342876bd512e775d7ca3497cd9f

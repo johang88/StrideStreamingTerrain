@@ -1,0 +1,17 @@
+﻿!Model
+Id: 10b5ea75-e959-4d24-a636-4e3c5ef0586c
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_forest_heather_01.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    e58589606e72a2d0575bd2b2fcdbb7ab:
+        Name: MI_Heater_Material
+        MaterialInstance:
+            Material: c3fa20ea-38e4-4ac6-83d9-3c5bd68dc8b1:Epic/Environment_Set/Models/M_Heather
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    ? 821adb701077eb22b353ecc489c71b0d~../../../../Resources/Epic/Environment_Set/Models/SM_forest_heather_01.FBX
+    : 13f6cb7546dadf3022c9d99cf5f98dc0

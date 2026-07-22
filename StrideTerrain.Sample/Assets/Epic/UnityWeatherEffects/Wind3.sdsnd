@@ -1,0 +1,8 @@
+!Sound
+Id: 6c2fa5c0-bef5-475a-a449-eebc3f4b69e0
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/UnityWeatherEffects/Wind3.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

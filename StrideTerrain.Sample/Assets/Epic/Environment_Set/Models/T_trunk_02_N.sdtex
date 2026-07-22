@@ -1,0 +1,6 @@
+!Texture
+Id: 2771560f-7731-488a-a16c-5ebf61883d68
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_trunk_02_N.PNG
+Type: !NormalMapTextureType {}

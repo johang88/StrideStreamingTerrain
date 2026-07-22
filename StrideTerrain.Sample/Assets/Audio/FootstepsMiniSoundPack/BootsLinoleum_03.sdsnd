@@ -1,0 +1,9 @@
+!Sound
+Id: f6a689f4-ec3b-4418-800a-d7f9c8efff04
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/BootsLinoleum_03.wav
+SampleRate: 96000
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

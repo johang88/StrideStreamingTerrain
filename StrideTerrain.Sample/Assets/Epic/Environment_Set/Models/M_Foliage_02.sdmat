@@ -1,0 +1,71 @@
+﻿!MaterialAsset
+Id: 3957f212-16fb-49a1-bd02-66627736cd40
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Attributes:
+    Displacement: !StrideTerrain.Vegetation.Materials.MaterialGrassDisplacementFeature,StrideTerrain {}
+    Surface: !MaterialNormalMapFeature
+        NormalMap: !ComputeTextureColor
+            Texture: 4a0332e8-8214-4b3b-a66f-6163673473b9:Epic/Environment_Set/Models/T_ground_foliage_02_N
+            FallbackValue:
+                Value: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+            Swizzle: null
+    MicroSurface: !MaterialGlossinessMapFeature
+        GlossinessMap: !ComputeTextureScalar
+            Texture: c8630027-9efc-47a5-b3cb-54c8a4344f7d:Epic/Environment_Set/Models/T_ground_foliage_02_MT_R_AO
+            FallbackValue:
+                Value: 1.0
+            Channel: G
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+        Invert: true
+    Diffuse: !MaterialDiffuseMapFeature
+        DiffuseMap: !ComputeTextureColor
+            Texture: 2db91799-83eb-40b5-8918-ad480e9b50cf:Epic/Environment_Set/Models/T_ground_foliage_02_BC_M
+            FallbackValue:
+                Value: {R: 1.0, G: 0.8856508, B: 0.6091625, A: 1.0}
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+            Swizzle: null
+    DiffuseModel: !MaterialDiffuseLambertModelFeature {}
+    Specular: !MaterialMetalnessMapFeature
+        MetalnessMap: !ComputeFloat
+            Value: 0.0
+    SpecularModel: !MaterialSpecularMicrofacetModelFeature
+        Fresnel: !MaterialSpecularMicrofacetFresnelSchlick {}
+        Visibility: !MaterialSpecularMicrofacetVisibilitySmithSchlickGGX {}
+        NormalDistribution: !MaterialSpecularMicrofacetNormalDistributionGGX {}
+        Environment: !MaterialSpecularMicrofacetEnvironmentGGXLUT {}
+    Occlusion: !MaterialOcclusionMapFeature
+        AmbientOcclusionMap: !ComputeTextureScalar
+            Texture: c8630027-9efc-47a5-b3cb-54c8a4344f7d:Epic/Environment_Set/Models/T_ground_foliage_02_MT_R_AO
+            FallbackValue:
+                Value: 1.0
+            Channel: B
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+        DirectLightingFactor: !ComputeFloat
+            Value: 0.0
+        CavityMap: !ComputeTextureScalar
+            FallbackValue:
+                Value: 1.0
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+        DiffuseCavity: !ComputeFloat
+            Value: 1.0
+        SpecularCavity: !ComputeFloat
+            Value: 1.0
+    SubsurfaceScattering: !MaterialVegetationSubSurfaceScatteringFeature
+        SubsurfaceLightingAmount: !ComputeFloat
+            Value: 1.0
+        Extinction: !ComputeColor
+            Value: {R: 0.12, G: 0.23, B: 0.12, A: 1.0}
+    Transparency: !MaterialTransparencyCutoffFeature
+        Alpha: !ComputeFloat
+            Value: 0.25
+    Overrides:
+        UVScale: {X: 1.0, Y: 1.0}
+    CullMode: None
+Layers: {}

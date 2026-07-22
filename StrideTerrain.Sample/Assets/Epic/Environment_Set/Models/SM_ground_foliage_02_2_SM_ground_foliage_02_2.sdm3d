@@ -1,0 +1,17 @@
+!Model
+Id: 9bdb933f-98b4-4bd4-8aea-25f140ce32ee
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_ground_foliage_02_2_SM_ground_foliage_02_2.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    04cbfd0013fdf208cdc63fe718a0f268:
+        Name: MI_Foliage_2_Material
+        MaterialInstance:
+            Material: 4a5d2fd6-9e79-4ebe-a06a-cc8e9df2d840:Epic/Environment_Set/Models/M_Foliage
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    ? fcfabe02e894ff82cde16da30496cd0f~../../../../Resources/Epic/Environment_Set/Models/SM_ground_foliage_02_2_SM_ground_foliage_02_2.FBX
+    : 16a0c219e5b9af46294474425bd3d140

@@ -1,0 +1,6 @@
+!Texture
+Id: 9b798a34-7abf-4e17-9bef-03af1771b3c1
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Body_Normal.png
+Type: !NormalMapTextureType {}

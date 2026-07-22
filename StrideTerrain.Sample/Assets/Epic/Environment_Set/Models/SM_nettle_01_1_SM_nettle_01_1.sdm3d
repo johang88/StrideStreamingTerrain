@@ -1,0 +1,17 @@
+﻿!Model
+Id: a484b845-5416-4a8d-8aac-ac268902c077
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_nettle_01_1_SM_nettle_01_1.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    7341e084b89dd332d3d42e0966e50b44:
+        Name: MI_Nettle_Material
+        MaterialInstance:
+            Material: c9ebc893-08d5-42ec-9b01-5275ba374618:Epic/Environment_Set/Models/M_Nettle
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    ? 2ffd75adc5eb031953619755b76a5344~../../../../Resources/Epic/Environment_Set/Models/SM_nettle_01_1_SM_nettle_01_1.FBX
+    : 26863953ce5ec3fe9492108ec45b58e2

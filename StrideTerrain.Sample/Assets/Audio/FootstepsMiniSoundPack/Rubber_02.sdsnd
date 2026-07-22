@@ -1,0 +1,9 @@
+!Sound
+Id: 0d28d733-e6c3-4c82-a35e-f9d4f11d0cd6
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Rubber_02.wav
+SampleRate: 96000
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

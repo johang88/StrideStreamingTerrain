@@ -1,0 +1,8 @@
+!Sound
+Id: ef9188bc-aad9-4a9d-b788-289caf88eac0
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../../../Resources/Epic/MadisonPike/Audio/Environments/Insects/Crickets5_LOOP.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

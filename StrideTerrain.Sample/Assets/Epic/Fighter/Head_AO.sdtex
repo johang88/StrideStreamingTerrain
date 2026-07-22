@@ -1,0 +1,6 @@
+!Texture
+Id: 8f73b6a9-6825-4fe5-b359-1635e95da376
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Head_AO.png
+Type: !GrayscaleTextureType {}

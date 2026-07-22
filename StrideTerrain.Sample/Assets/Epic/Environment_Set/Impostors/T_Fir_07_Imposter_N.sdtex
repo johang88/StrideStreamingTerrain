@@ -1,0 +1,6 @@
+!Texture
+Id: f211f261-0fea-48dd-872a-255165337156
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Fir_07_Imposter_N.PNG
+Type: !NormalMapTextureType {}

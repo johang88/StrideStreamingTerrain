@@ -1,0 +1,7 @@
+!Texture
+Id: 04a2818d-09ac-478f-82c4-f62ac711b999
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Fir_leaves_BC_T.PNG
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

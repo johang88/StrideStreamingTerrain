@@ -1,0 +1,71 @@
+﻿!MaterialAsset
+Id: 2072ab17-65bb-4dd0-b4b3-8988f330f608
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Attributes:
+    Displacement: !StrideTerrain.Vegetation.Materials.MaterialGrassDisplacementFeature,StrideTerrain {}
+    Surface: !MaterialNormalMapFeature
+        NormalMap: !ComputeTextureColor
+            Texture: 30196e6e-9cf4-4c67-a345-fd0b9bddf0e4:Epic/Environment_Set/Models/T_grass_atlas_01_N
+            FallbackValue:
+                Value: {R: 1.0, G: 1.0, B: 1.0, A: 1.0}
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+            Swizzle: null
+    MicroSurface: !MaterialGlossinessMapFeature
+        GlossinessMap: !ComputeTextureScalar
+            Texture: a89081d5-5394-4812-9c7d-70d890f9c44f:Epic/Environment_Set/Models/T_grass_atlas_01_MT_R_AO
+            FallbackValue:
+                Value: 1.0
+            Channel: G
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+        Invert: true
+    Diffuse: !MaterialDiffuseMapFeature
+        DiffuseMap: !ComputeTextureColor
+            Texture: a3ff90c7-568b-4002-9da2-8e35651d2f8f:Epic/Environment_Set/Models/T_grass_atlas_01_BC_M
+            FallbackValue:
+                Value: {R: 1.0, G: 0.8856508, B: 0.6091625, A: 1.0}
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+            Swizzle: null
+    DiffuseModel: !MaterialDiffuseLambertModelFeature {}
+    Specular: !MaterialMetalnessMapFeature
+        MetalnessMap: !ComputeFloat
+            Value: 0.0
+    SpecularModel: !MaterialSpecularMicrofacetModelFeature
+        Fresnel: !MaterialSpecularMicrofacetFresnelSchlick {}
+        Visibility: !MaterialSpecularMicrofacetVisibilitySmithSchlickGGX {}
+        NormalDistribution: !MaterialSpecularMicrofacetNormalDistributionGGX {}
+        Environment: !MaterialSpecularMicrofacetEnvironmentGGXLUT {}
+    Occlusion: !MaterialOcclusionMapFeature
+        AmbientOcclusionMap: !ComputeTextureScalar
+            Texture: a89081d5-5394-4812-9c7d-70d890f9c44f:Epic/Environment_Set/Models/T_grass_atlas_01_MT_R_AO
+            FallbackValue:
+                Value: 1.0
+            Channel: B
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+        DirectLightingFactor: !ComputeFloat
+            Value: 0.0
+        CavityMap: !ComputeTextureScalar
+            FallbackValue:
+                Value: 1.0
+            Scale: {X: 1.0, Y: 1.0}
+            Offset: {X: 0.0, Y: 0.0}
+        DiffuseCavity: !ComputeFloat
+            Value: 1.0
+        SpecularCavity: !ComputeFloat
+            Value: 1.0
+    SubsurfaceScattering: !MaterialVegetationSubSurfaceScatteringFeature
+        SubsurfaceLightingAmount: !ComputeFloat
+            Value: 1.0
+        Extinction: !ComputeColor
+            Value: {R: 0.12, G: 0.23, B: 0.12, A: 1.0}
+    Transparency: !MaterialTransparencyCutoffFeature
+        Alpha: !ComputeFloat
+            Value: 0.5
+    Overrides:
+        UVScale: {X: 1.0, Y: 1.0}
+    CullMode: None
+Layers: {}

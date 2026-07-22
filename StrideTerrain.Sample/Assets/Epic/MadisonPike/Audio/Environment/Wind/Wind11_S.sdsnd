@@ -1,0 +1,8 @@
+!Sound
+Id: e7066fd7-facd-4a6f-8138-2685869b5616
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../../../Resources/Epic/MadisonPike/Audio/Environments/Wind/Wind11_S.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

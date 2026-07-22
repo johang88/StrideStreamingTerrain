@@ -1,0 +1,8 @@
+!Sound
+Id: 63c5765f-1393-4773-81d1-aa71ddfbd195
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../../../Resources/Epic/MadisonPike/Audio/Environments/Insects/Crickets3_ONESHOT.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

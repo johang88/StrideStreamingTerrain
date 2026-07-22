@@ -1,0 +1,8 @@
+!Sound
+Id: fe6c5ed0-29c1-4846-8b13-bcf702591ddd
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/UnityWeatherEffects/CasualWind1.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

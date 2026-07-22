@@ -1,0 +1,8 @@
+!Sound
+Id: 869134c8-1fca-4fc7-8d7d-a0f385e92642
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/UnityWeatherEffects/HeavyWind3.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

@@ -1,0 +1,8 @@
+!Sound
+Id: d02e7242-0d91-4c24-bf9d-4070b1e89663
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/DirtRoad_Mono_02.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

@@ -1,0 +1,35 @@
+﻿!MaterialAsset
+Id: 7257da3b-6694-4b7a-9b04-876c7647125b
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Attributes:
+    Displacement: !StrideTerrain.Vegetation.Materials.MaterialImpostorDisplacementFeature,StrideTerrain {}
+    Surface: !MaterialNormalMapFeature
+        NormalMap: !StrideTerrain.Vegetation.Materials.ComputeImpostorAtlasNormal,StrideTerrain {}
+        ScaleAndBias: true
+        IsXYNormal: false
+    MicroSurface: !MaterialGlossinessMapFeature
+        GlossinessMap: !ComputeFloat
+            Value: 0.125
+    Diffuse: !MaterialDiffuseMapFeature
+        DiffuseMap: !StrideTerrain.Vegetation.Materials.ComputeImpostorAtlasColor,StrideTerrain {}
+    DiffuseModel: !MaterialDiffuseLambertModelFeature {}
+    Specular: !MaterialMetalnessMapFeature
+        MetalnessMap: !ComputeFloat
+            Value: 0.0
+    SpecularModel: !MaterialSpecularMicrofacetModelFeature
+        Fresnel: !MaterialSpecularMicrofacetFresnelSchlick {}
+        Visibility: !MaterialSpecularMicrofacetVisibilitySmithSchlickGGX {}
+        NormalDistribution: !MaterialSpecularMicrofacetNormalDistributionGGX {}
+        Environment: !MaterialSpecularMicrofacetEnvironmentGGXLUT {}
+    SubsurfaceScattering: !MaterialVegetationSubSurfaceScatteringFeature
+        SubsurfaceLightingAmount: !ComputeFloat
+            Value: 0.8
+        Extinction: !ComputeColor
+            Value: {R: 0.12, G: 0.23, B: 0.12, A: 1.0}
+    Transparency: !MaterialTransparencyCutoffFeature
+        Alpha: !ComputeFloat
+            Value: 0.25
+    Overrides:
+        UVScale: {X: 1.0, Y: 1.0}
+Layers: {}

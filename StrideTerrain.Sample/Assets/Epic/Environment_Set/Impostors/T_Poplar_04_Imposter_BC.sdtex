@@ -1,0 +1,7 @@
+!Texture
+Id: 299f380e-5679-4f19-b55d-42c37e9bf94c
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Poplar_04_Imposter_BC.PNG
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

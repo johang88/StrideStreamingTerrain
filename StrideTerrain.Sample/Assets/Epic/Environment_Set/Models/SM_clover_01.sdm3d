@@ -1,0 +1,17 @@
+﻿!Model
+Id: ffceead3-c0e3-4ca4-b09a-b721115138ba
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_clover_01.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    c5f82266de93ba9b455c456b14908cff:
+        Name: MI_Clover_Material
+        MaterialInstance:
+            Material: 8c1bec1a-3878-4c94-a772-f029c7e2848a:Epic/Environment_Set/Models/M_Clover
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    ? 613076eefabb086134bb80b77db57cba~../../../../Resources/Epic/Environment_Set/Models/SM_clover_01.FBX
+    : e26368be02b1560bc15782645093e55c

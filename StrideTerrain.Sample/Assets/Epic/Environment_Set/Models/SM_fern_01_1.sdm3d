@@ -1,0 +1,16 @@
+!Model
+Id: f4f3e64f-8712-4353-a28c-f8a5b302e873
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_fern_01_1.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    911f067068191e0d6faf005911e6f9fd:
+        Name: MI_Fern_Material
+        MaterialInstance:
+            Material: e5b00513-6841-4e39-a5ad-606382b088f2:Epic/Environment_Set/Models/M_Fern
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    4836b7af1805a3d6e0704ffc0e6f42d2~../../../../Resources/Epic/Environment_Set/Models/SM_fern_01_1.FBX: 13d885a497a152fe9901aa2a0c7d6586

@@ -1,0 +1,16 @@
+!Model
+Id: f8174703-70c9-4fe8-b4a7-fa91e65273ee
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Sword.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    af2e8782c69b36bc1ef800a18526533e:
+        Name: Sword
+        MaterialInstance:
+            Material: e0336254-859e-4a3d-aecb-cad7fdae59f4:Epic/Fighter/MT_Sword
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    cb46379f086afddbfae56397afab9806~../../../Resources/Epic/Fighter/Sword.FBX: adc3224b147131604f4493d85667b2b2

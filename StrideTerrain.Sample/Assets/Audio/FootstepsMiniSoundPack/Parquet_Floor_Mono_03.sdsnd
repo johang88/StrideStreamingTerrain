@@ -1,0 +1,8 @@
+!Sound
+Id: 4a0dd292-4c9a-4b5d-a455-fefa94e12c21
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Parquet_Floor_Mono_03.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

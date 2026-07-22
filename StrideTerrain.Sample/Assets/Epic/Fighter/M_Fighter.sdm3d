@@ -1,0 +1,20 @@
+!Model
+Id: 5b68fe5d-f3ed-4ee2-be26-74443e45eef1
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Fighter.fbx
+Skeleton: 3a360301-7ef4-4069-97b0-c53d6fce2533:Epic/Fighter/S_Fighter
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    e4451f0f338815d4c1c00ba57bde546c:
+        Name: Body
+        MaterialInstance:
+            Material: 5740ed86-fe2b-4241-9b60-d23f12b46784:Epic/Fighter/MT_Body
+    8ba9d65308fd26b860898c65b725faff:
+        Name: Head
+        MaterialInstance:
+            Material: eb0cef7a-7bfd-48a6-82e0-c0c5ab147826:Epic/Fighter/MT_Head
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    d1ee2ec2960cd79384f91535ae7956c2~../../../Resources/Epic/Fighter/Fighter.fbx: 861ffb6bda69e3e68c884848dd459d80

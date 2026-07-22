@@ -1,0 +1,7 @@
+!Texture
+Id: d2b3a172-b3be-462c-93c9-c51bb6b611c0
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Body_AlbedoTransparency.png
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

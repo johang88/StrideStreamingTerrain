@@ -1,0 +1,8 @@
+!Sound
+Id: f23532f6-290c-4226-b993-1bb479f40eee
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Ice_Mono_03.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

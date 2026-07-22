@@ -1,0 +1,17 @@
+﻿!Model
+Id: d5a32d7d-e699-4d0b-8e19-923d55e5ebac
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_crooked_root_05.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    2d81ead43882494098ba32250233ffb4:
+        Name: M_Roots
+        MaterialInstance:
+            Material: e7441be4-dbea-4e21-866e-86de8f2ddb1c:Epic/Environment_Set/Models/M_Roots
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    ? c26d02a940e11a7f50371f633a4e6017~../../../../Resources/Epic/Environment_Set/Models/SM_crooked_root_05.FBX
+    : a15f21da8705986a04fba5a1cf05edf2

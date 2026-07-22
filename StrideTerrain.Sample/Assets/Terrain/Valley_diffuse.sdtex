@@ -1,0 +1,8 @@
+!Texture
+Id: a5d32e12-8add-4e9b-ba0c-e0b7f9f2f02e
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../Resources/Terrain/Valley_diffuse.dds
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+IsStreamable: false

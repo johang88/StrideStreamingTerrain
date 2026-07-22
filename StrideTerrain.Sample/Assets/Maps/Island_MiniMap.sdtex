@@ -1,0 +1,9 @@
+!Texture
+Id: d2305400-57f1-4b6a-8cc3-ac568ba4905c
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../Resources/Maps/Island_MiniMap_Stylized2.png
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+GenerateMipmaps: false
+IsStreamable: false

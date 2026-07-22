@@ -1,0 +1,8 @@
+!Texture
+Id: 11d17149-c90e-476b-9815-c4e85a586d0b
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../Resources/Foam003_1K_Opacity.jpg
+Type: !ColorTextureType
+    UseSRgbSampling: false
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

@@ -1,0 +1,20 @@
+!Animation
+Id: 5a6e738c-5c34-4c74-8689-7628999949df
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Fighter/Animations/Unarmed Idle Looking Ver. 1.fbx
+AnimationStack: 0
+ClipDuration:
+    Enabled: false
+    StartAnimationTime: 0:00:00:00.0000000
+    EndAnimationTime: 0:00:30:00.0000000
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+RepeatMode: LoopInfinite
+Type: !StandardAnimationAssetType {}
+Skeleton: 3a360301-7ef4-4069-97b0-c53d6fce2533:Epic/Fighter/S_Fighter
+RootMotion: false
+PreviewModel: null
+AnimationTimeMinimum: 0:00:00:00.0000000
+AnimationTimeMaximum: 0:00:00:11.2666600
+~SourceHashes:
+    dfe301fccf143adc90df69515ccae61e~../../../../Resources/Epic/Fighter/Animations/Unarmed Idle Looking Ver. 1.fbx: 418def0b0b43ef41f0c162226170c2fe

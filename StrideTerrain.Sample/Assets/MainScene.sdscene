@@ -1,0 +1,49 @@
+!SceneAsset
+Id: 58e08753-d6bf-4bca-81b5-247aa1946880
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+ChildrenIds: []
+Offset: {X: 0.0, Y: 0.0, Z: 0.0}
+Hierarchy:
+    RootParts:
+        - ref!! 84c5f1d4-28e2-4314-94d1-c88fd7403c0d
+        - ref!! 72664b2a-d06b-46ae-a7af-476a84918946
+    Parts:
+        -   Entity:
+                Id: 72664b2a-d06b-46ae-a7af-476a84918946
+                Name: Camera
+                Components:
+                    808cc35aebe6debe79a48c329f6d51de: !TransformComponent
+                        Id: 11d852a8-d501-4c25-ad15-adfbbf845b4f
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    5d17d89895439722fdcdee0da2a04974: !CameraComponent
+                        Id: a4bb1940-5009-4d89-b43f-43df4f1a6d8e
+                        Enabled: true
+                        Name: Default
+                        Projection: Perspective
+                        Slot: e8beb24c-7acd-4fea-ba82-a672d9225f3f
+                        VerticalFieldOfView: 60.0
+                        FarClipPlane: 10000.0
+                    f93b611e45fa35fa2ee145161e9eedc8: !StrideTerrain.Sample.GameProfiler,StrideTerrain.Sample
+                        Id: 3e5a9bdd-f7bd-46dc-b942-165130451d33
+                        Enabled: false
+                        TextColor: {R: 144, G: 238, B: 144, A: 255}
+                        RefreshTime: 500.0
+                        SortingMode: ByTime
+                        FilteringMode: Fps
+                        ResultPage: 1
+        -   Entity:
+                Id: 84c5f1d4-28e2-4314-94d1-c88fd7403c0d
+                Name: AutoStart
+                Components:
+                    f045a7762d55cb2a6b3cd1c7c63d6f59: !TransformComponent
+                        Id: 79e87a20-fb68-4f15-96c9-5014ac744bbe
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    46c891f0c32a24a42655b582f43c4df0: !StrideTerrain.Sample.Game.AutoStartSession,StrideTerrain.Sample
+                        Id: 67dd9806-70a0-4ea3-980f-ac3e294dca97

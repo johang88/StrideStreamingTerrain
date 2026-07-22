@@ -1,0 +1,8 @@
+!Sound
+Id: 21a630d9-9a2b-4a2d-990d-5ca08f34f062
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Tile_Mono_01.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

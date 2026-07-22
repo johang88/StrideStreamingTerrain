@@ -1,0 +1,20 @@
+!Animation
+Id: 81b1c523-4a8d-4af5-971e-02b3452c1b98
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Fighter/Animations/Unarmed Walk Forward.fbx
+AnimationStack: 0
+ClipDuration:
+    Enabled: false
+    StartAnimationTime: 0:00:00:00.0000000
+    EndAnimationTime: 0:00:30:00.0000000
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+RepeatMode: LoopInfinite
+Type: !StandardAnimationAssetType {}
+Skeleton: 3a360301-7ef4-4069-97b0-c53d6fce2533:Epic/Fighter/S_Fighter
+RootMotion: false
+PreviewModel: null
+AnimationTimeMinimum: 0:00:00:00.0000000
+AnimationTimeMaximum: 0:00:00:01.3666600
+~SourceHashes:
+    c372f3c4329eaf1df5ea52d7b111b10e~../../../../Resources/Epic/Fighter/Animations/Unarmed Walk Forward.fbx: d5382965edd7187d43d737ad565913f0

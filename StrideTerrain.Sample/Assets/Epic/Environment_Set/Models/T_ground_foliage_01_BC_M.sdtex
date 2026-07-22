@@ -1,0 +1,7 @@
+!Texture
+Id: 33665b93-7a68-4b53-b232-4b545c60bf29
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_ground_foliage_01_BC_M.PNG
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

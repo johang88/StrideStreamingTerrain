@@ -1,0 +1,128 @@
+!PrefabAsset
+Id: 3cd4d2b0-a650-4b5b-93a8-eb0a406eb8be
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! cf09c595-6338-4f97-8509-6629d7c526a3
+    Parts:
+        -   Entity:
+                Id: 91d3d191-f60e-4b74-b6ef-c2372c6cf948
+                Name: M_Sword
+                Components:
+                    047d497bc1ffb38fac6fdbe00bc5a234: !TransformComponent
+                        Id: c24423ab-6d5d-4848-b72a-d8c25a166f81
+                        Position: {X: 0.108739026, Y: -0.3381295, Z: 1.1576182}
+                        Rotation: {X: -0.5917927, Y: 0.0, Z: -5.1736162E-08, W: 0.8060902}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    f72b3720684a1dc13999592944b50ec0: !ModelComponent
+                        Id: db0e28e1-e08f-4a4a-bd7c-a0e87d7175d0
+                        Model: f8174703-70c9-4fe8-b4a7-fa91e65273ee:Epic/Fighter/M_Sword
+                        Materials: {}
+                    63ab0dec0ec6019962cdfd6d16483ece: !ModelNodeLinkComponent
+                        Id: ade94091-504b-4e2f-abce-4d046ba55931
+                        Target: null
+                        NodeName: Bip001RHand
+        -   Entity:
+                Id: cf09c595-6338-4f97-8509-6629d7c526a3
+                Name: Player Character
+                Components:
+                    9a6b17183b9a396e67961326c6f8168e: !TransformComponent
+                        Id: 23cf5ad6-5c9b-4ed7-bfcc-353ff5ee9cc5
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children:
+                            4872a386a5fd1787db242e369d06985d: ref!! e7e72e94-b3e2-4616-9ffb-dad77166c8c0
+                    bad1a8b00947aba07859149ea37dabea: !StrideTerrain.Sample.Actors.ActorController,StrideTerrain.Sample
+                        Id: 83392855-17b7-4f60-9f70-f90c5f11ba5f
+                        Enabled: true
+                        ModelEntity: ref!! cf09c595-6338-4f97-8509-6629d7c526a3
+                        ActorAnimationController: ref!! 91c345fe-4ec9-408c-869e-0363e3b15f9c
+                        Character: ref!! 73bef94e-99f7-4763-95b2-01ef795773cf
+                        ActorStats: ref!! 06b9c4fe-5a79-4e70-8914-bcbe193e856e
+                    54804c426eb6a08260678a4c2456c8c2: !StrideTerrain.Sample.Actors.ActorStatsComponent,StrideTerrain.Sample
+                        Id: 06b9c4fe-5a79-4e70-8914-bcbe193e856e
+                        Health:
+                            Current: 100.0
+                            Max: 100.0
+                        MovementSpeed: 4.0
+                        Faction: Friends
+                    d1432a4714e9d80cb373b3b61e0636e7: !CharacterComponent
+                        Id: 73bef94e-99f7-4763-95b2-01ef795773cf
+                        CanSleep: false
+                        Restitution: 0.0
+                        Friction: 0.5
+                        RollingFriction: 0.0
+                        CcdMotionThreshold: 0.0
+                        CcdSweptSphereRadius: 0.0
+                        FallSpeed: 10.0
+                        MaxSlope: {Radians: 0.7853982}
+                        JumpSpeed: 5.0
+                        Gravity: {X: 0.0, Y: -10.0, Z: 0.0}
+                        ColliderShapes:
+                            0afaceb90bba5f08aea38f83e21b8a4d: !CapsuleColliderShapeDesc
+                                Length: 1.51
+                                LocalOffset: {X: 0.0, Y: 1.0, Z: 0.0}
+                                LocalRotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                    103da34f7119488c41609bffe22b2688: !StrideTerrain.Sample.Actors.ActorAudioController,StrideTerrain.Sample
+                        Id: 4610b513-85ba-4b7f-81dc-f7a5cf8c545b
+                        Footsteps:
+                            29314fe5d993b9f1392603f78a67766a~Grass:
+                                Sounds:
+                                    9008194e4940fe3983b5dc8395998522: ef36d44b-573d-4b89-a5f7-5fca70cc601c:Audio/FootstepsMiniSoundPack/Tall_Grass_Mono_01
+                                    e92b9b023c1018c1590c30c88bcc36cf: 434fdb48-7b47-401d-aba3-250d76257a14:Audio/FootstepsMiniSoundPack/Tall_Grass_Mono_02
+                                    fa35f96aae55eba67ca4a4cae35b9515: b9f60aae-5dea-42d3-b7f6-af9758bfea13:Audio/FootstepsMiniSoundPack/Tall_Grass_Mono_04
+                                    b38b11f7747c46ea48c21654b0956ed7: efef474e-fd03-4be5-99e7-70d19c13bd74:Audio/FootstepsMiniSoundPack/Undergrowth_Mono_01
+                                    7d78697f4498083a747f493e0d92cb48: 1e93a2ac-e90c-43f4-8c38-5f7a9306bc3b:Audio/FootstepsMiniSoundPack/Undergrowth_Mono_02
+                                    4aafae9c0141b601619c1a3c562e03f4: a6f5669d-864d-45de-b960-ad87c5705d1e:Audio/FootstepsMiniSoundPack/Undergrowth_Mono_03
+                                    2181220cfc961337c431090e9f1b1f1c: 52c407af-e6de-482b-abc7-ffa73f918cd1:Audio/FootstepsMiniSoundPack/Undergrowth_Mono_04
+                                    9e7ef900519c2212abadc31a298268f6: 24e92afd-a0a9-466a-8005-711642dfbcca:Audio/FootstepsMiniSoundPack/Undergrowth_Mono_05
+                            e197fbbb6f029023e26db98d762aa8c7~Mud:
+                                Sounds:
+                                    85ae4406d1a7f22c0c9cce2620dff51e: 1004d084-23d9-44f4-95d3-a23927d51395:Audio/FootstepsMiniSoundPack/Mud_Mono_01
+                                    102d773b0d416957308e73e43afb0c66: c90711d8-829a-4762-83fe-aab8dbfdf7e2:Audio/FootstepsMiniSoundPack/Mud_Mono_02
+                                    d77b9bf414e3b46fb67bd7000ccfd2e0: 4a61c63a-896f-46b2-9939-e5d4a2de444e:Audio/FootstepsMiniSoundPack/Mud_Mono_03
+                                    56aebb5ea5d58bff86a1d290313b1c31: e00ecc1d-1f34-438e-8487-14a6ffd78fbd:Audio/FootstepsMiniSoundPack/Mud_Mono_04
+                                    ef81fed8f03cf82938c63af59366ab52: 23440bf1-8652-4fbb-85ba-73994d312c75:Audio/FootstepsMiniSoundPack/Mud_Mono_05
+                            523e549f1fb06936a4ba310269d38d45~Dirt:
+                                Sounds:
+                                    68a89274b5f40e00dee6355aa76476b5: 563a51a7-39d0-40bb-9172-0399206c7dc9:Audio/FootstepsMiniSoundPack/DirtRoad_Mono_03
+                                    337d46e7baec458e14e0bc32eb032517: d02e7242-0d91-4c24-bf9d-4070b1e89663:Audio/FootstepsMiniSoundPack/DirtRoad_Mono_02
+                                    deae05d88ff1cd151679d7f1b233aa13: 67c5402e-ae34-445c-9a1f-34362301fe84:Audio/FootstepsMiniSoundPack/DirtRoad_Mono_01
+                                    a47247b1dd2c1b3f21af481acd8d8358: 17b8c94e-594f-48ce-aa9f-6713451f17db:Audio/FootstepsMiniSoundPack/DirtRoad_Mono_04
+                                    49dcdf3a7f8b36232ff3877f054edddc: 3c399473-b2a6-4581-a9ad-6a8865ab7804:Audio/FootstepsMiniSoundPack/DirtRoad_Mono_05
+                            c4af2e9a45d8f173b7100244fd026cd4~Snow:
+                                Sounds:
+                                    9eb05a0a449c6b3423f41a7dc21bd54a: 7cfafbfa-7522-4908-85df-0360255f0dbc:Audio/FootstepsMiniSoundPack/SnowSteps_01
+                                    a2150a9266c26e40e238e20fd2c9ba13: 37452ce6-1424-44b7-a52d-23484d82ecae:Audio/FootstepsMiniSoundPack/SnowSteps_02
+                                    2ced02626dd9f06764488932c3a7b367: 63084d4d-f358-4625-9573-7157d07a69c5:Audio/FootstepsMiniSoundPack/SnowSteps_03
+                                    525bff37bde3eed1eeb77194e4770d02: f41abd32-8fcf-44ed-b3db-21fcef483b16:Audio/FootstepsMiniSoundPack/SnowSteps_04
+                                    41e3adaffea85b5974517e3a989861a2: 0d72795f-7733-4e7a-afef-313ab06b9ff0:Audio/FootstepsMiniSoundPack/SnowSteps_05
+                        ActorAnimationController: ref!! 91c345fe-4ec9-408c-869e-0363e3b15f9c
+        -   Entity:
+                Id: f9b00161-5956-4de1-ac93-b7d5126f62fb
+                Name: Player Model
+                Components:
+                    9a6b17183b9a396e67961326c6f8168e: !TransformComponent
+                        Id: e7e72e94-b3e2-4616-9ffb-dad77166c8c0
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 1.0, Z: -0.0, W: -4.371139E-08}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children:
+                            c4f981943128f4a751bd9ce9d1815e13: ref!! c24423ab-6d5d-4848-b72a-d8c25a166f81
+                    ea2d3b7c9f98b6c1ad1437cc7ef4296e: !ModelComponent
+                        Id: 5ce9f6c1-59e2-4ea2-a782-4432018b70d1
+                        Model: 5b68fe5d-f3ed-4ee2-be26-74443e45eef1:Epic/Fighter/M_Fighter
+                        Materials: {}
+                    17d832baf9697ec9063b80ea9d347613: !AnimationComponent
+                        Id: 3e46f4e5-9821-4236-9fe2-22e6b2c886bc
+                        Animations:
+                            451b34714ff3522753dd26558237ae56~Walk: 81b1c523-4a8d-4af5-971e-02b3452c1b98:Epic/Fighter/Animations/Unarmed Walk Forward_mixamo.com
+                            86a1de08a3f34cdd3a782e060c2dc1fc~Idle: 1e5bfbef-703c-4e80-9cbe-3b9cb14fb8e9:Epic/Fighter/Animations/Unarmed Idle_mixamo.com
+                            cd8aa8b654c4ac375081d00612393732~Basic Attack: 6ea2dc1b-bcdf-42c9-a9bc-f9bfa1a23521:Epic/Fighter/Animations/Standing Melee Attack Horizontal_mixamo.com
+                            d31cefd49bde0455f0f474b6fe2d9efd~Die: 800bda96-5916-4754-a9b4-f3d1a1065ed5:Epic/Fighter/Animations/Falling Forward Death_mixamo.com
+                            cb5c80a139f25d44fc7b83a580840fa5~Idle Ready: 08d46d6a-f367-45c7-a557-8e18e67d60b0:Epic/Fighter/Animations/Standing Idle Looking Ver. 1_mixamo.com
+                    08219b18071514a763423c0c99cac46d: !StrideTerrain.Sample.Actors.ActorAnimationController,StrideTerrain.Sample
+                        Id: 91c345fe-4ec9-408c-869e-0363e3b15f9c

@@ -1,0 +1,8 @@
+!Texture
+Id: db361e9d-a195-426d-8b60-ae92b7316228
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Fir_08_Imposter_BC.PNG
+Type: !ColorTextureType
+    UseSRgbSampling: false
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

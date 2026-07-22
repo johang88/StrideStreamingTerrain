@@ -1,0 +1,8 @@
+!Sound
+Id: 487dd493-df09-4a00-8756-9f22e3e49034
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/MetalSteps_05.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

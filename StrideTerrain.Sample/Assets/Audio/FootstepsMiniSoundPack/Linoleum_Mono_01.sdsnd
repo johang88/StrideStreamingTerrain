@@ -1,0 +1,8 @@
+!Sound
+Id: 0918b039-28cc-4de7-b992-5e5ee130c17b
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Linoleum_Mono_01.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

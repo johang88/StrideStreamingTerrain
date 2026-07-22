@@ -1,0 +1,8 @@
+!Texture
+Id: 7af78177-3892-477d-aa0a-ddc4b932e29b
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Sword_MetallicSmoothness.png
+Type: !ColorTextureType
+    UseSRgbSampling: false
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

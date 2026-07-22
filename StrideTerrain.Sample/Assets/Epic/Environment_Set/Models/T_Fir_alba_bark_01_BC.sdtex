@@ -1,0 +1,7 @@
+!Texture
+Id: 5c29b13b-2315-44b9-87d7-1dc1ad2c9a49
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Fir_alba_bark_01_BC.PNG
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

@@ -1,0 +1,8 @@
+!Sound
+Id: c173528c-e282-4e5a-9da9-af9ecfeb6497
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/UnityWeatherEffects/Wind5.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

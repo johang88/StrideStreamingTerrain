@@ -1,0 +1,24 @@
+!Model
+Id: 552aecd7-6ff2-4d8a-885c-80855e6d11d0
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/Poplar_02_Standalone.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    3342e080c55dd5cfb14a9dfca5ecfa89:
+        Name: M_Bark
+        MaterialInstance:
+            Material: 23a0178f-b18e-44df-8cb8-69c986204a73:Epic/Environment_Set/Models/M_bark
+    ba73903a164cfda63c9d456a1196cbb4:
+        Name: MI_poplar_branch
+        MaterialInstance:
+            Material: fb4070e7-04b3-4768-9a72-68564e221e87:Epic/Environment_Set/Models/M_poplar_branch
+    56bfe8051d7a265a2b1d376881c426f3:
+        Name: M_leaves
+        MaterialInstance:
+            Material: 776f8b41-e42e-463a-8158-e1bb281ab7a0:Epic/Environment_Set/Models/M_leaves
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    8181031d4fc1213a0fd4ce108a0507c2~../../../../Resources/Epic/Environment_Set/Models/Poplar_02_Standalone.FBX: ece7ad00be95247ee455c256bd0f9436

@@ -1,0 +1,8 @@
+!Sound
+Id: e00ecc1d-1f34-438e-8487-14a6ffd78fbd
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Mud_Mono_04.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

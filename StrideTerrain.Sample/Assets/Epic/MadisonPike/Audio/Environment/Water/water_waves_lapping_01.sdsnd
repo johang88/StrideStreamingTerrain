@@ -1,0 +1,8 @@
+!Sound
+Id: 742fbfce-54db-4c47-8282-a419343e129a
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../../../Resources/Epic/MadisonPike/Audio/Environments/Water/water_waves_lapping_01.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

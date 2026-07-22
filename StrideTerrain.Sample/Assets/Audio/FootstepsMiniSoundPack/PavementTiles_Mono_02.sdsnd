@@ -1,0 +1,8 @@
+!Sound
+Id: 65ea9f39-4fd4-434b-ac47-cf0f1be1eb0f
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/PavementTiles_Mono_02.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

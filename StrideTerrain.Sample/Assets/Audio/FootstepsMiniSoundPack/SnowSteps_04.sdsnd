@@ -1,0 +1,8 @@
+!Sound
+Id: f41abd32-8fcf-44ed-b3db-21fcef483b16
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/SnowSteps_04.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

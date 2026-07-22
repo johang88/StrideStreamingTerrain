@@ -1,0 +1,55 @@
+!PrefabAsset
+Id: 8f236f47-d911-484e-a39a-7d6bc993a7b3
+SerializedVersion: {Stride: 3.1.0.1}
+Tags: []
+Hierarchy:
+    RootParts:
+        - ref!! 32da3154-f598-404a-a54d-142d87d42874
+    Parts:
+        -   Entity:
+                Id: 2a45c85a-bd81-4730-9667-29e489236bc6
+                Name: Camera Target
+                Components:
+                    657610ca9dc1d85f4a74fc523a9aef77: !TransformComponent
+                        Id: 68e1bd3c-bfab-43bf-b5a7-b868eb9c89de
+                        Position: {X: 0.0, Y: 2.3, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children:
+                            0639545a35ac5dfed7d58776e4d4816b: ref!! 12186628-0db5-4176-a28d-a397e5465f73
+        -   Entity:
+                Id: 32da3154-f598-404a-a54d-142d87d42874
+                Name: Third Person Camera
+                Components:
+                    43a48e1179f5f0908ff8d50227a3ec1f: !TransformComponent
+                        Id: 85cd8e6b-88d7-4627-b05a-41ed225e7ce9
+                        Position: {X: 0.0, Y: 0.0, Z: 0.0}
+                        Rotation: {X: 0.0, Y: 0.0, Z: 0.0, W: 1.0}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children:
+                            e9a62bb7491c37a5b147b19cf8270ce1: ref!! 68e1bd3c-bfab-43bf-b5a7-b868eb9c89de
+                    4ae7063b7e48add477b19a38c3b1ef44: !StrideTerrain.Sample.Player.ThirdPersonCameraController,StrideTerrain.Sample
+                        Id: 0486bba6-c871-4001-9535-bce9e735dafa
+                        Target: null
+                        RotationSpeed: 360.0
+                        VerticalSpeed: 65.0
+                        MinVerticalAngle: -20.0
+                        MaxVerticalAngle: 70.0
+                        Enabled: true
+        -   Entity:
+                Id: 381ed807-5e80-4086-8413-e1a5f17c1358
+                Name: Camera
+                Components:
+                    70ea589e10cfa6d6b161b9e76d171055: !TransformComponent
+                        Id: 12186628-0db5-4176-a28d-a397e5465f73
+                        Position: {X: 0.0, Y: 0.0, Z: 3.0}
+                        Rotation: {X: -0.118774675, Y: 0.0, Z: 0.0, W: 0.99292123}
+                        Scale: {X: 1.0, Y: 1.0, Z: 1.0}
+                        Children: {}
+                    b0e30de2dc97a0edc098d2bc3b584fbf: !CameraComponent
+                        Id: 2c0d19e3-dc74-460e-8ea1-e9dd09ae996a
+                        Name: Main Third Person Camera
+                        Projection: Perspective
+                        VerticalFieldOfView: 60.0
+                        FarClipPlane: 10000.0
+                        Slot: e8beb24c-7acd-4fea-ba82-a672d9225f3f

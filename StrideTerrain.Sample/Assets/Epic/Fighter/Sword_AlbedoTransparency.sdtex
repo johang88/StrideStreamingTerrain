@@ -1,0 +1,7 @@
+!Texture
+Id: 5360f9cc-ab58-4d42-81cc-ed006e1ef8ae
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Sword_AlbedoTransparency.png
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

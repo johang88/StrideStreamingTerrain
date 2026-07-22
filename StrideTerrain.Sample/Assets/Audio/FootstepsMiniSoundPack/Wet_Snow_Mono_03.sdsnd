@@ -1,0 +1,8 @@
+!Sound
+Id: 615b9e23-f156-4162-a7c6-e78c6371daa1
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Wet_Snow_Mono_03.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

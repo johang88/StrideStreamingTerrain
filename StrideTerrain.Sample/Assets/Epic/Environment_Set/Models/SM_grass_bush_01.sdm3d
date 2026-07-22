@@ -1,0 +1,16 @@
+!Model
+Id: f11eb0fe-7b83-42e8-a145-7e2fe8e90451
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_grass_bush_01.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    5b3d9132576f7f1d7f155bf112fb1048:
+        Name: MI_Grass_Material
+        MaterialInstance:
+            Material: 2072ab17-65bb-4dd0-b4b3-8988f330f608:Epic/Environment_Set/Models/M_Grass_Tick
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    67e0bb9aa4de3a3f2dc0ff13280574d2~../../../../Resources/Epic/Environment_Set/Models/SM_grass_bush_01.FBX: fdaf3152a07ccca1c53fa50d6417d319

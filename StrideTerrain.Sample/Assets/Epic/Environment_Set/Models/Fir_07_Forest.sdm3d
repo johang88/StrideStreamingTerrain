@@ -1,0 +1,24 @@
+!Model
+Id: d9ec25fd-65d0-421e-a81a-3d7179d08c86
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/Fir_07_Forest.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    e40c8237365337162d4c3fdc4b073843:
+        Name: MI_Bark_Fir_01
+        MaterialInstance:
+            Material: 1cb50bd9-4642-4f74-adaa-d0023dd2dca4:Epic/Environment_Set/Models/M_bark_fir
+    cd0afbad81b6447570f3b51c65edbc61:
+        Name: MI_Bark_Fir_03_01
+        MaterialInstance:
+            Material: 1fac0aae-786d-425f-9945-786b20b4ca24:Epic/Environment_Set/Models/M_bark_fir_03_01
+    306a7e556b55b8ebca0d97afd69f68b1:
+        Name: MI_leaves_Fir
+        MaterialInstance:
+            Material: 65292b4f-3662-4198-9807-27b06c9033b4:Epic/Environment_Set/Models/M_leaves_fir
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    b1f0e0ab6abd343953924c2956f0ae92~../../../../Resources/Epic/Environment_Set/Models/Fir_07_Forest.FBX: 50d88134b301bc6e5607f68db14ff407

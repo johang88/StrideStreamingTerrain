@@ -1,0 +1,6 @@
+!Texture
+Id: c1d25355-e276-4242-b15d-587fc051dec2
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Body_AO.png
+Type: !GrayscaleTextureType {}

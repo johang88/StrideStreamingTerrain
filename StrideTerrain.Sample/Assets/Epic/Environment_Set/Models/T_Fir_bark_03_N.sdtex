@@ -1,0 +1,6 @@
+!Texture
+Id: 86513c51-3b92-471a-a148-f89bb1683f83
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Fir_bark_03_N.PNG
+Type: !NormalMapTextureType {}

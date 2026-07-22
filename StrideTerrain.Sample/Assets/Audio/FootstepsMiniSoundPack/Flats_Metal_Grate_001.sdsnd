@@ -1,0 +1,9 @@
+!Sound
+Id: ff516a85-387b-4166-80d5-0ff2f7ddc29e
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Flats_Metal_Grate_001.wav
+SampleRate: 96000
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

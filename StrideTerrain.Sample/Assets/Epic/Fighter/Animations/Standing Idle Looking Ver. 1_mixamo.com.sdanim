@@ -1,0 +1,20 @@
+!Animation
+Id: 08d46d6a-f367-45c7-a557-8e18e67d60b0
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Fighter/Animations/Standing Idle Looking Ver. 1.fbx
+AnimationStack: 0
+ClipDuration:
+    Enabled: false
+    StartAnimationTime: 0:00:00:00.0000000
+    EndAnimationTime: 0:00:30:00.0000000
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+RepeatMode: LoopInfinite
+Type: !StandardAnimationAssetType {}
+Skeleton: 3a360301-7ef4-4069-97b0-c53d6fce2533:Epic/Fighter/S_Fighter
+RootMotion: false
+PreviewModel: null
+AnimationTimeMinimum: 0:00:00:00.0000000
+AnimationTimeMaximum: 0:00:00:11.2666600
+~SourceHashes:
+    6fc479df1f6e4254f13db0088c6b9bb5~../../../../Resources/Epic/Fighter/Animations/Standing Idle Looking Ver. 1.fbx: be00477cf37a7e6f65a3fa32208ce9fc

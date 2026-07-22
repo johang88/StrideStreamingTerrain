@@ -1,0 +1,9 @@
+!Sound
+Id: ac02d8a8-7b14-422f-8bd5-a6173536fc52
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Plastic_005.wav
+SampleRate: 96000
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

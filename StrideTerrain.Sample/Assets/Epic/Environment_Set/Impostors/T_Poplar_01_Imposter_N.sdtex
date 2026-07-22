@@ -1,0 +1,6 @@
+!Texture
+Id: d2e3e16e-54a1-411d-923d-7f6c6f9b3ff5
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Poplar_01_Imposter_N.PNG
+Type: !NormalMapTextureType {}

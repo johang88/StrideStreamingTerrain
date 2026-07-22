@@ -1,0 +1,20 @@
+!Animation
+Id: 6ea2dc1b-bcdf-42c9-a9bc-f9bfa1a23521
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Fighter/Animations/Standing Melee Attack Horizontal.fbx
+AnimationStack: 0
+ClipDuration:
+    Enabled: false
+    StartAnimationTime: 0:00:00:00.0000000
+    EndAnimationTime: 0:00:30:00.0000000
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+RepeatMode: LoopInfinite
+Type: !StandardAnimationAssetType {}
+Skeleton: 3a360301-7ef4-4069-97b0-c53d6fce2533:Epic/Fighter/S_Fighter
+RootMotion: false
+PreviewModel: null
+AnimationTimeMinimum: 0:00:00:00.0000000
+AnimationTimeMaximum: 0:00:00:02.4000000
+~SourceHashes:
+    24e980acba6f448d14e455cc45217a8b~../../../../Resources/Epic/Fighter/Animations/Standing Melee Attack Horizontal.fbx: f7bfbece18d6a234cc1a6900236e8217

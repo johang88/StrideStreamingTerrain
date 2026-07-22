@@ -1,0 +1,8 @@
+!Texture
+Id: a89081d5-5394-4812-9c7d-70d890f9c44f
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_grass_atlas_01_MT_R_AO.PNG
+Type: !ColorTextureType
+    UseSRgbSampling: false
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

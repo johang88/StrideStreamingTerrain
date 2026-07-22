@@ -1,0 +1,9 @@
+!Texture
+Id: 6e66213f-9b31-4f25-9c66-5bd7c46de8f6
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Fir_bark_05_MT_R_AO_H_LOG.PNG
+Type: !ColorTextureType
+    UseSRgbSampling: false
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}
+    PremultiplyAlpha: false

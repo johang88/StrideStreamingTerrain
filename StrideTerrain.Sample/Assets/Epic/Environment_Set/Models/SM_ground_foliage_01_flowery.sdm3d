@@ -1,0 +1,16 @@
+!Model
+Id: 8d14bfd0-6106-4f45-9a7c-e29836036f15
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Models/SM_ground_foliage_01_flowery.FBX
+Skeleton: null
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Materials:
+    114d0b599dd989835807afab515f715b:
+        Name: MI_Foliage_Material
+        MaterialInstance:
+            Material: 4a5d2fd6-9e79-4ebe-a06a-cc8e9df2d840:Epic/Environment_Set/Models/M_Foliage
+DeduplicateMaterials: false
+Modifiers: {}
+~SourceHashes:
+    64cc52a7f44e7d54c820dc9544c2c91b~../../../../Resources/Epic/Environment_Set/Models/SM_ground_foliage_01_flowery.FBX: 8827872ac9a9f69cfd61c70a07ce7fdd

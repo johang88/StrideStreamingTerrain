@@ -1,0 +1,8 @@
+!Sound
+Id: 8fc5d3af-9fdc-409b-b36d-d59f1e22b0bf
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../../../Resources/Epic/MadisonPike/Audio/Environments/Insects/Crickets4_Oneshot_LNG.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

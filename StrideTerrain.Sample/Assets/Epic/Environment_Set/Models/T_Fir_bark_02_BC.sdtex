@@ -1,0 +1,7 @@
+!Texture
+Id: 1e606329-bc27-4a98-a90b-69a7db106e2f
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../Resources/Epic/Environment_Set/Textures/T_Fir_bark_02_BC.PNG
+Type: !ColorTextureType
+    ColorKeyColor: {R: 255, G: 0, B: 255, A: 255}

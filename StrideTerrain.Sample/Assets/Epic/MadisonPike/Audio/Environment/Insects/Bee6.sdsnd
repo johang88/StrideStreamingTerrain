@@ -1,0 +1,8 @@
+!Sound
+Id: 7a495b69-7a18-4971-bcb9-22145f070fff
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../../../Resources/Epic/MadisonPike/Audio/Environments/Insects/Bee6.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

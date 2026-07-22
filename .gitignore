@@ -12,7 +12,13 @@ _ReSharper*
 [Bb]in/
 obj/
 Cache/
+# Source art (FBX, PNG, heightmaps). Redistribution restricted, so it stays out of the repo.
 StrideTerrain.Sample/Resources/*
-StrideTerrain.Sample/Assets/*
+
+# Assets are the Stride side of the pipeline - material graphs, model and texture import settings,
+# scenes, prefabs. They are authored here, they are small, and they are what actually breaks, so
+# they belong in version control even though the Resources they point at do not. Without them a
+# rendering regression that lives in a material graph cannot be bisected at all.
+!StrideTerrain.Sample/Assets/
 StrideTerrain.Editor/Resources/Valley_normal.dds
 StrideTerrain.Editor/Resources/Valley_roughness.dds

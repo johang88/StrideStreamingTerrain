@@ -1,0 +1,8 @@
+!Sound
+Id: a78aee7b-b706-4747-a94e-ab840aafc579
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Glass_Grit_Mono_04.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

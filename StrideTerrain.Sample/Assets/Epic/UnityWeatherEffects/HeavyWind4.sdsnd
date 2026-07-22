@@ -1,0 +1,8 @@
+!Sound
+Id: f658d862-b56b-4b58-9516-48bca2c1828a
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/UnityWeatherEffects/HeavyWind4.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

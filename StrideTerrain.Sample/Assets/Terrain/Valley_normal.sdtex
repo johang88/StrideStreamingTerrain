@@ -1,0 +1,8 @@
+!Texture
+Id: ce3e0af2-011c-4ceb-8c38-8460efbb5d1f
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../Resources/Terrain/Valley_normal.dds
+Type: !NormalMapTextureType
+    InvertY: false
+IsStreamable: false

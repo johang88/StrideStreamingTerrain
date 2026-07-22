@@ -1,0 +1,8 @@
+!Sound
+Id: 372e3a28-6f51-4f54-bbd0-4d4802f3b132
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/LowMetal_Mono_02.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

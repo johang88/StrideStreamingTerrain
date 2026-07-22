@@ -1,0 +1,80 @@
+!Skeleton
+Id: 3a360301-7ef4-4069-97b0-c53d6fce2533
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Epic/Fighter/Fighter.fbx
+PivotPosition: {X: 0.0, Y: 0.0, Z: 0.0}
+Nodes:
+    f0e2cddd86a094a346ff268bc61e509d: {Name: RootNode, Depth: 0}
+    bbdc882305ee548af433c4aea86447a7: {Name: Body, Depth: 1}
+    ade7efe2362e25a34bc4f9cddad8420a: {Name: Head, Depth: 1}
+    36319d4f95163bff140e4ac2861e829d: {Name: ParticleView001, Depth: 1}
+    d7aab14e0240e347d76a4971e2d6354a: {Name: Bip001, Depth: 1}
+    92ce27baed59385d71c85be995b15796: {Name: Bip001Footsteps, Depth: 2}
+    17780f24f51f93cb2c40cc90a235a217: {Name: Bip001Pelvis, Depth: 2}
+    f7cb4843fc4436e5f8ecee4efcebd9ee: {Name: Bip001Spine, Depth: 3}
+    4321d7f758179b0332874b9ce3e1da1d: {Name: Bip001Spine1, Depth: 4}
+    849e9a6bf025008b2ba0970190e4ac86: {Name: Bip001Neck, Depth: 5}
+    7f71ae2601006359d89c8e68efc6e053: {Name: Bip001Head, Depth: 6}
+    51ebb3a094609709a4d576032e8db46c: {Name: Bip001HeadNub, Depth: 7}
+    78a317978872f90956805cfae7203fee: {Name: Eyes, Depth: 7}
+    157b4ed5633607a1d5cb9cb228b4a56a: {Name: Bip001RClavicle, Depth: 5}
+    87a9c34739fea4a722cfd227ceb42464: {Name: Bip001RUpperArm, Depth: 6}
+    2d87dd57e1aee82e43a613dbebcaa1df: {Name: Bip001RForearm, Depth: 7}
+    2d683fe9b9b8e98a71430c298eb8eb93: {Name: Bip001RHand, Depth: 8}
+    8ea793dc31a9fafafdadebf3f0f8b5e8: {Name: Bip001RFinger0, Depth: 9}
+    2b71ff6e1914812d4a18ea40fabc8ceb: {Name: Bip001RFinger01, Depth: 10}
+    39686fdcbdc296b230feeb6a0621f7f0: {Name: Bip001RFinger02, Depth: 11}
+    adcca87942e0d7140d54e958c45100bc: {Name: Bip001RFinger0Nub, Depth: 12}
+    a31aa8a293bcb280abdaa8469bc5e5fb: {Name: Bip001RFinger1, Depth: 9}
+    e41c57703b0830af5db43cdd91452d95: {Name: Bip001RFinger11, Depth: 10}
+    d4dbbdb3d7ca6203f9fa8c0fcc7e2122: {Name: Bip001RFinger12, Depth: 11}
+    381af1ec1486dd7e2460515d09acacde: {Name: Bip001RFinger1Nub, Depth: 12}
+    7f294f744a80eb9d3046f6d899dd3c4b: {Name: Bip001RFinger2, Depth: 9}
+    83f4cdbba703a778f9bc939a0a679ffa: {Name: Bip001RFinger21, Depth: 10}
+    4046386a965563fe7fa06e2338ea92b9: {Name: Bip001RFinger22, Depth: 11}
+    261e3743f2db992429e9ec7ec5a2956a: {Name: Bip001RFinger2Nub, Depth: 12}
+    5d0b5a1a24d0953b8860f39c905f2d2a: {Name: Bip001RFinger3, Depth: 9}
+    f4b265047118a56fd951dbeb20a6e3b4: {Name: Bip001RFinger31, Depth: 10}
+    8b1f055a87bce3597c221ff08d5c282a: {Name: Bip001RFinger32, Depth: 11}
+    c10edc24bc2b2d30311006966f928ea0: {Name: Bip001RFinger3Nub, Depth: 12}
+    a44827e98058d0bbe2abf095b0199b3c: {Name: Bip001RFinger4, Depth: 9}
+    faf684b6ec95bcde642bf1639ddae93d: {Name: Bip001RFinger41, Depth: 10}
+    783fa6443f99d01c7694e438986b79bf: {Name: Bip001RFinger42, Depth: 11}
+    f21be4b6497a4f748ef9f488b9cb519c: {Name: Bip001RFinger4Nub, Depth: 12}
+    786f0f61935bcbbb266bb41beb816084: {Name: Bip001LClavicle, Depth: 5}
+    fc04ab5934f0d1ee8dab0557fe717377: {Name: Bip001LUpperArm, Depth: 6}
+    64fd7fe752da366ec89133c4ee369ec8: {Name: Bip001LForearm, Depth: 7}
+    9f2b8d83dd29c366853fb156db25c1df: {Name: Bip001LHand, Depth: 8}
+    39ccf085dfdc958dcad20f7ae8d8c0cf: {Name: Bip001LFinger0, Depth: 9}
+    42004d55db4d46447da533789f36c4c5: {Name: Bip001LFinger01, Depth: 10}
+    d9a5eaf9c2a9a4967bbafae48eb044e1: {Name: Bip001LFinger02, Depth: 11}
+    a22a0be7cdae63464efc056a6da32466: {Name: Bip001LFinger0Nub, Depth: 12}
+    7190d9e028cc944910390af2a5d77d49: {Name: Bip001LFinger1, Depth: 9}
+    62b66d3de34c43f16ef12c8ecc283665: {Name: Bip001LFinger11, Depth: 10}
+    2e6da0ece0715417c1293d8baefc3802: {Name: Bip001LFinger12, Depth: 11}
+    83a25cb8e5800ef4d8195eed6c2b1fd3: {Name: Bip001LFinger1Nub, Depth: 12}
+    deb2f45cafc57f3419ea45be4fd0ebec: {Name: Bip001LFinger2, Depth: 9}
+    472e15746174fd9f2cf0f96101c10abf: {Name: Bip001LFinger21, Depth: 10}
+    b143c22150f683fce148b89f8b6b3d91: {Name: Bip001LFinger22, Depth: 11}
+    ac89b916b1ad2e256616032ef5c54001: {Name: Bip001LFinger2Nub, Depth: 12}
+    4e9f3e27e81f6eabf6bf96e9c8a64a5c: {Name: Bip001LFinger3, Depth: 9}
+    67fc79e5e363d4ed07da9ddf4b5f5f1c: {Name: Bip001LFinger31, Depth: 10}
+    894687887a6402f93512ddb3c0de01f2: {Name: Bip001LFinger32, Depth: 11}
+    15393a2d163ce1b4e402452875d40ffd: {Name: Bip001LFinger3Nub, Depth: 12}
+    4814aff9c26f049e9a52e0ceceb366ec: {Name: Bip001LFinger4, Depth: 9}
+    825490db8ffc0425ee652eaad550f5c0: {Name: Bip001LFinger41, Depth: 10}
+    682d450da477da49a375fdbe1ad70427: {Name: Bip001LFinger42, Depth: 11}
+    9556576d2b75d121dfe75e4bfd994312: {Name: Bip001LFinger4Nub, Depth: 12}
+    a526e3660fcdf048669642de4995ef60: {Name: Bip001LThigh, Depth: 3}
+    4a91723c410d6ab93ab92304285040ee: {Name: Bip001LCalf, Depth: 4}
+    3b7740f8cf160abbeb4915de97e834af: {Name: Bip001LFoot, Depth: 5}
+    4d66d8ea629ac15ec5e64301324f0c7e: {Name: Bip001LToe0, Depth: 6}
+    188f3c7c1910bbe14354d7bd3d6b656f: {Name: Bip001LToe0Nub, Depth: 7}
+    fa9569b8e21c4fe2c273cac65ed8858e: {Name: Bip001RThigh, Depth: 3}
+    0ba0a3f9713bd2984d1e277409523c4d: {Name: Bip001RCalf, Depth: 4}
+    d1e1d834321995d6bf214eac29e56d49: {Name: Bip001RFoot, Depth: 5}
+    c4b1f5d36edd0c0bb7158b192b589cd9: {Name: Bip001RToe0, Depth: 6}
+    ad9ac766bfad143c0a0d05bb1f842911: {Name: Bip001RToe0Nub, Depth: 7}
+~SourceHashes:
+    69d5a1630f9405208e138438ec9b3d66~../../../Resources/Epic/Fighter/Fighter.fbx: 861ffb6bda69e3e68c884848dd459d80

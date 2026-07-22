@@ -1,0 +1,8 @@
+!Sound
+Id: ef36d44b-573d-4b89-a5f7-5fca70cc601c
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Tall_Grass_Mono_01.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

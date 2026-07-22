@@ -1,0 +1,8 @@
+!Sound
+Id: 24e92afd-a0a9-466a-8005-711642dfbcca
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../Resources/Audio/FootstepsMiniSoundPack/Undergrowth_Mono_05.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false

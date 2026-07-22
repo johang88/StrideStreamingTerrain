@@ -1,0 +1,8 @@
+!Sound
+Id: f194b366-af89-49fc-bf89-7719f9b43874
+SerializedVersion: {Stride: 2.0.0.0}
+Tags: []
+Source: !file ../../../../../../Resources/Epic/MadisonPike/Audio/Environments/Forest/Forest_Stereo_LOOP.wav
+CompressionRatio: 15
+StreamFromDisk: false
+Spatialized: false
