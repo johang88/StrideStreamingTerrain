@@ -15,7 +15,11 @@ public static class SubSurfaceScatteringKeys
     public static readonly ValueParameterKey<float> SubsurfaceLightingAmountValue = ParameterKeys.NewValue<float>();
 
     public static readonly ObjectParameterKey<Texture> Extinction = ParameterKeys.NewObject<Texture>();
-    public static readonly ValueParameterKey<float> ExtinctionValue = ParameterKeys.NewValue<float>();
+
+    // Color4, not float: Extinction is an IComputeColor, so a constant colour node binds through
+    // this key and the asset compiler rejects a scalar. It went unnoticed while every material
+    // fed Extinction from a texture, which only ever uses the object key above.
+    public static readonly ValueParameterKey<Color4> ExtinctionValue = ParameterKeys.NewValue<Color4>();
 }
 
 [DataContract("MaterialVegetationSubSurfaceScatteringFeature")]

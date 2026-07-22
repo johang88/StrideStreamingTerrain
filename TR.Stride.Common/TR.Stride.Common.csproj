@@ -17,6 +17,6 @@
     <PackageReference Include="Stride.UI" PrivateAssets="contentfiles;analyzers" />
     <PackageReference Include="Stride.Core" PrivateAssets="contentfiles;analyzers" />
 
-    <PackageReference Include="Stride.Core.Assets.CompilerApp" PrivateAssets="contentfiles;analyzers" IncludeAssets="build" />
+    <PackageReference Include="Stride.AssetCompiler" PrivateAssets="contentfiles;analyzers" IncludeAssets="build" />
   </ItemGroup>
 </Project>

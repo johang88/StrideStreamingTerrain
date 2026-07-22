@@ -18,7 +18,11 @@
                 { 0.5f, 0.25f, 1 }
             }; 
 
-            float3 lodColor = lodColors[min(8, streams.LodLevel)];
+            // LodLevel is a float stream, so it has to be converted before indexing - SPIR-V
+            // rejects a non-integer index to OpAccessChain even where HLSL would tolerate it.
+            int lodIndex = clamp((int)streams.LodLevel, 0, 8);
+
+            float3 lodColor = lodColors[lodIndex];
             float lodAlpha = 0.0f;
             streams.matDiffuse.xyz = streams.matColorBase.xyz = (streams.matColorBase.xyz * (1.0f - lodAlpha) + lodColor * lodAlpha);
         }

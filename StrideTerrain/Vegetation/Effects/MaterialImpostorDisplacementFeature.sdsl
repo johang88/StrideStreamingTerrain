@@ -1,102 +1,159 @@
 ﻿namespace StrideTerrain.Vegetation.Effects
 {
-    shader MaterialImpostorDisplacementFeature 
-        : IMaterialSurface, PositionStream4, Transformation, Texturing, NormalStream
+    /// <summary>
+    /// Expands a structured buffer of instance positions into camera facing impostor billboards
+    /// and picks the three hemi-octahedral atlas frames that bracket the current view direction.
+    ///
+    /// The three frames and their barycentric weights are handed to the pixel stage rather than
+    /// resolved here, so that ComputeColorImpostorAtlas can blend them per pixel - blending is
+    /// what removes the angular popping the old sixteen frame azimuth ring suffered from.
+    /// </summary>
+    shader MaterialImpostorDisplacementFeature
+        : IMaterialSurface, PositionStream4, Transformation, Texturing, NormalStream, ImpostorOctahedral, ImpostorStream
     {
         stage stream uint VertexId : SV_VERTEXID;
 
         rgroup PerMaterial
         {
-            stage StructuredBuffer<float4> Positions; // x,y,z,scale(half2)
+            stage StructuredBuffer<float4> Positions;
         }
 
         cbuffer PerMaterial
         {
-            stage float LodDistance;
+            // World size of the baked quad, and the offset from instance origin to bounds centre.
+            stage float2 ImpostorWorldSize;
+            stage float3 ImpostorCenterOffset;
+
+            stage float ImpostorGridSize;
+
+            // Billboards are suppressed inside FadeEnd and fully opaque beyond FadeStart; between
+            // the two they dither out as the real mesh dithers in.
+            stage float ImpostorFadeStart;
+            stage float ImpostorFadeEnd;
+        }
+
+        // Projects a vertex offset onto one frame's capture basis. Because the bake used an
+        // orthographic camera this is exact, which is what lets the three frames blend without
+        // ghosting rather than merely cross fading two flat images.
+        float2 GetFrameUv(float2 frame, float3 offset, float scaleX, float scaleY)
+        {
+            float2 gridUv = frame / (ImpostorGridSize - 1.0);
+            float3 dir = HemiOctDecode(gridUv);
+
+            float3 frameRight;
+            float3 frameUp;
+            GetFrameBasis(dir, frameRight, frameUp);
+
+            float2 local = float2(dot(offset, frameRight) / max(scaleX, 0.0001), dot(offset, frameUp) / max(scaleY, 0.0001));
+
+            // frameUp is +y in view space, i.e. up on screen, but texture V runs downwards - so V
+            // is flipped while U passes through.
+            float2 frameUv = clamp(float2(0.5 + local.x, 0.5 - local.y), 0.001, 0.999);
+
+            return (frame + frameUv) / ImpostorGridSize;
         }
 
         override void Compute()
         {
             const float2 baseVerts[6] = {
-                float2(0.5, 0), float2(0.5, 1), float2(-0.5, 1),  // first tri
-                float2(0.5, 0), float2(-0.5, 1), float2(-0.5, 0)  // second tri
+                float2(0.5, 0), float2(0.5, 1), float2(-0.5, 1),
+                float2(0.5, 0), float2(-0.5, 1), float2(-0.5, 0)
             };
 
-            const float2 baseUVs[6] = {
-                float2(1, 1), float2(1, 0), float2(0, 0),
-                float2(1, 1), float2(0, 0), float2(0, 1)
-            };
-
-            // Load triangle data
             uint triangleVertex = streams.VertexId % (uint)6;
-            
-            float2 quadPos = baseVerts[triangleVertex];
-            float2 quadUV  = baseUVs[triangleVertex];
+            uint itemIndex = streams.VertexId / (uint)6;
 
-            // Unpack per instance data
-            uint itemIndex = streams.VertexId / 6;
+            float2 quadPos = baseVerts[triangleVertex];
 
             float4 itemData = Positions[itemIndex];
-            float3 center = itemData.xyz;
+            float3 origin = itemData.xyz;
 
             uint packedScale = asuint(itemData.w);
+            float scaleX = f16tof32(packedScale & 0xFFFF);
+            float scaleY = f16tof32((packedScale >> 16) & 0xFFFF);
 
-            uint hx = packedScale & 0xFFFF;
-            uint hy = (packedScale >> 16) & 0xFFFF;
+            // The bake captured a square centred on the model's bounds, so the billboard has to be
+            // centred there too - trees pivot at the base, the impostor does not.
+            float instanceScale = scaleY / max(ImpostorWorldSize.y, 0.0001);
+            float3 center = origin + float3(0, ImpostorCenterOffset.y * instanceScale, 0);
 
-            float scaleX = f16tof32(hx);
-            float scaleY = f16tof32(hy);
+            float3 toCamera = normalize(Eye.xyz - center);
 
-            quadPos.x *= scaleX;
-            quadPos.y *= scaleY;
+            // Full spherical billboard rather than the old Y axis only one: hemi-octahedral frames
+            // cover elevation, so the quad has to tilt to face the camera or the upper frames are
+            // never seen square on.
+            float3 worldUp = float3(0, 1, 0);
+            if (abs(toCamera.y) > 0.999)
+            {
+                worldUp = float3(0, 0, 1);
+            }
 
-            // Billboard rotation
-            float3 toCamera = normalize(Eye - center);
+            // Order matters: cross(toCamera, worldUp) - not cross(worldUp, toCamera) - so that the
+            // quad keeps the winding baseVerts was authored for. Swapping the operands negates
+            // right, reverses every triangle and gets the whole billboard backface culled.
+            float3 right = normalize(cross(toCamera, worldUp));
+            float3 up = cross(right, toCamera);
 
-            float3 toCamXZ = normalize(float3(toCamera.x, 0, toCamera.z));
-
-            float3 right = float3(-toCamXZ.z, 0, toCamXZ.x);
-            float3 up = float3(0, 1, 0);
-
-            float3 vertexWorldPos = center + right * quadPos.x + up * quadPos.y;
+            float3 offset = right * (quadPos.x * scaleX) + up * ((quadPos.y - 0.5) * scaleY);
+            float3 vertexWorldPos = center + offset;
 
             streams.Position = float4(vertexWorldPos, 1);
 
-            // Normal
-            float3 normal = normalize(cross(up, right));
-            float3 viewDir = normalize(Eye - center);
-            if (dot(normal, viewDir) < 0)
-                normal = -normal;
+            // Frame selection. Clamp the view direction into the upper hemisphere - looking up at
+            // a tree from below just reuses the horizon ring, which is far less wrong than
+            // wrapping round to the top of the tree.
+            float3 lookup = normalize(float3(toCamera.x, max(toCamera.y, 0.0), toCamera.z));
 
-            streams.meshNormal = streams.normalWS = normal;
-            streams.meshTangent = float4(normalize(right), 1);
+            float grid = ImpostorGridSize - 1.0;
+            float2 g = HemiOctEncode(lookup) * grid;
+            float2 gf = clamp(floor(g), 0.0, grid - 1.0);
+            float2 t = g - gf;
 
-            // UV - fix angle mapping
-            float angle = atan2(toCamera.x, toCamera.z); // range [-PI, PI]
-            if (angle < 0) angle += 6.2831853;
+            float2 f0;
+            float2 f1;
+            float2 f2;
+            float3 weights;
 
-            // Add offset to align with UE's capture start angle
-            // UE typically starts capture at a half-frame offset
-            angle += 6.2831853 / 32.0; // half-frame offset
-            if (angle >= 6.2831853) angle -= 6.2831853;
-
-            uint spriteIndex = (uint)(angle / (6.2831853 / 16.0));
-            spriteIndex = min(spriteIndex, 15); // clamp safety
-
-            uint col = spriteIndex % 4;
-            uint row = spriteIndex / 4;
-
-            // Flip row if UE's grid is top-to-bottom but UVs are bottom-up
-            //row = 3 - row;
-             
-            float2 uvBase = float2(col * 0.25, row * 0.25);
-            streams.TexCoord = uvBase + quadUV * 0.25;
-
-            // Cull if too close (triangle rejected becuase of nan)
-            if (length(Eye.xz - center.xz) < LodDistance)
+            if (t.x + t.y < 1.0)
             {
-                streams.Position.y /= 0;
+                f0 = gf;
+                f1 = gf + float2(1, 0);
+                f2 = gf + float2(0, 1);
+                weights = float3(1.0 - t.x - t.y, t.x, t.y);
+            }
+            else
+            {
+                f0 = gf + float2(1, 1);
+                f1 = gf + float2(1, 0);
+                f2 = gf + float2(0, 1);
+                weights = float3(t.x + t.y - 1.0, 1.0 - t.y, 1.0 - t.x);
+            }
+
+            streams.ImpostorWeights = weights;
+            streams.ImpostorUV0 = GetFrameUv(f0, offset, scaleX, scaleY);
+            streams.ImpostorUV1 = GetFrameUv(f1, offset, scaleX, scaleY);
+            streams.ImpostorUV2 = GetFrameUv(f2, offset, scaleX, scaleY);
+
+            // Hand the billboard basis to the pixel stage so it can rotate the baked frame-space
+            // normal back into world space.
+            streams.ImpostorRight = right;
+            streams.ImpostorUp = up;
+            streams.ImpostorForward = toCamera;
+
+            streams.meshNormal = streams.normalWS = toCamera;
+            streams.meshTangent = float4(right, 1);
+
+            float viewDistance = length(Eye.xyz - center);
+            float fadeRange = max(ImpostorFadeStart - ImpostorFadeEnd, 0.0001);
+            streams.ImpostorFade = saturate((viewDistance - ImpostorFadeEnd) / fadeRange);
+
+            // Fully inside the mesh range - collapse the triangle so it is never rasterised at all
+            // rather than paying for a fully discarded quad.
+            if (viewDistance < ImpostorFadeEnd)
+            {
+                streams.Position = float4(0, 0, 0, 0);
             }
         }
+
     };
 }

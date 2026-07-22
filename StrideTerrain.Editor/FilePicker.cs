@@ -1,5 +1,4 @@
 ﻿using Hexa.NET.ImGui;
-using Silk.NET.SDL;
 using System;
 using System.IO;
 using System.Numerics;

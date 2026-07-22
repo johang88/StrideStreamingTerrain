@@ -1,5 +1,7 @@
 ﻿using Stride.Core.IO;
+using Stride.Core.Serialization;
 using Stride.Core.Serialization.Contents;
+using Stride.Core.Storage;
 using StrideTerrain.Common;
 using System.IO;
 
@@ -26,18 +28,36 @@ public class GameTerrainDataProvider(TerrainComponent terrainComponent, ContentM
     public (Stream stream, long baseOffset) OpenStreamingData()
     {
         DatabaseFileProvider fileProvider = contentManager.FileProvider;
+        var streamingDataUrl = terrainComponent.TerrainStreamingData!.Url;
 
-        if (!fileProvider.ContentIndexMap.TryGetValue(terrainComponent.TerrainStreamingData!.Url, out var objectId))
+        if (!TryGetObjectId(fileProvider, streamingDataUrl, out var objectId))
         {
-            throw new FileNotFoundException("Could not locate terrain streaming data.");
+            throw new FileNotFoundException($"Could not locate terrain streaming data '{streamingDataUrl}' in the content index.");
         }
 
         if (!fileProvider.ObjectDatabase.TryGetObjectLocation(objectId, out var url, out var startPosition, out var end))
         {
-            throw new FileNotFoundException("Could not locate terrain streaming data.");
+            throw new FileNotFoundException($"Could not locate the backing file for terrain streaming data '{streamingDataUrl}' ({objectId}).");
         }
 
         return (File.OpenRead(url), startPosition);
+    }
+
+    /// <summary>
+    /// Content index lookup with bare-to-canonical alias fallback, mirroring the private
+    /// <c>DatabaseFileProvider.TryGetObjectId</c>. <see cref="UrlReference.Url"/> holds the bare authored
+    /// url (Maps/Island_StreamingData) while the shipped index is keyed by canonical, package qualified
+    /// urls (/StrideTerrain.Sample/Maps/Island_StreamingData). ContentManager resolves this for us, but
+    /// ContentIndexMap is the raw table and does not.
+    /// </summary>
+    private static bool TryGetObjectId(DatabaseFileProvider fileProvider, string url, out ObjectId objectId)
+    {
+        if (fileProvider.ContentIndexMap.TryGetValue(url, out objectId))
+            return true;
+
+        var aliases = fileProvider.ObjectDatabase.ContentAliases;
+        return aliases.TryGetValue(url, out var canonical)
+            && fileProvider.ContentIndexMap.TryGetValue(canonical, out objectId);
     }
 }
 

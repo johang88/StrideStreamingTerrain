@@ -1,5 +1,4 @@
-﻿using SharpFont;
-using Stride.Graphics;
+﻿using Stride.Graphics;
 using System;
 
 namespace StrideTerrain.TerrainSystem.Rendering;

@@ -1,25 +1,22 @@
-﻿using Stride.Core.IO;
-using Stride.Core.Mathematics;
-using Stride.Core.Serialization;
-using Stride.Engine;
-using Stride.Graphics;
-using System.Collections.Generic;
-using System.Text.Json;
-using System;
-using Buffer = Stride.Graphics.Buffer;
-using Stride.Core.Diagnostics;
-using Stride.Rendering;
-using StrideTerrain.Vegetation.Effects;
-using Half = System.Half;
-using System.Linq;
-using Stride.Core;
-using StrideTerrain.Rendering.Profiling;
-using Stride.Core.Collections;
-using StrideTerrain.Rendering;
-using Stride.Games;
+﻿using Stride.Core;
 using Stride.Core.Annotations;
-using System.IO;
+using Stride.Core.Collections;
+using Stride.Core.Diagnostics;
+using Stride.Core.Mathematics;
+using Stride.Engine;
+using Stride.Games;
+using Stride.Graphics;
+using Stride.Rendering;
+using StrideTerrain.Rendering;
+using StrideTerrain.Rendering.Profiling;
+using StrideTerrain.Vegetation.Effects;
+using StrideTerrain.Vegetation.Impostors;
+using System;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
+using System.Text.Json;
+using Buffer = Stride.Graphics.Buffer;
+using Half = System.Half;
 
 namespace StrideTerrain.Vegetation;
 
@@ -27,12 +24,15 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
 {
     private static readonly ProfilingKey ProfilingKeyImpostorsDraw = new("Trees.Draw.Impostors");
     private static readonly ProfilingKey ProfilingKeyInstancedDraw = new("Trees.Draw.Instanced");
+    private static readonly ProfilingKey ProfilingKeyBake = new("Trees.Bake.Impostors");
     private const int GridSize = 128;
 
     private static readonly JsonSerializerOptions _jsonOptions = new(JsonSerializerDefaults.General)
     {
         IncludeFields = true
     };
+
+    private ImpostorBaker? _baker;
 
     protected override RuntimeData GenerateComponentData(Entity entity, VegetationComponent component)
         => new();
@@ -64,103 +64,218 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
             if (IsDirty(component, data))
             {
                 data.Dispose();
-                if (!InitializeRuntimeData(graphicsDevice, component, data))
+                if (!InitializeRuntimeData(component, data))
                     continue;
             }
 
-            if (data.ImpostorMaterial?.Passes == null || data.ImpostorMaterial.Passes.Count == 0)
+            // Nothing can be drawn until the atlas exists - the billboard quad is sized from the
+            // baked bounds, so drawing before the bake would use garbage.
+            if (!data.IsBaked)
                 continue;
 
+            UpdateMeshInstances(component, data, cameraPosition);
 
-            data.ImpostorMaterial!.Passes[0].Parameters.Set(MaterialImpostorDisplacementFeatureKeys.Positions, data.PositionsBuffer);
-            data.ImpostorMaterial.Passes[0].Parameters.Set(MaterialImpostorDisplacementFeatureKeys.LodDistance, 0);
-
-            // TODO: This should be improved and have multi lod support
-            data.InstancingWorldMatrices.Clear();
-            var lodDistance = 32;
-            var lodDistanceSquared = lodDistance * lodDistance;
-            var start = GetGridPosition(cameraPosition.X - lodDistance, cameraPosition.Z - lodDistance);
-            var end = GetGridPosition(cameraPosition.X + lodDistance, cameraPosition.Z + lodDistance);
-            for (var z = start.Z; z <= end.Z; z++)
-            {
-                for (var x = start.X; x <= end.X; x++)
-                {
-                    if (!data.GridPositions.TryGetValue((x, z), out var positions))
-                        continue;
-
-                    for (var i = 0; i < positions.Count; i++)
-                    {
-                        var distanceSquared = (cameraPosition.XZ() - new Vector2(positions[i].X, positions[i].Z)).LengthSquared();
-                        if (distanceSquared < lodDistanceSquared)
-                        {
-                            data.InstancingWorldMatrices.Add(Matrix.Scaling(positions[i].W) * Matrix.Translation(positions[i].XYZ()));
-                        }
-                    }
-                }
-            }
-
-            var model = data.InstancingEntity!.Get<ModelComponent>();
-            var instancing = data.InstancingEntity.Get<InstancingComponent>();
-
-            if (data.InstancingWorldMatrices.Count > 0)
-            {
-                model.Enabled = true;
-                instancing.Enabled = true;
-
-                var instancingUserArray = (InstancingUserArray)instancing.Type;
-
-                instancingUserArray.UpdateWorldMatrices(data.InstancingWorldMatrices.Items, data.InstancingWorldMatrices.Count);
-            }
-            else
-            {
-                model.Enabled = false;
-                instancing.Enabled = false;
-            }
-
-            model.Enabled = Enabled;
             data.ImpostorEntity!.Get<ModelComponent>().Enabled = Enabled;
         }
 
         static bool IsDirty(VegetationComponent component, RuntimeData data)
-            => data.PositionsBuffer == null 
-            || data.InstancingEntity == null 
-            || data.ImpostorMaterial != component.ImpostorMaterial 
-            || data.Model != component.Model 
-            || data.ImpostorSize != component.ImpostorSize;
+            => data.LodEntities.Count == 0
+            || data.ImpostorMaterial != component.ImpostorMaterial
+            || data.Model != component.Model
+            || data.GridSizeUsed != component.ImpostorGridSize
+            || data.FrameResolutionUsed != component.ImpostorFrameResolution;
     }
 
-    private static bool InitializeRuntimeData(GraphicsDevice graphicsDevice, VegetationComponent component, RuntimeData data)
+    /// <summary>
+    /// Baking needs a command list, which only exists on the render thread, so it happens here
+    /// rather than in Update. Each model is baked exactly once.
+    /// </summary>
+    public override void Draw(RenderContext context)
+    {
+        base.Draw(context);
+
+        var graphicsDevice = Services.GetSafeServiceAs<IGraphicsDeviceService>().GraphicsDevice;
+
+        foreach (var componentData in ComponentDatas)
+        {
+            var component = componentData.Key;
+            var data = componentData.Value;
+
+            if (data.IsBaked || data.Model == null || data.ImpostorMaterial == null || data.LodModels.Count == 0)
+                continue;
+
+            if (_baker == null)
+            {
+                _baker = new ImpostorBaker(Services, graphicsDevice);
+
+                // Set to a folder to have every baked atlas written out as a PNG. Off by default.
+                ImpostorBaker.DumpPath = System.Environment.GetEnvironmentVariable("STRIDETERRAIN_IMPOSTOR_DUMP");
+            }
+
+            var drawContext = context.GetThreadContext();
+
+            using (drawContext.QueryManager.BeginProfile(Color4.Black, ProfilingKeyBake))
+            {
+                // LOD0, never data.Model. Since the vegetation models point at the LOD chain, the
+                // raw model holds every level's geometry stacked on top of itself plus the impostor
+                // card UE bakes in - rendering that gives a silhouette several layers of alpha
+                // tested foliage deep, which comes out far darker than the tree actually is.
+                data.Atlas = _baker.Bake(drawContext, data.LodModels[0], component.ImpostorGridSize, component.ImpostorFrameResolution);
+            }
+
+            if (data.Atlas == null)
+            {
+                // Mark as baked anyway so we do not retry a model that can never succeed every
+                // single frame.
+                data.IsBaked = true;
+                continue;
+            }
+
+            BuildPositionsBuffer(graphicsDevice, data);
+            BindImpostorMaterial(component, data);
+
+            data.IsBaked = true;
+        }
+    }
+
+    /// <summary>
+    /// Buckets every instance inside the impostor handover distance into its LOD level and uploads
+    /// one instance array per level. Instances inside the fade band are still submitted so mesh and
+    /// impostor overlap there and can dither between each other.
+    /// </summary>
+    private static void UpdateMeshInstances(VegetationComponent component, RuntimeData data, Vector3 cameraPosition)
+    {
+        for (var i = 0; i < data.LodMatrices.Count; i++)
+            data.LodMatrices[i].Clear();
+
+        var meshDistance = component.ImpostorLodDistance;
+        var meshDistanceSquared = meshDistance * meshDistance;
+
+        var start = GetGridPosition(cameraPosition.X - meshDistance, cameraPosition.Z - meshDistance);
+        var end = GetGridPosition(cameraPosition.X + meshDistance, cameraPosition.Z + meshDistance);
+
+        var lastLod = data.LodMatrices.Count - 1;
+
+        for (var z = start.Z; z <= end.Z; z++)
+        {
+            for (var x = start.X; x <= end.X; x++)
+            {
+                if (!data.GridPositions.TryGetValue((x, z), out var positions))
+                    continue;
+
+                for (var i = 0; i < positions.Count; i++)
+                {
+                    var distanceSquared = (cameraPosition.XZ() - new Vector2(positions[i].X, positions[i].Z)).LengthSquared();
+                    if (distanceSquared >= meshDistanceSquared)
+                        continue;
+
+                    // Compared squared to keep the per instance cost to a multiply; the thresholds
+                    // are squared once per frame in RefreshLodThresholds.
+                    var lod = lastLod;
+                    for (var level = 0; level < data.LodThresholdsSquared.Count; level++)
+                    {
+                        if (distanceSquared < data.LodThresholdsSquared[level])
+                        {
+                            lod = level;
+                            break;
+                        }
+                    }
+
+                    data.LodMatrices[lod].Add(Matrix.Scaling(positions[i].W) * Matrix.Translation(positions[i].XYZ()));
+                }
+            }
+        }
+
+        for (var lod = 0; lod < data.LodEntities.Count; lod++)
+        {
+            var matrices = data.LodMatrices[lod];
+            var model = data.LodEntities[lod].Get<ModelComponent>();
+            var instancing = data.LodEntities[lod].Get<InstancingComponent>();
+
+            if (matrices.Count > 0)
+            {
+                instancing.Enabled = true;
+                ((InstancingUserArray)instancing.Type).UpdateWorldMatrices(matrices.Items, matrices.Count);
+            }
+            else
+            {
+                instancing.Enabled = false;
+            }
+
+            model.Enabled = matrices.Count > 0;
+        }
+    }
+
+    private static void BuildPositionsBuffer(GraphicsDevice graphicsDevice, RuntimeData data)
+    {
+        var atlas = data.Atlas!;
+        var packed = new Vector4[data.Instances.Count];
+
+        for (var i = 0; i < data.Instances.Count; i++)
+        {
+            var instance = data.Instances[i];
+            var scale = instance.W;
+
+            // Quad size comes from the baked bounds rather than a hand tuned ImpostorSize, so the
+            // billboard silhouette always matches the mesh exactly.
+            packed[i] = new Vector4(instance.X, instance.Y, instance.Z,
+                PackScale(atlas.WorldSize.X * scale, atlas.WorldSize.Y * scale));
+        }
+
+        data.PositionsBuffer = Buffer.New(graphicsDevice, (ReadOnlySpan<Vector4>)packed,
+            BufferFlags.StructuredBuffer | BufferFlags.ShaderResource | BufferFlags.UnorderedAccess);
+    }
+
+    private static void BindImpostorMaterial(VegetationComponent component, RuntimeData data)
+    {
+        var material = data.ImpostorMaterial!;
+        if (material.Passes == null || material.Passes.Count == 0)
+            return;
+
+        var atlas = data.Atlas!;
+        var parameters = material.Passes[0].Parameters;
+
+        parameters.Set(MaterialImpostorDisplacementFeatureKeys.Positions, data.PositionsBuffer);
+        parameters.Set(MaterialImpostorDisplacementFeatureKeys.ImpostorWorldSize, atlas.WorldSize);
+        parameters.Set(MaterialImpostorDisplacementFeatureKeys.ImpostorCenterOffset, atlas.CenterOffset);
+        parameters.Set(MaterialImpostorDisplacementFeatureKeys.ImpostorGridSize, atlas.GridSize);
+
+        var fadeEnd = MathF.Max(component.ImpostorLodDistance - component.ImpostorFadeRange, 0.0f);
+        parameters.Set(MaterialImpostorDisplacementFeatureKeys.ImpostorFadeStart, component.ImpostorLodDistance);
+        parameters.Set(MaterialImpostorDisplacementFeatureKeys.ImpostorFadeEnd, fadeEnd);
+
+        parameters.Set(ComputeColorImpostorDiffuseKeys.ImpostorDiffuseAtlas, atlas.Diffuse);
+        parameters.Set(ComputeColorImpostorNormalKeys.ImpostorNormalAtlas, atlas.Normal);
+    }
+
+    private static bool InitializeRuntimeData(VegetationComponent component, RuntimeData data)
     {
         data.ImpostorMaterial = component.ImpostorMaterial;
         data.Model = component.Model;
-        data.ImpostorSize = component.ImpostorSize;
+        data.GridSizeUsed = component.ImpostorGridSize;
+        data.FrameResolutionUsed = component.ImpostorFrameResolution;
 
         if (data.Model == null || data.ImpostorMaterial == null || string.IsNullOrEmpty(component.InstancesJson))
             return false;
 
-        // Load instance data
         var instances = JsonSerializer.Deserialize<List<Vector4>>(component.InstancesJson, _jsonOptions)!;
-
         if (instances.Count == 0)
             return false;
 
+        data.Instances = instances;
+
         for (var i = 0; i < instances.Count; i++)
         {
-            var scale = instances[i].W;
-            float scaleX = data.ImpostorSize.X * scale;
-            float scaleY = data.ImpostorSize.Y * scale;
-            instances[i] = new(instances[i].X, instances[i].Y, instances[i].Z, PackScale(scaleX, scaleY));
-
             var gridPosition = GetGridPosition(instances[i].X, instances[i].Z);
-            if (!data.GridPositions.ContainsKey(gridPosition))
-                data.GridPositions.Add(gridPosition, []);
+            if (!data.GridPositions.TryGetValue(gridPosition, out var cell))
+            {
+                cell = [];
+                data.GridPositions.Add(gridPosition, cell);
+            }
 
-            data.GridPositions[gridPosition].Add(new(instances[i].X, instances[i].Y, instances[i].Z, scale));
+            cell.Add(instances[i]);
         }
 
-        data.PositionsBuffer = Buffer.New(graphicsDevice, (ReadOnlySpan<Vector4>)CollectionsMarshal.AsSpan(instances), BufferFlags.StructuredBuffer | BufferFlags.ShaderResource | BufferFlags.UnorderedAccess);
-
-        // Setup impostor + model entities
         var entity = component.Entity;
 
         data.ImpostorEntity =
@@ -187,34 +302,55 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
         impostorModel.Model.BoundingBox = BoundingBox.FromSphere(impostorModel.BoundingSphere);
         impostorModel.IsShadowCaster = false;
         impostorModel.Materials[0] = data.ImpostorMaterial;
+        impostorModel.Enabled = false;
 
         entity.AddChild(data.ImpostorEntity);
 
-        data.InstancingEntity =
-        [
-            new ProfilingKeyComponent
-            {
-                ProfilingKey  = ProfilingKeyInstancedDraw
-            },
-            new ModelComponent
-            {
-                BoundingSphere = new(Vector3.Zero, 10000),
-                BoundingBox = new BoundingBox(new Vector3(-100000, -100000, -100000), new Vector3(100000, 100000, 100000)),
-                Model = data.Model,
-                Enabled = false,
-                IsShadowCaster = true
-            },
-            new InstancingComponent
-            {
-                Enabled = false,
-                Type = new InstancingUserArray
-                {
-                    WorldMatrices = []
-                }
-            }
-        ];
+        // One entity per LOD level. Stride's instancing binds a single model, so distinct levels
+        // need distinct draws rather than a mesh swap on one component.
+        data.LodModels = VegetationLods.Split(data.Model);
 
-        component.Entity.AddChild(data.InstancingEntity);
+        VegetationLods.GetLodDistances(component.LodDistances, data.LodModels.Count,
+            component.ImpostorLodDistance, data.LodThresholds);
+
+        data.LodThresholdsSquared.Clear();
+        foreach (var distance in data.LodThresholds)
+            data.LodThresholdsSquared.Add(distance * distance);
+
+        for (var lod = 0; lod < data.LodModels.Count; lod++)
+        {
+            var lodEntity = new Entity($"VegetationLod{lod}")
+            {
+                new ProfilingKeyComponent
+                {
+                    ProfilingKey  = ProfilingKeyInstancedDraw
+                },
+                new ModelComponent
+                {
+                    BoundingSphere = new(Vector3.Zero, 10000),
+                    BoundingBox = new BoundingBox(new Vector3(-100000, -100000, -100000), new Vector3(100000, 100000, 100000)),
+                    Model = data.LodModels[lod],
+                    Enabled = false,
+                    // Only the closest level casts shadows. The reduced levels sit far enough out
+                    // that their shadows are subpixel, and casting from all of them would multiply
+                    // the shadow pass cost for no visible gain.
+                    IsShadowCaster = lod == 0
+                },
+                new InstancingComponent
+                {
+                    Enabled = false,
+                    Type = new InstancingUserArray
+                    {
+                        WorldMatrices = []
+                    }
+                }
+            };
+
+            data.LodEntities.Add(lodEntity);
+            data.LodMatrices.Add(new FastList<Matrix>());
+
+            component.Entity.AddChild(lodEntity);
+        }
 
         return true;
     }
@@ -232,30 +368,57 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
         return BitConverter.Int32BitsToSingle((int)packed);
     }
 
+    protected override void OnSystemRemove()
+    {
+        base.OnSystemRemove();
+
+        _baker?.Dispose();
+        _baker = null;
+    }
+
     public class RuntimeData : IDisposable
     {
         public Buffer? PositionsBuffer;
-        public Entity? InstancingEntity;
         public Entity? ImpostorEntity;
+
+        // One entry per LOD level, highest detail first.
+        public List<Entity> LodEntities = [];
+        public List<Model> LodModels = [];
+        public List<FastList<Matrix>> LodMatrices = [];
+        public List<float> LodThresholds = [];
+        public List<float> LodThresholdsSquared = [];
         public Dictionary<(int, int), List<Vector4>> GridPositions = [];
 
         public Material? ImpostorMaterial;
         public Model? Model;
 
-        public Vector2 ImpostorSize;
+        public List<Vector4> Instances = [];
 
-        public FastList<Matrix> InstancingWorldMatrices = new();
+        public ImpostorAtlas? Atlas;
+        public bool IsBaked;
+        public int GridSizeUsed;
+        public int FrameResolutionUsed;
 
         public void Dispose()
         {
             PositionsBuffer?.Dispose();
+            PositionsBuffer = null;
 
-            if (InstancingEntity != null)
+            Atlas?.Dispose();
+            Atlas = null;
+            IsBaked = false;
+
+            foreach (var lodEntity in LodEntities)
             {
-                InstancingEntity.SetParent(null);
-                InstancingEntity.Scene = null;
-                InstancingEntity = null;
+                lodEntity.SetParent(null);
+                lodEntity.Scene = null;
             }
+
+            LodEntities.Clear();
+            LodModels.Clear();
+            LodMatrices.Clear();
+            LodThresholds.Clear();
+            LodThresholdsSquared.Clear();
 
             if (ImpostorEntity != null)
             {
@@ -266,6 +429,7 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
 
             ImpostorMaterial = null;
             Model = null;
+            Instances.Clear();
             GridPositions.Clear();
         }
     }

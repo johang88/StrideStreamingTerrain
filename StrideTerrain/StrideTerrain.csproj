@@ -17,7 +17,7 @@
 		<PackageReference Include="Stride.Particles" />
 		<PackageReference Include="Stride.UI" />
 
-		<PackageReference Include="Stride.Core.Assets.CompilerApp" IncludeAssets="build;buildTransitive" />
+		<PackageReference Include="Stride.AssetCompiler" IncludeAssets="build;buildTransitive" />
 	</ItemGroup>
 
 	<ItemGroup>
@@ -30,492 +30,65 @@
 	</ItemGroup>
 	
 	<ItemGroup>
-	  <Compile Update="Rendering\Effects\CompressBC3.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\CompressBC1.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\BlockCompression.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\CompressBC5.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\PostEffectCommon.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\HistogramReduce.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\HistogramDrawDebug.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\Histogram.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\ExposureCommon.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\BloomUpSample.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\BloomDownSample.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\BloomBrightPass.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\FullscreenTriangle.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Rendering\Effects\ToneMapASEC.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainDisplacement.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialSampling.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>TerrainMaterialSampling.sdsl</DependentUpon>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialDiffuseTileRenderer.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialTileRenderer.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainComputeColorNormal.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialStreamInitializer.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainMaterialStreams.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainVirtualTextureSampling.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainVirtualTextureFeedback.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Material\TerrainVirtualTexture.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>TerrainVirtualTexture.sdsl</DependentUpon>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\Shadows\TerrainShadowGenerator.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainData.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainQuery.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="TerrainSystem\Effects\TerrainStreams.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\SetupIndirectDispatchArgs.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>SetupIndirectDispatchArgs.sdsl</DependentUpon>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\ClearDrawArgs.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\ComoputeColorImpostor.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\GrassCullInstances.sdsl.cs">
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <DesignTime>True</DesignTime>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\GrassPopulateInstances.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\MaterialImpostorDisplacementFeature.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	    <DependentUpon>MaterialImpostorDisplacementFeature.sdsl</DependentUpon>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\MaterialTreeDisplacementFeature.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Vegetation\Effects\MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\Atmosphere.sdfx.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereBase.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereParametersBase.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereRenderAerialPerspective.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\CloudBase.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\CloudBasicNoise.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\CloudDetailNoise.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\CloudReconstruct.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\CloudWeatherMap.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\LUT\AtmosphereCameraVolumeLut.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\Noise.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\VolumetricClouds.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Atmosphere\VolumetricCloudsTrace.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Lights\VolumetricLightDiretional.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\Lights\VolumetricLightDiretionalEffect.sdfx.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\WeatherFordwardRenderer.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\WeatherForwardRendererBase.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\WeatherForwardShadingEffect.sdfx.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	  <Compile Update="Weather\Effects\WeatherLightDirectionalGroup.sdsl.cs">
-	    <DesignTime>True</DesignTime>
-	    <DesignTimeSharedInput>True</DesignTimeSharedInput>
-	    <AutoGen>True</AutoGen>
-	  </Compile>
-	</ItemGroup>
-	<ItemGroup>
-	  <None Update="Rendering\Effects\CompressBC3.sdsl">
-	    <LastGenOutput>CompressBC3.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\CompressBC5.sdsl">
-	    <LastGenOutput>CompressBC5.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\CompressBC1.sdsl">
-	    <LastGenOutput>CompressBC1.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\BlockCompression.sdsl">
-	    <LastGenOutput>BlockCompression.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\PostEffectCommon.sdsl">
-	    <LastGenOutput>PostEffectCommon.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\HistogramReduce.sdsl">
-	    <LastGenOutput>HistogramReduce.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\HistogramDrawDebug.sdsl">
-	    <LastGenOutput>HistogramDrawDebug.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\Histogram.sdsl">
-	    <LastGenOutput>Histogram.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\ExposureCommon.sdsl">
-	    <LastGenOutput>ExposureCommon.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\BloomUpSample.sdsl">
-	    <LastGenOutput>BloomUpSample.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\BloomDownSample.sdsl">
-	    <LastGenOutput>BloomDownSample.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\BloomBrightPass.sdsl">
-	    <LastGenOutput>BloomBrightPass.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\FullscreenTriangle.sdsl">
-	    <LastGenOutput>FullscreenTriangle.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Rendering\Effects\ToneMapASEC.sdsl">
-	    <LastGenOutput>ToneMapASEC.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainDisplacement.sdsl">
-	    <LastGenOutput>TerrainDisplacement.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialSampling.sdsl">
-	    <LastGenOutput>TerrainMaterialSampling.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialDiffuseTileRenderer.sdsl">
-	    <LastGenOutput>TerrainMaterialDiffuseTileRenderer.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialTileRenderer.sdsl">
-	    <LastGenOutput>TerrainMaterialTileRenderer.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl">
-	    <LastGenOutput>MaterialTerrainDisplacement.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainComputeColorNormal.sdsl">
-	    <LastGenOutput>TerrainComputeColorNormal.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialStreamInitializer.sdsl">
-	    <LastGenOutput>TerrainMaterialStreamInitializer.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialStreams.sdsl">
-	    <LastGenOutput>TerrainMaterialStreams.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTextureSampling.sdsl">
-	    <LastGenOutput>TerrainVirtualTextureSampling.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTextureFeedback.sdsl">
-	    <LastGenOutput>TerrainVirtualTextureFeedback.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTexture.sdsl">
-	    <LastGenOutput>TerrainVirtualTexture.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl">
-	    <LastGenOutput>TerrainShadowBase.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowGenerator.sdsl">
-	    <LastGenOutput>TerrainShadowGenerator.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainData.sdsl">
-	    <LastGenOutput>TerrainData.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainQuery.sdsl">
-	    <LastGenOutput>TerrainQuery.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="TerrainSystem\Effects\TerrainStreams.sdsl">
-	    <LastGenOutput>TerrainStreams.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\SetupIndirectDispatchArgs.sdsl">
-	    <LastGenOutput>SetupIndirectDispatchArgs.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\ClearDrawArgs.sdsl">
-	    <LastGenOutput>ClearDrawArgs.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\ComoputeColorImpostor.sdsl">
-	    <LastGenOutput>ComoputeColorImpostor.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\GrassCullInstances.sdsl">
-	    <LastGenOutput>GrassCullInstances.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\GrassPopulateInstances.sdsl">
-	    <LastGenOutput>GrassPopulateInstances.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl">
-	    <LastGenOutput>MaterialGrassDisplacementFeature.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\MaterialImpostorDisplacementFeature.sdsl">
-	    <LastGenOutput>MaterialImpostorDisplacementFeature.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\MaterialTreeDisplacementFeature.sdsl">
-	    <LastGenOutput>MaterialTreeDisplacementFeature.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Vegetation\Effects\MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl">
-	    <LastGenOutput>MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\Atmosphere.sdfx">
-	    <LastGenOutput>Atmosphere.sdfx.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\AtmosphereBase.sdsl">
-	    <LastGenOutput>AtmosphereBase.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\AtmosphereParametersBase.sdsl">
-	    <LastGenOutput>AtmosphereParametersBase.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderAerialPerspective.sdsl">
-	    <LastGenOutput>AtmosphereRenderAerialPerspective.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl">
-	    <LastGenOutput>AtmosphereRenderSky.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\CloudBase.sdsl">
-	    <LastGenOutput>CloudBase.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\CloudBasicNoise.sdsl">
-	    <LastGenOutput>CloudBasicNoise.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\CloudDetailNoise.sdsl">
-	    <LastGenOutput>CloudDetailNoise.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\CloudReconstruct.sdsl">
-	    <LastGenOutput>CloudReconstruct.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\CloudWeatherMap.sdsl">
-	    <LastGenOutput>CloudWeatherMap.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\LUT\AtmosphereCameraVolumeLut.sdsl">
-	    <LastGenOutput>AtmosphereCameraVolumeLut.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\Noise.sdsl">
-	    <LastGenOutput>Noise.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\VolumetricClouds.sdsl">
-	    <LastGenOutput>VolumetricClouds.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Atmosphere\VolumetricCloudsTrace.sdsl">
-	    <LastGenOutput>VolumetricCloudsTrace.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Lights\VolumetricLightDiretional.sdsl">
-	    <LastGenOutput>VolumetricLightDiretional.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl">
-	    <LastGenOutput>VolumetricLightDiretionalBase.sdsl.cs</LastGenOutput>
-	    <Generator>StrideShaderKeyGenerator</Generator>
-	  </None>
-	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalEffect.sdfx">
-	    <LastGenOutput>VolumetricLightDiretionalEffect.sdfx.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\WeatherFordwardRenderer.sdsl">
-	    <LastGenOutput>WeatherFordwardRenderer.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\WeatherForwardRendererBase.sdsl">
-	    <LastGenOutput>WeatherForwardRendererBase.sdsl.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\WeatherForwardShadingEffect.sdfx">
-	    <LastGenOutput>WeatherForwardShadingEffect.sdfx.cs</LastGenOutput>
-	  </None>
-	  <None Update="Weather\Effects\WeatherLightDirectionalGroup.sdsl">
-	    <LastGenOutput>WeatherLightDirectionalGroup.sdsl.cs</LastGenOutput>
-	  </None>
+	  <None Update="Rendering\Effects\CompressBC3.sdsl" />
+	  <None Update="Rendering\Effects\CompressBC5.sdsl" />
+	  <None Update="Rendering\Effects\CompressBC1.sdsl" />
+	  <None Update="Rendering\Effects\BlockCompression.sdsl" />
+	  <None Update="Rendering\Effects\PostEffectCommon.sdsl" />
+	  <None Update="Rendering\Effects\HistogramReduce.sdsl" />
+	  <None Update="Rendering\Effects\HistogramDrawDebug.sdsl" />
+	  <None Update="Rendering\Effects\Histogram.sdsl" />
+	  <None Update="Rendering\Effects\ExposureCommon.sdsl" />
+	  <None Update="Rendering\Effects\BloomUpSample.sdsl" />
+	  <None Update="Rendering\Effects\BloomDownSample.sdsl" />
+	  <None Update="Rendering\Effects\BloomBrightPass.sdsl" />
+	  <None Update="Rendering\Effects\FullscreenTriangle.sdsl" />
+	  <None Update="Rendering\Effects\ToneMapASEC.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainDisplacement.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialSampling.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialDiffuseTileRenderer.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialTileRenderer.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\MaterialTerrainDisplacement.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainComputeColorNormal.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialStreamInitializer.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainMaterialStreams.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTextureSampling.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTextureFeedback.sdsl" />
+	  <None Update="TerrainSystem\Effects\Material\TerrainVirtualTexture.sdsl" />
+	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowBase.sdsl" />
+	  <None Update="TerrainSystem\Effects\Shadows\TerrainShadowGenerator.sdsl" />
+	  <None Update="TerrainSystem\Effects\TerrainData.sdsl" />
+	  <None Update="TerrainSystem\Effects\TerrainQuery.sdsl" />
+	  <None Update="TerrainSystem\Effects\TerrainStreams.sdsl" />
+	  <None Update="Vegetation\Effects\SetupIndirectDispatchArgs.sdsl" />
+	  <None Update="Vegetation\Effects\ClearDrawArgs.sdsl" />
+	  <None Update="Vegetation\Effects\ComoputeColorImpostor.sdsl" />
+	  <None Update="Vegetation\Effects\GrassCullInstances.sdsl" />
+	  <None Update="Vegetation\Effects\GrassPopulateInstances.sdsl" />
+	  <None Update="Vegetation\Effects\MaterialGrassDisplacementFeature.sdsl" />
+	  <None Update="Vegetation\Effects\MaterialImpostorDisplacementFeature.sdsl" />
+	  <None Update="Vegetation\Effects\MaterialTreeDisplacementFeature.sdsl" />
+	  <None Update="Vegetation\Effects\MaterialVegetationSurfaceSubsurfaceScatteringShading.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\Atmosphere.sdfx" />
+	  <None Update="Weather\Effects\Atmosphere\AtmosphereBase.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\AtmosphereParametersBase.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderAerialPerspective.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\AtmosphereRenderSky.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\CloudBase.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\CloudBasicNoise.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\CloudDetailNoise.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\CloudReconstruct.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\CloudWeatherMap.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\LUT\AtmosphereCameraVolumeLut.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\Noise.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\VolumetricClouds.sdsl" />
+	  <None Update="Weather\Effects\Atmosphere\VolumetricCloudsTrace.sdsl" />
+	  <None Update="Weather\Effects\Lights\VolumetricLightDiretional.sdsl" />
+	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalBase.sdsl" />
+	  <None Update="Weather\Effects\Lights\VolumetricLightDiretionalEffect.sdfx" />
+	  <None Update="Weather\Effects\WeatherFordwardRenderer.sdsl" />
+	  <None Update="Weather\Effects\WeatherForwardRendererBase.sdsl" />
+	  <None Update="Weather\Effects\WeatherForwardShadingEffect.sdfx" />
+	  <None Update="Weather\Effects\WeatherLightDirectionalGroup.sdsl" />
 	</ItemGroup>
 </Project>

@@ -10,18 +10,10 @@
 		<PackageReference Include="Hexa.NET.ImGui" />
 		<PackageReference Include="Stride.Core" PrivateAssets="contentfiles;analyzers" />
 		<PackageReference Include="Stride.Engine" PrivateAssets="contentfiles;analyzers" />
-		<PackageReference Include="Stride.Core.Assets.CompilerApp" rivateAssets="contentfiles; analyzers" IncludeAssets="build; buildtransitive" />
-	</ItemGroup>
-	<ItemGroup>
-		<Compile Update="Effects\ImGuiShader.sdsl.cs">
-			<DesignTime>True</DesignTime>
-			<DesignTimeSharedInput>True</DesignTimeSharedInput>
-			<AutoGen>True</AutoGen>
-		</Compile>
+		<PackageReference Include="Stride.AssetCompiler" PrivateAssets="contentfiles; analyzers" IncludeAssets="build; buildtransitive" />
 	</ItemGroup>
 	<ItemGroup>
 		<None Update="Effects\ImGuiShader.sdsl">
-			<LastGenOutput>ImGuiShader.sdsl.cs</LastGenOutput>
 			<CopyToOutputDirectory>Never</CopyToOutputDirectory>
 		</None>
 	</ItemGroup>

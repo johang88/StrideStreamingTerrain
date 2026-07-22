@@ -1,5 +1,4 @@
-﻿using Silk.NET.Core.Native;
-using StrideTerrain.Common;
+﻿using StrideTerrain.Common;
 using System.Drawing;
 using System.Drawing.Imaging;
 

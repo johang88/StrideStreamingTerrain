@@ -11,6 +11,7 @@
 
 	<ItemGroup>
 		<PackageReference Include="System.CommandLine" />
+		<PackageReference Include="System.Drawing.Common" />
 		<PackageReference Include="Stride.Graphics" />
 		<PackageReference Include="Stride.TextureConverter" />
 	</ItemGroup>

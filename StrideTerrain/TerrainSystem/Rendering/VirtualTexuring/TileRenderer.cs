@@ -1,4 +1,3 @@
-using SharpFont.PostScript;
 using Stride.Core;
 using Stride.Core.Mathematics;
 using Stride.Graphics;
