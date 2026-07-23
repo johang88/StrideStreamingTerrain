@@ -29,8 +29,12 @@ public class VegetationComponent : ScriptComponent
     /// <summary>Resolution of a single atlas frame. Total atlas is this times ImpostorGridSize.</summary>
     [DataMember] public int ImpostorFrameResolution { get; set; } = 256;
 
-    /// <summary>Distance at which real meshes stop being drawn and the impostor takes over fully.</summary>
-    [DataMember] public float ImpostorLodDistance { get; set; } = 48.0f;
+    /// <summary>
+    /// Distance at which real meshes stop being drawn and the impostor takes over fully. Now that
+    /// the mesh LOD chain carries the mid range cheaply, this sits far enough out that the impostor
+    /// is only ever seen small - the far LODs cover the band where a billboard would read as flat.
+    /// </summary>
+    [DataMember] public float ImpostorLodDistance { get; set; } = 120.0f;
 
     /// <summary>
     /// Width of the cross fade band ending at <see cref="ImpostorLodDistance"/>. Mesh and impostor

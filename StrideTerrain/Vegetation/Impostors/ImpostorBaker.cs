@@ -138,7 +138,8 @@ public sealed class ImpostorBaker : IDisposable
             }
         }
 
-        DumpAtlas(context, diffuseAtlas, model);
+        DumpAtlas(context, diffuseAtlas, model, "diffuse");
+        DumpAtlas(context, normalAtlas, model, "normal");
 
         return new ImpostorAtlas
         {
@@ -161,7 +162,7 @@ public sealed class ImpostorBaker : IDisposable
 
     private static int _dumpIndex;
 
-    private static void DumpAtlas(RenderDrawContext context, Texture atlas, Model model)
+    private static void DumpAtlas(RenderDrawContext context, Texture atlas, Model model, string kind)
     {
         if (string.IsNullOrEmpty(DumpPath))
             return;
@@ -169,7 +170,7 @@ public sealed class ImpostorBaker : IDisposable
         try
         {
             System.IO.Directory.CreateDirectory(DumpPath);
-            var file = System.IO.Path.Combine(DumpPath, $"impostor_{_dumpIndex++}_{model.Meshes.Count}meshes.png");
+            var file = System.IO.Path.Combine(DumpPath, $"impostor_{_dumpIndex++}_{model.Meshes.Count}meshes_{kind}.png");
 
             using var stream = System.IO.File.Create(file);
             atlas.Save(context.CommandList, stream, ImageFileType.Png);
