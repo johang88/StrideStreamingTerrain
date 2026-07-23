@@ -1,24 +1,27 @@
 namespace StrideTerrain.Weather.Effects.Atmosphere
 {
-    // Generates a 2D weather map from user parameters.
-    // R = cloud coverage noise (raw, 0-1)
-    // G = cloud type (0 = stratus, 1 = cumulus)
-    // B = precipitation / density multiplier
-    // A = unused (1.0)
+    // Generates a 2D weather map driven by continuous sliders. This is a
+    // continuous interpolation of skygl's discrete presets (Weather.cpp:
+    // GenMostlyClear / GenPartlyCloudy / GenMostlyCloudy / GenOvercast / GenStorm).
     //
-    // Coverage thresholding is NOT applied here — the global Coverage
-    // parameter is applied at runtime in SampleCloudDensity, matching
-    // the Horizon Zero Dawn / WickedEngine approach.
+    // Output channels follow the skygl convention:
+    //   R = coverage
+    //   G = precipitation
+    //   B = cloud type (0=stratus .. 0.5=cumulus .. 1=cumulonimbus)
+    //   A = 1
+    //
+    // The map is wrap-sampled in world space, so every noise call passes a
+    // period equal to its cell count and the map tiles seamlessly.
     shader CloudWeatherMap : Noise
     {
         stage RWTexture2D<float4> OutputTexture;
 
         cbuffer WeatherParams
         {
-            uint MapSize;
-            float Coverage;       // 0-1 global coverage (stored but not used for thresholding)
-            float CoverageScale;  // world-space scale for coverage noise
-            float TypeScale;      // world-space scale for cloud type noise
+            uint MapSize;        // texture size, e.g. 512
+            float Coverage;      // 0-1 slider
+            float CloudType;     // 0-1 slider: 0=stratus, 0.5=cumulus, 1=cumulonimbus
+            float Precipitation; // 0-1 slider
         }
 
         override void Compute()
@@ -28,31 +31,49 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
                 return;
 
             float mapSizeF = MapSize;
-            float2 uv = float2(id) / mapSizeF;
+            float2 f = float2(id);
 
-            // Tileable coordinates
-            float2 p = uv * mapSizeF;
+            // Recipe iterated offline (scratchpad map_iter.py) and validated
+            // visually: macro perlin gates weather systems, a perlin+worley mix
+            // forms connected cumulus fields inside them, and fields merge to a
+            // solid deck as Coverage -> 1. The normalized Perlin FBM has a small
+            // standard deviation, hence the *3.0 / *2.5 contrast stretches.
+            float macro = saturate(PerlinFbm2D(f * (5.0 / mapSizeF), float2(5.0, 5.0), 3) * 3.0 * 0.5 + 0.5);
+            float meso = saturate(PerlinFbm2D(f * (12.0 / mapSizeF), float2(12.0, 12.0), 4) * 2.5 * 0.5 + 0.5);
+            float clumps = 1.0 - Worley2D(f * (12.0 / mapSizeF), float2(12.0, 12.0));
 
-            // Coverage: multi-octave Perlin for large-scale variation
-            float coverageNoise = Perlin(float3(p * CoverageScale, 0.0), mapSizeF * CoverageScale);
-            coverageNoise += 0.5 * Perlin(float3(p * CoverageScale * 2.0, 3.7), mapSizeF * CoverageScale * 2.0);
-            coverageNoise += 0.25 * Perlin(float3(p * CoverageScale * 4.0, 7.3), mapSizeF * CoverageScale * 4.0);
-            coverageNoise = coverageNoise * 0.5 + 0.5; // remap to [0,1]
+            // Macro gate: which regions of the sky carry weather at all.
+            // The window slides down as Coverage rises, opening the gate.
+            float gate = smoothstep(0.75 - 1.1 * Coverage, 1.05 - 0.75 * Coverage, macro);
 
-            // Output raw noise — no coverage thresholding.
-            // The global Coverage parameter is applied in SampleCloudDensity.
-            float coverage = saturate(coverageNoise);
+            // Cellular breakup inside weather regions (connected cumulus fields).
+            float cellBase = 0.6 * meso + 0.4 * smoothstep(0.2, 1.0, clumps);
+            float cells = smoothstep(0.52 - 0.25 * Coverage, 0.78 - 0.1 * Coverage, cellBase);
 
-            // Cloud type: separate noise pattern for variety
-            float typeNoise = Perlin(float3(p * TypeScale + 100.0, 13.5), mapSizeF * TypeScale);
-            typeNoise += 0.5 * Perlin(float3(p * TypeScale * 2.0 + 100.0, 17.2), mapSizeF * TypeScale * 2.0);
-            typeNoise = typeNoise * 0.5 + 0.5;
-            float cloudType = saturate(typeNoise);
+            // Fields merge toward a solid overcast deck as Coverage -> 1.
+            float cov = gate * saturate(cells + smoothstep(0.55, 1.0, Coverage));
+            // The macro gate window still lets a few patches through at
+            // Coverage ~0 — force a completely clear sky at the bottom of the
+            // slider.
+            cov *= smoothstep(0.0, 0.05, Coverage);
+            cov = saturate(cov);
 
-            // Precipitation: correlated with coverage (dense areas rain more)
-            float precip = saturate(coverage * coverage * 1.5);
+            // Independent low-frequency type variation (tileable), ~8 cells.
+            float typeNoise = PerlinFbm2D(f * (8.0 / mapSizeF), float2(8.0, 8.0), 2) * 0.5 + 0.5;
+            typeNoise = saturate(typeNoise);
 
-            OutputTexture[id] = float4(coverage, cloudType, precip, 1.0);
+            // Type: zero where there are no clouds, local variation elsewhere.
+            float type = CloudType * smoothstep(0.1, 0.4, cov) * (0.6 + 0.4 * typeNoise);
+
+            // Precipitation: large-scale rain regions driven by the MACRO weather
+            // field (tens of km), not the fine cellular coverage — sourcing it
+            // from `cov` makes the pow/densify response flicker cell-by-cell and
+            // read as random noise. Contained to areas that actually have cloud.
+            float precip = Precipitation
+                * smoothstep(0.35, 0.75, macro)
+                * smoothstep(0.1, 0.35, cov);
+
+            OutputTexture[id] = float4(cov, precip, type, 1.0);
         }
     };
 }

@@ -8,6 +8,15 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
         stage Texture2D<float4> MultiScatteringLUT;
         stage Texture2D<float4> SkyViewLUT;
         stage Texture2D<float4> CloudAccumulationTexture;
+        stage Texture2D<float2> HighCloudsTexture;
+
+        // Wrap sampler for the tiling high-clouds texture (base only has clamp).
+        stage SamplerState SamplerLinearWrapSky
+        {
+            Filter = MIN_MAG_MIP_LINEAR;
+            AddressU = Wrap;
+            AddressV = Wrap;
+        };
 
         cbuffer Atmosphere
         {
@@ -136,20 +145,9 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 
             float3 totalColor = luminance;
 
-			// --- Wispy cirrus layer at 5000 m (renders behind main clouds) ---
-			float cirrusDensity = 0;
-			float tCirrus = TracePlane(CameraPosition, worldDirection, float3(0, 5000, 0), float3(0, -1, 0));
-			if (tCirrus > 0)
-			{
-				float3 cirrusPos = CameraPosition + worldDirection * tCirrus;
-				cirrusDensity = CalculateCirrus(cirrusPos);
-				if (cirrusDensity > 0.001f)
-				{
-					float3 atmTransmittance = GetAtmosphericLightTransmittance(atmosphere, cirrusPos, SunDirection, TransmittanceLUT);
-					float3 cirrusColor = GetCirrusLighting(cirrusPos, SunDirection, SunColor * atmTransmittance, cirrusDensity);
-					totalColor = lerp(totalColor, cirrusColor, cirrusDensity);
-				}
-			}
+			// --- High-altitude clouds (cirrus + alto) renders behind main clouds ---
+			float4 highClouds = HighAltitudeCloud(CameraPosition, worldDirection, atmosphere);
+			totalColor = totalColor * (1.0 - highClouds.a) + highClouds.rgb;
 
 			// --- Volumetric clouds from compute pre-pass ---
 			float cloudTransmittance = 0.0f;
@@ -178,8 +176,10 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 				float3 sunIlluminance = SunColor;
 				float3 sun = GetSunLuminance(worldPosition, worldDirection, sunDirection, sunIlluminance, atmosphere, TransmittanceLUT);
 
-				// Sun transmittance through cloud layers
-				float sunTau = -log(max(cloudTransmittance, 0.0001)) + cirrusDensity * 6.0;
+				// Sun transmittance through cloud layers. Thin high clouds only
+				// haze the sun slightly (factor 3, not 6 — cirrus is mostly
+				// transparent ice, and 6 visibly greys the sun even at low alpha).
+				float sunTau = -log(max(cloudTransmittance, 0.0001)) + highClouds.a * 3.0;
 				sun *= exp(-sunTau);
 				totalColor += sun;
 			}
@@ -220,78 +220,60 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 			return dot(planeNormal, (planeOrigin - o) / dot(planeNormal, d));
 		}
 
-		// --- 2D noise functions kept for cirrus ---
-		float2 Hash(float2 p)
+		// --- High-altitude clouds: texture-based cirrus (R) + alto (G) ---
+		// Ported from skygl HighAltitudeCloud, using a horizontal plane at
+		// HighCloudsHeight (simpler than sphere intersection, matches the old
+		// plane-based cirrus). Returns premultiplied-alpha scattering.
+		float4 HighAltitudeCloud(float3 ro, float3 rd, AtmosphereParameters atmosphere)
 		{
-			p = float2(dot(p, float2(127.1, 311.7)), dot(p, float2(269.5, 183.3)));
-			return -1.0 + 2.0 * frac(sin(p) * 43758.5453123);
-		}
+			float4 result = float4(0, 0, 0, 0);
 
-		float Noise(in float2 p)
-		{
-			const float K1 = 0.366025404; // (sqrt(3)-1)/2;
-			const float K2 = 0.211324865; // (3-sqrt(3))/6;
-			float2 i = floor(p + (p.x + p.y) * K1);
-			float2 a = p - i + (i.x + i.y) * K2;
-			float2 o = (a.x > a.y) ? float2(1.0, 0.0) : float2(0.0, 1.0);
-			float2 b = a - o + K2;
-			float2 c = a - 1.0 + 2.0 * K2;
-			float3 h = max(0.5 - float3(dot(a, a), dot(b, b), dot(c, c)), 0.0);
-			float3 n = h * h * h * h * float3(dot(a, Hash(i + 0.0)), dot(b, Hash(i + o)), dot(c, Hash(i + 1.0)));
-			return dot(n, float3(70.0, 70.0, 70.0));
-		}
+			// Only looking up toward the layer produces high clouds.
+			if (rd.y < 1e-4f)
+				return result;
 
-		// Evaluates thin cirrus cloud density at a given world-space position.
-		float CalculateCirrus(float3 cloudPos)
-		{
-			const float cirrusScale = Clouds.BaseNoiseScale * 3.0;
-			const float cloudTime = Time * Clouds.WindSpeed * 0.001;
+			float t = TracePlane(ro, rd, float3(0, Clouds.HighCloudsHeight, 0), float3(0, -1, 0));
+			if (t <= 0.0f)
+				return result;
 
-			// Anisotropic UVs: strongly stretched along X to simulate wind-streak direction.
-			float2 uv = float2(cloudPos.x * cirrusScale * 0.08f, cloudPos.z * cirrusScale * 0.35f);
-			uv -= float2(cloudTime * 0.7f, cloudTime * 0.05f);
+			float3 pos = ro + rd * t;
 
-			const float2x2 m = float2x2(1.6f, 1.2f, -1.2f, 1.6f);
+			// Dual-lobe phase (skygl: mix(HG(-0.1,mu), HG(0.2,mu), 0.2), mu = dot(-rd, sun)).
+			// HgPhase uses the opposite cos sign, so skygl g -> -g.
+			float mu = dot(-rd, SunDirection);
+			float phase = lerp(HgPhase(0.1f, mu), HgPhase(-0.2f, mu), 0.2f);
 
-			// Ridged FBM: peaks of (1 - |noise|) create thin bright streaks
-			float cirrus = 0.0f;
-			float weight = 0.8f;
-			for (uint i = 0; i < 4; i++)
-			{
-				cirrus += weight * (1.0f - abs(Noise(uv)));
-				uv = mul(m, uv) + cloudTime * 0.08f;
-				weight *= 0.55f;
-			}
-			cirrus /= 1.8f; // approximate normalise to [0,1]
-
-			// Keep only the bright peaks (wispy thin streaks, not a solid layer)
-			cirrus = pow(saturate((cirrus - 0.4f) * (1.0f / 0.6f)), 1.8f);
-
-			// Horizon fade - wider radius since cirrus is at 5000 m
-			cirrus *= pow(saturate(1.0f - length(cloudPos.xz) * 0.0000025f), 8);
-
-			return saturate(cirrus * Clouds.CirrusAmount);
-		}
-
-		// Lighting for thin cirrus: strong forward-scatter halo from ice crystals.
-		float3 GetCirrusLighting(float3 worldPos, float3 lightDir, float3 lightColor, float density)
-		{
-			float3 viewDir = normalize(CameraPosition - worldPos);
-			float cosAngle = dot(viewDir, lightDir);
-
-			// Ice crystals produce a strong narrow forward-scatter lobe (sun halo)
-			// and a broader secondary lobe for overall translucency.
-			float phaseNarrow = HgPhase(-0.85f, cosAngle);
-			float phaseBroad  = HgPhase(-0.25f, cosAngle);
-			float phase = phaseNarrow * 0.6f + phaseBroad * 0.4f;
-
-			// Very thin cloud: minimal self-shadowing, slight edge brightening
-			float3 directLight = lightColor * phase * (1.2f - density * 0.4f);
-
+			float3 atmTransmittance = GetAtmosphericLightTransmittance(atmosphere, pos, SunDirection, TransmittanceLUT);
+			float3 sunLight = SunColor * atmTransmittance;
 			float3 skyAmbient = SkyLuminanceLUT.SampleLevel(SamplerLinearClamp, float2(0.5f, 0.5f), 0).rgb;
-			float3 ambient    = skyAmbient * 0.08f;
+			float3 scatter = sunLight * phase + skyAmbient;
 
-			return directLight + ambient;
+			// Wind-scrolled UVs; cirrus and alto scroll at different rates.
+			float2 windOffset = Clouds.WindDirection * Clouds.WindSpeed * Time;
+			float2 uvCirrus = (pos.xz + windOffset * 3.5f) / Clouds.HighCloudsScale;
+			float2 uvAlto   = (pos.xz + windOffset * 2.0f) / Clouds.HighCloudsScale;
+
+			float cirrus = HighCloudsTexture.SampleLevel(SamplerLinearWrapSky, uvCirrus, 0).r;
+			float alto   = HighCloudsTexture.SampleLevel(SamplerLinearWrapSky, uvAlto, 0).g;
+
+			// Alpha-composite cirrus then alto (both premultiplied).
+			float alphaC = cirrus * Clouds.CirrusAmount;
+			if (alphaC > 1e-4f)
+			{
+				result.rgb += (1.0f - result.a) * scatter * alphaC;
+				result.a   += (1.0f - result.a) * alphaC;
+			}
+
+			float alphaA = alto * Clouds.AltoAmount;
+			if (alphaA > 1e-4f)
+			{
+				result.rgb += (1.0f - result.a) * scatter * alphaA;
+				result.a   += (1.0f - result.a) * alphaA;
+			}
+
+			// Horizon fade.
+			float fade = pow(saturate(1.0f - length(pos.xz) * 2.5e-6f), 8);
+			return result * fade;
 		}
     };
 }

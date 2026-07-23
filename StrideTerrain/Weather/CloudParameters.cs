@@ -8,49 +8,64 @@ namespace StrideTerrain.Weather;
 [StructLayout(LayoutKind.Sequential, Pack = 4)]
 public struct CloudParameters
 {
-    // Shape
-    [DataMember] public float Coverage;
-    [DataMember] public float Density;
-    [DataMember] public float BaseNoiseScale;
-    [DataMember] public float DetailNoiseScale;
+    // row 0
+    [DataMember] public float Coverage;         // 0-1 slider
+    [DataMember] public float CloudType;         // 0-1: stratus -> cumulus -> cumulonimbus
+    [DataMember] public float Precipitation;     // 0-1
+    [DataMember] public float WindSpeed;         // m/s
 
-    [DataMember] public float ErosionStrength;
-    [DataMember] public float WindSpeed;
-    [DataMember] public Vector2 WindDirection;
+    // row 1
+    [DataMember] public Vector2 WindDirection;   // normalized horizontal wind direction
+    [DataMember] public float LayerBottom;       // m
+    [DataMember] public float LayerThickness;    // m
 
-    // Layer geometry (meters)
-    [DataMember] public float CloudLayerMin;
-    [DataMember] public float CloudLayerMax;
+    // row 2
+    [DataMember] public float HighCloudsHeight;  // m
+    [DataMember] public float CirrusAmount;      // 0-1
+    [DataMember] public float AltoAmount;        // 0-1
+    [DataMember] public float SigmaS;            // scattering coefficient, per m (see ctor)
 
-    // Lighting
-    [DataMember] public float PhaseG;
-    [DataMember] public float LightAbsorption;
+    // row 3
+    [DataMember] public float SigmaA;            // absorption coefficient, per m
+    [DataMember] public float WeatherMapScale;   // m, world size of one weather map tile
+    [DataMember] public float BaseNoiseScale;    // m per base noise tile
+    [DataMember] public float DetailNoiseScale;  // m per detail noise tile
 
-    // Quality
+    // row 4
+    [DataMember] public float HighCloudsScale;   // m per high clouds tile
+    [DataMember] public float MaxDistance;       // m, volumetric render distance
     [DataMember] public int StepCount;
     [DataMember] public int LightStepCount;
 
-    // Cirrus
-    [DataMember] public float CirrusAmount;
-    [DataMember] public float _Padding0;
-
     public CloudParameters()
     {
-        Coverage = 0.65f;
-        Density = 0.3f;
-        BaseNoiseScale = 0.00005f;
-        DetailNoiseScale = 0.0005f;
-        ErosionStrength = 0.3f;
-        WindSpeed = 10.0f;
+        Coverage = 0.5f;
+        CloudType = 0.35f;
+        Precipitation = 0.0f;
+        WindSpeed = 2.0f;
+
         WindDirection = new Vector2(1.0f, 0.0f);
-        CloudLayerMin = 1500.0f;
-        CloudLayerMax = 4000.0f;
-        PhaseG = 0.75f;
-        LightAbsorption = 0.5f;
+        LayerBottom = 2000.0f;
+        LayerThickness = 4000.0f;
+
+        HighCloudsHeight = 8000.0f;
+        CirrusAmount = 0.3f;
+        AltoAmount = 0.3f;
+        // skygl uses 0.01 per m, but its weather-map presets push in-cloud
+        // coverage close to 1 while ours peaks lower, and `density *= coverage`
+        // scales the result down — leaving cores at ~0.05 density and visibly
+        // see-through. Raised so a normal cloud core is optically thick.
+        SigmaS = 0.05f;
+
+        SigmaA = 0.0f;
+        WeatherMapScale = 128000.0f;
+        BaseNoiseScale = 25000.0f;
+        DetailNoiseScale = 1500.0f;
+
+        HighCloudsScale = 32000.0f;
+        MaxDistance = 40000.0f;
         StepCount = 64;
         LightStepCount = 6;
-        CirrusAmount = 0.5f;
-        _Padding0 = 0.0f;
     }
 }
 
@@ -60,7 +75,5 @@ public struct CloudParameters
 [DataContract]
 public class WeatherMapParameters
 {
-    [DataMember] public float CoverageScale { get; set; } = 0.02f;
-    [DataMember] public float TypeScale { get; set; } = 0.01f;
     [DataMember] public int MapSize { get; set; } = 512;
 }

@@ -73,6 +73,15 @@ public class VegetationProcessor : EntityProcessor<VegetationComponent, Vegetati
             if (!data.IsBaked)
                 continue;
 
+            // Debug kill switch: hide all vegetation (e.g. to get an unobstructed sky view).
+            if (Environment.GetEnvironmentVariable("STRIDETERRAIN_DISABLE_VEGETATION") == "1")
+            {
+                foreach (var lodEntity in data.LodEntities)
+                    lodEntity.Get<ModelComponent>().Enabled = false;
+                data.ImpostorEntity!.Get<ModelComponent>().Enabled = false;
+                continue;
+            }
+
             UpdateMeshInstances(component, data, cameraPosition);
 
             data.ImpostorEntity!.Get<ModelComponent>().Enabled = Enabled;

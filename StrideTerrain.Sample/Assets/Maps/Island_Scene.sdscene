@@ -619,9 +619,9 @@ Hierarchy:
                             Color: {X: 1.0, Y: 1.0, Z: 1.0}
                             OverrideFogColor: 1.0
                         Clouds:
-                            Scale: 0.001
-                            Speed: 0.02
-                            Cloudiness: 0.3
+                            Coverage: 0.5
+                            CloudType: 0.35
+                            Precipitation: 0.0
                     5c3d5a8f5a457c1da38dc289e44293f7: !StrideTerrain.Weather.TimeOfDayComponent,StrideTerrain
                         Id: aa181f26-5c64-475f-aa80-046d967e9e26
                         TimeOfDay: 0.28

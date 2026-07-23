@@ -60,8 +60,10 @@ public class WeatherRenderFeature : RootRenderFeature
     // Precomputed noise textures (generated once at init)
     private ComputeEffectShader? _basicNoiseEffect;
     private ComputeEffectShader? _detailNoiseEffect;
+    private ComputeEffectShader? _highCloudsEffect;
     private Texture? _basicNoiseTexture;
     private Texture? _detailNoiseTexture;
+    private Texture? _highCloudsTexture;
     private bool _noiseTexturesGenerated;
 
     // Weather map (regenerated when parameters change)
@@ -69,11 +71,12 @@ public class WeatherRenderFeature : RootRenderFeature
     private Texture? _weatherMapTexture;
     private int _weatherMapSize;
     private float _lastCoverage = -1;
-    private float _lastCoverageScale = -1;
-    private float _lastTypeScale = -1;
+    private float _lastCloudType = -1;
+    private float _lastPrecipitation = -1;
 
     private const int BasicNoiseSize = 128;
     private const int DetailNoiseSize = 32;
+    private const int HighCloudsSize = 512;
 
     protected override void InitializeCore()
     {
@@ -130,6 +133,9 @@ public class WeatherRenderFeature : RootRenderFeature
         _detailNoiseEffect = new(Context) { ShaderSourceName = "CloudDetailNoise" };
         _detailNoiseEffect.DisposeBy(this);
 
+        _highCloudsEffect = new(Context) { ShaderSourceName = "CloudHighClouds" };
+        _highCloudsEffect.DisposeBy(this);
+
         _weatherMapEffect = new(Context) { ShaderSourceName = "CloudWeatherMap" };
         _weatherMapEffect.DisposeBy(this);
 
@@ -148,8 +154,10 @@ public class WeatherRenderFeature : RootRenderFeature
 
         _basicNoiseTexture?.Dispose();
         _detailNoiseTexture?.Dispose();
+        _highCloudsTexture?.Dispose();
         _basicNoiseTexture = null;
         _detailNoiseTexture = null;
+        _highCloudsTexture = null;
 
         _weatherMapTexture?.Dispose();
         _weatherMapTexture = null;
@@ -244,10 +252,10 @@ public class WeatherRenderFeature : RootRenderFeature
         if (_noiseTexturesGenerated)
             return;
 
-        if (_basicNoiseEffect == null || _detailNoiseEffect == null)
+        if (_basicNoiseEffect == null || _detailNoiseEffect == null || _highCloudsEffect == null)
             return;
 
-        if (_basicNoiseTexture == null || _detailNoiseTexture == null)
+        if (_basicNoiseTexture == null || _detailNoiseTexture == null || _highCloudsTexture == null)
         {
             var device = context.GraphicsDevice;
 
@@ -257,6 +265,10 @@ public class WeatherRenderFeature : RootRenderFeature
 
             _detailNoiseTexture = Texture.New3D(device, DetailNoiseSize, DetailNoiseSize, DetailNoiseSize,
                 PixelFormat.R16G16B16A16_Float, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
+
+            // High-altitude clouds 2D texture (R = cirrus, G = alto)
+            _highCloudsTexture = Texture.New2D(device, HighCloudsSize, HighCloudsSize,
+                PixelFormat.R16G16_Float, TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
         }
 
         // Generate basic noise (128^3)
@@ -275,6 +287,15 @@ public class WeatherRenderFeature : RootRenderFeature
             DetailNoiseSize / 8, DetailNoiseSize / 8, DetailNoiseSize / 8);
         _detailNoiseEffect.Draw(context, "Clouds.GenerateDetailNoise");
 
+        // Generate high-altitude clouds texture (512^2)
+        _highCloudsEffect.Parameters.Set(CloudHighCloudsKeys.OutputTexture, _highCloudsTexture);
+        _highCloudsEffect.Parameters.Set(CloudHighCloudsKeys.MapSize, (uint)HighCloudsSize);
+        _highCloudsEffect.ThreadNumbers = new Int3(8, 8, 1);
+        _highCloudsEffect.ThreadGroupCounts = new Int3(
+            (int)Math.Ceiling(HighCloudsSize / 8.0),
+            (int)Math.Ceiling(HighCloudsSize / 8.0), 1);
+        _highCloudsEffect.Draw(context, "Clouds.GenerateHighClouds");
+
         _noiseTexturesGenerated = true;
     }
 
@@ -285,14 +306,14 @@ public class WeatherRenderFeature : RootRenderFeature
 
         var mapSize = weatherMap.MapSize;
 
-        // Check if we need to regenerate
-        // Coverage is no longer baked into the map, but we track it to force
-        // shader recompilation when the user changes parameters in the editor.
+        // The weather map is driven directly by the Coverage / CloudType /
+        // Precipitation sliders, so regenerate only when one of those (or the
+        // map size) changes.
         bool needsRegenerate = _weatherMapTexture == null
             || _weatherMapSize != mapSize
             || Math.Abs(_lastCoverage - clouds.Coverage) > 0.001f
-            || Math.Abs(_lastCoverageScale - weatherMap.CoverageScale) > 0.001f
-            || Math.Abs(_lastTypeScale - weatherMap.TypeScale) > 0.001f;
+            || Math.Abs(_lastCloudType - clouds.CloudType) > 0.001f
+            || Math.Abs(_lastPrecipitation - clouds.Precipitation) > 0.001f;
 
         if (!needsRegenerate)
             return;
@@ -309,8 +330,8 @@ public class WeatherRenderFeature : RootRenderFeature
         _weatherMapEffect.Parameters.Set(CloudWeatherMapKeys.OutputTexture, _weatherMapTexture);
         _weatherMapEffect.Parameters.Set(CloudWeatherMapKeys.MapSize, (uint)mapSize);
         _weatherMapEffect.Parameters.Set(CloudWeatherMapKeys.Coverage, clouds.Coverage);
-        _weatherMapEffect.Parameters.Set(CloudWeatherMapKeys.CoverageScale, weatherMap.CoverageScale);
-        _weatherMapEffect.Parameters.Set(CloudWeatherMapKeys.TypeScale, weatherMap.TypeScale);
+        _weatherMapEffect.Parameters.Set(CloudWeatherMapKeys.CloudType, clouds.CloudType);
+        _weatherMapEffect.Parameters.Set(CloudWeatherMapKeys.Precipitation, clouds.Precipitation);
 
         _weatherMapEffect.ThreadNumbers = new Int3(8, 8, 1);
         _weatherMapEffect.ThreadGroupCounts = new Int3(
@@ -319,14 +340,16 @@ public class WeatherRenderFeature : RootRenderFeature
         _weatherMapEffect.Draw(context, "Clouds.GenerateWeatherMap");
 
         _lastCoverage = clouds.Coverage;
-        _lastCoverageScale = weatherMap.CoverageScale;
-        _lastTypeScale = weatherMap.TypeScale;
+        _lastCloudType = clouds.CloudType;
+        _lastPrecipitation = clouds.Precipitation;
     }
     #endregion
 
     #region Volumetric Clouds
-    private void EnsureCloudBuffers(GraphicsDevice device, int fullWidth, int fullHeight)
+    private void EnsureCloudBuffers(RenderDrawContext context, int fullWidth, int fullHeight)
     {
+        var device = context.GraphicsDevice;
+
         // Trace buffer is quarter-resolution
         var traceW = Math.Max(1, fullWidth / 4);
         var traceH = Math.Max(1, fullHeight / 4);
@@ -349,6 +372,14 @@ public class WeatherRenderFeature : RootRenderFeature
         _cloudReconstructB = Texture.New2D(device, fullWidth, fullHeight, PixelFormat.R16G16B16A16_Float,
             TextureFlags.UnorderedAccess | TextureFlags.ShaderResource);
 
+        // Fresh UAVs hold undefined memory; clear to "no cloud" (transmittance 1)
+        // so nothing garbage can be composited on the (re)creation frame — this
+        // showed up as a single-frame colored blink after viewport resizes.
+        var clear = new Vector4(0, 0, 0, 1);
+        context.CommandList.ClearReadWrite(_cloudTraceBuffer, clear);
+        context.CommandList.ClearReadWrite(_cloudReconstructA, clear);
+        context.CommandList.ClearReadWrite(_cloudReconstructB, clear);
+
         // Reset temporal state on resize
         _frameIndex = 0;
         _cloudPingPong = false;
@@ -368,7 +399,7 @@ public class WeatherRenderFeature : RootRenderFeature
         if (width <= 0 || height <= 0)
             return null;
 
-        EnsureCloudBuffers(context.GraphicsDevice, width, height);
+        EnsureCloudBuffers(context, width, height);
 
         if (_cloudTraceBuffer == null || _cloudReconstructA == null || _cloudReconstructB == null)
             return null;
@@ -485,6 +516,7 @@ public class WeatherRenderFeature : RootRenderFeature
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.SkyViewLUT, skyViewLut);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.SkyLuminanceLUT, skyLuminanceLut);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.CloudAccumulationTexture, cloudAccumulationTexture);
+        renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.HighCloudsTexture, _highCloudsTexture);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.Atmosphere, atmosphere);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.Fog, fog);
         renderSkyEffect.Parameters.Set(AtmosphereRenderSkyKeys.SunDirection, sunDirection);

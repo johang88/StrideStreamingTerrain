@@ -4,24 +4,34 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
     {
         struct CloudParameters
         {
+            // row 0
             float Coverage;
-            float Density;
+            float CloudType;
+            float Precipitation;
+            float WindSpeed;
+
+            // row 1
+            float2 WindDirection;
+            float LayerBottom;
+            float LayerThickness;
+
+            // row 2
+            float HighCloudsHeight;
+            float CirrusAmount;
+            float AltoAmount;
+            float SigmaS;
+
+            // row 3
+            float SigmaA;
+            float WeatherMapScale;
             float BaseNoiseScale;
             float DetailNoiseScale;
 
-            float ErosionStrength;
-            float WindSpeed;
-            float2 WindDirection;
-
-            float CloudLayerMin;
-            float CloudLayerMax;
-            float PhaseG;
-            float LightAbsorption;
-
+            // row 4
+            float HighCloudsScale;
+            float MaxDistance;
             uint StepCount;
             uint LightStepCount;
-            float CirrusAmount;
-            float _Padding0;
         };
     };
 }

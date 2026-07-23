@@ -1,5 +1,7 @@
 namespace StrideTerrain.Weather.Effects.Atmosphere
 {
+    // Volumetric cloud density + lighting, ported from skygl (clouds_pass.frag, MIT).
+    // Density is a UNITLESS [0,1] value; extinction comes from SigmaS/SigmaA.
     shader VolumetricClouds : AtmosphereBase, CloudBase
     {
         struct VolumetricCloudResult
@@ -9,7 +11,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             float depth;
         };
 
-        // ── Sampler for 3D noise textures (wrapping) ──
+        // ── Sampler for the precomputed noise / weather textures (wrapping) ──
         stage SamplerState SamplerLinearWrap
         {
             Filter = MIN_MAG_MIP_LINEAR;
@@ -18,36 +20,31 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             AddressW = Wrap;
         };
 
-        // ── Height fraction within cloud layer ──
-        float GetHeightFraction(float3 worldPos, float3 planetCenter, float innerRadius, float outerRadius)
-        {
-            float dist = length(worldPos - planetCenter);
-            return saturate((dist - innerRadius) / (outerRadius - innerRadius));
-        }
-
-        // ── Height gradient for cumulus-type clouds ──
-        float HeightGradient(float heightFraction, float cloudType)
-        {
-            // Stratus: thin layer concentrated at bottom
-            float stratus = smoothstep(0.0, 0.1, heightFraction) * smoothstep(0.4, 0.2, heightFraction);
-            // Stratocumulus: moderate height
-            float stratocumulus = smoothstep(0.0, 0.15, heightFraction) * smoothstep(0.7, 0.4, heightFraction);
-            // Cumulus: tall clouds
-            float cumulus = smoothstep(0.0, 0.2, heightFraction) * smoothstep(1.0, 0.7, heightFraction);
-
-            float a = lerp(stratus, stratocumulus, saturate(cloudType * 2.0));
-            float b = lerp(stratocumulus, cumulus, saturate(cloudType * 2.0 - 1.0));
-            return lerp(a, b, saturate(cloudType));
-        }
-
-        // ── Remap utility ──
+        // ── Remap utility (saturating) ──
         float Remap(float value, float oldMin, float oldMax, float newMin, float newMax)
         {
             return newMin + saturate((value - oldMin) / (oldMax - oldMin)) * (newMax - newMin);
         }
 
-        // ── Sample cloud density using precomputed textures ──
-        float SampleCloudDensity(
+        // ── 3-archetype height gradient (skygl) ──
+        // cloudType: 0 = stratus, 0.5 = cumulus, 1 = cumulonimbus
+        float HeightGradient(float h, float cloudType)
+        {
+            float stratus = smoothstep(0.0, 0.07, h) * smoothstep(0.2, 0.07, h);
+            float cumulus = smoothstep(0.0, 0.2, h) * smoothstep(0.65, 0.35, h);
+            float cumulonimbus = smoothstep(0.0, 0.1, h) * smoothstep(0.95, 0.4, h);
+
+            float a = 1.0 - cloudType;
+            return a * a * stratus
+                 + 2.0 * cloudType * a * cumulus
+                 + cloudType * cloudType * cumulonimbus;
+        }
+
+        // ── Sample cloud density (skygl SampleDensity) ──
+        // Weather map channels: R = coverage, G = precipitation, B = type.
+        // Returns a unitless [0,1] density. cheapLod skips detail erosion and
+        // returns the pre-erosion base density (used by the light march).
+        float SampleDensity(
             float3 worldPos,
             CloudParameters clouds, AtmosphereParameters atmosphere,
             Texture3D<float4> basicNoiseTexture,
@@ -57,136 +54,174 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
         {
             float3 planetCenter = atmosphere.PlanetCenter * SKY_UNIT_TO_M;
             float bottomRadiusM = atmosphere.BottomRadius * SKY_UNIT_TO_M;
-            float innerR = bottomRadiusM + clouds.CloudLayerMin;
-            float outerR = bottomRadiusM + clouds.CloudLayerMax;
+            float innerR = bottomRadiusM + clouds.LayerBottom;
 
-            float heightFrac = GetHeightFraction(worldPos, planetCenter, innerR, outerR);
-
-            if (heightFrac <= 0.0 || heightFrac >= 1.0)
+            float heightFraction = (length(worldPos - planetCenter) - innerR) / clouds.LayerThickness;
+            if (heightFraction < 0.0 || heightFraction > 1.0)
                 return 0.0;
 
-            // Wind offset
+            // Wind-scrolled sample position (with a mild wind skew toward the top).
             float3 windDir3D = float3(clouds.WindDirection.x, 0, clouds.WindDirection.y);
-            float3 windOffset = windDir3D * clouds.WindSpeed * time;
-            float3 samplePos = worldPos + windOffset;
+            float3 samplePos = worldPos + windDir3D * clouds.WindSpeed * time;
+            samplePos += windDir3D * heightFraction * 500.0;
 
-            // Skew top of clouds with wind
-            samplePos += windDir3D * heightFrac * 500.0;
+            // ── Weather map: R = coverage, G = precipitation, B = type ──
+            float2 weatherUV = samplePos.xz / clouds.WeatherMapScale;
+            float3 weather = weatherMapTexture.SampleLevel(SamplerLinearWrap, weatherUV, 0).rgb;
+            float coverage = weather.r;
+            float precipitation = weather.g;
+            float cloudType = weather.b;
+            float heightGradient = HeightGradient(heightFraction, cloudType);
 
-            // ── Weather map sampling ──
-            float weatherScale = 0.00002;
-            float2 weatherUV = samplePos.xz * weatherScale;
-            float4 weather = weatherMapTexture.SampleLevel(SamplerLinearWrap, weatherUV, 0);
-            float rawWeatherCoverage = weather.r;  // raw noise [0,1] from weather map
-            float cloudType = weather.g;
-            float precipDensity = weather.b;
+            // ── Base shape ──
+            float3 baseUV = samplePos / clouds.BaseNoiseScale;
+            float4 baseN = basicNoiseTexture.SampleLevel(SamplerLinearWrap, baseUV, 0);
+            float lowFBM = baseN.g * 0.625 + baseN.b * 0.25 + baseN.a * 0.125;
+            float baseCloud = Remap(baseN.r, -(1.0 - lowFBM), 1.0, 0.0, 1.0);
 
-            // Coverage remap: Coverage controls what fraction of the sky has clouds.
-            // At Coverage=0.5, only weather noise > 0.5 produces clouds.
-            // Areas that DO have clouds can reach full cloudCoverage (up to 1.0).
-            float cloudCoverage = Remap(rawWeatherCoverage, 1.0 - clouds.Coverage, 1.0, 0.0, 1.0);
+            // Contrast window calibrated to our noise distributions (baseCloud
+            // lands in ~[0.6, 0.95] after the dilation above; measured offline).
+            // Without this the coverage remap below behaves almost binarily:
+            // nothing below coverage ~0.2, uniform haze above it.
+            baseCloud = Remap(baseCloud, 0.6, 0.95, 0.0, 1.0);
 
-            // Early out for uncovered areas
-            if (cloudCoverage < 0.01)
+            // ── Compose with coverage + height gradient ──
+            baseCloud = Remap(baseCloud, 1.0 - coverage, 1.0, 0.0, 1.0);
+            baseCloud *= coverage;
+            baseCloud *= heightGradient;
+
+            if (baseCloud <= 0.0)
                 return 0.0;
 
-            // ── Base shape from 3D noise texture ──
-            float3 baseUV = samplePos * clouds.BaseNoiseScale;
-            float4 basicNoise = basicNoiseTexture.SampleLevel(SamplerLinearWrap, baseUV, 0);
-
-            // R = Perlin-Worley composite (pre-dilated at bake time)
-            // Smooth and boost using Worley FBM with negative lower bound (WickedEngine).
-            // This pushes noisy low values up above the coverage threshold so they're
-            // cleanly cut off, eliminating speckly fragments.
-            float worleyFbm = basicNoise.g * 0.625 + basicNoise.b * 0.25 + basicNoise.a * 0.125;
-            float cloudSample = Remap(basicNoise.r, -(1.0 - worleyFbm), 1.0, 0.0, 1.0);
-
-            // Height gradient shaping
-            float heightGrad = HeightGradient(heightFrac, cloudType);
-            cloudSample *= heightGrad;
-
-            // HZD/WickedEngine coverage remap:
-            // coverage * remap(noise, 1-coverage, 1, 0, 1)
-            float density = cloudCoverage * Remap(cloudSample, 1.0 - cloudCoverage, 1.0, 0.0, 1.0);
-
-            if (density < 0.01)
-                return 0.0;
-
-            // For cheap LOD (light march), skip detail
+            // Cheap LOD path (light march): skip detail fetch.
             if (cheapLod)
-                return density * clouds.Density;
+                return saturate(baseCloud);
 
-            // ── Detail erosion from 3D detail noise texture ──
-            float3 detailUV = samplePos * clouds.DetailNoiseScale;
-            detailUV += float3(heightFrac * 1.3, heightFrac * 0.7, heightFrac * 1.1) * 0.5;
-            float4 detailNoise = detailNoiseTexture.SampleLevel(SamplerLinearWrap, detailUV, 0);
+            // ── Detail erosion (A channel = pre-composited FBM) ──
+            // HZD/WickedEngine height-varying erosion: at the cloud bottom carve
+            // with INVERTED detail (billowy rounded undersides), toward the top
+            // erode with regular detail (wispy cauliflower edges). Slight vertical
+            // UV shear keeps repeating detail cells from reading as columns.
+            float3 detailUV = samplePos / clouds.DetailNoiseScale;
+            detailUV.xz += heightFraction * 0.7;
+            float detailFBM = detailNoiseTexture.SampleLevel(SamplerLinearWrap, detailUV, 0).a;
+            float detailModifier = lerp(1.0 - detailFBM, detailFBM, saturate(heightFraction * 5.0));
+            float detailCloud = Remap(baseCloud, detailModifier * 0.35, 1.0, 0.0, 1.0);
 
-            // Use pre-composited detail FBM (alpha channel)
-            float detailFbm = detailNoise.a;
-
-            // Detail erosion: dilate based on height (WickedEngine approach)
-            // At bottom of cloud: erode with inverted detail (carve into base)
-            // At top: erode with regular detail (wispy tops)
-            float detailModifier = lerp(1.0 - detailFbm, detailFbm, saturate(heightFrac * 10.0));
-            density = Remap(density, detailModifier * clouds.ErosionStrength, 1.0, 0.0, 1.0);
-
-            // Precipitation: extra density in wet areas
-            density = lerp(density, saturate(density * 1.5), precipDensity);
-
-            return max(density, 0.0) * clouds.Density;
+            // Precipitation: denser, heavier cloud (the pow lifts mid densities,
+            // the multiplier deepens extinction -> darker rain bases).
+            float density = pow(saturate(detailCloud), lerp(1.0, 0.6, precipitation));
+            density *= lerp(1.0, 1.8, precipitation);
+            return density;
         }
 
-        // ── Light march toward sun for self-shadowing ──
-        float LightMarch(
-            float3 worldPos, float3 sunDir,
+        // ── Multiple-octave scattering approximation (skygl) ──
+        // sigmaT = SigmaS + SigmaA. HgPhase's convention has the opposite sign on
+        // the cos term vs skygl's HenyeyGreenstein, so skygl g -> -g here.
+        float MultipleOctaveScattering(float density, float mu, float sigmaT)
+        {
+            const float attenuation = 0.5;
+            const float contribution = 0.6;
+            const float phaseAttenuation = 0.2;
+            const float scatteringOctaves = 4.0;
+
+            float a = 1.0;
+            float b = 1.0;
+            float c = 1.0;
+
+            float luminance = 0.0;
+
+            for (float i = 0.0; i < scatteringOctaves; i++)
+            {
+                // skygl: mix(HG(-0.2*c, mu), HG(0.8*c, mu), 0.3)
+                float phase = lerp(HgPhase(0.2 * c, mu), HgPhase(-0.8 * c, mu), 0.3);
+                luminance += b * phase * exp(-sigmaT * density * a);
+
+                a *= attenuation;
+                b *= contribution;
+                c *= phaseAttenuation;
+            }
+
+            return luminance;
+        }
+
+        // ── Intersect the cloud shell (skygl IntersectCloudLayer) ──
+        bool IntersectCloudLayer(float3 ro, float3 rd, float3 center, float innerR, float outerR,
+            out float tEnter, out float tExit)
+        {
+            tEnter = 0.0;
+            tExit = 0.0;
+
+            float2 inner = RaySphereIntersect(ro, rd, center, innerR);
+            float2 outer = RaySphereIntersect(ro, rd, center, outerR);
+
+            float tInnerNear = inner.x;
+            float tInnerFar = inner.y;
+            float tOuterNear = outer.x;
+            float tOuterFar = outer.y;
+
+            float distToCenter = length(ro - center);
+
+            if (distToCenter < innerR) // below layer
+            {
+                tEnter = tInnerFar;
+                tExit = tOuterFar;
+            }
+            else if (distToCenter < outerR) // inside layer
+            {
+                tEnter = 0.0;
+                tExit = (tInnerNear > 0.0) ? tInnerNear : tOuterFar;
+            }
+            else // above layer
+            {
+                if (tOuterNear < 0.0) return false;
+                tEnter = tOuterNear;
+                tExit = (tInnerNear > 0.0) ? tInnerNear : tOuterFar;
+            }
+
+            if (tExit < 0.0 || tEnter >= tExit) return false;
+
+            tEnter = max(tEnter, 0.0);
+            return true;
+        }
+
+        // ── Light march toward the sun for self-shadowing (skygl ComputeLightVisibility) ──
+        float ComputeLightVisibility(
+            float3 pos, float3 sunDir, float mu,
             CloudParameters clouds, AtmosphereParameters atmosphere,
             Texture3D<float4> basicNoiseTexture,
             Texture3D<float4> detailNoiseTexture,
             Texture2D<float4> weatherMapTexture,
-            float time)
+            float time, float sigmaT)
         {
             float3 planetCenter = atmosphere.PlanetCenter * SKY_UNIT_TO_M;
             float bottomRadiusM = atmosphere.BottomRadius * SKY_UNIT_TO_M;
-            float outerR = bottomRadiusM + clouds.CloudLayerMax;
+            float innerR = bottomRadiusM + clouds.LayerBottom;
+            float outerR = innerR + clouds.LayerThickness;
 
-            float2 tOuter = RaySphereIntersect(worldPos, sunDir, planetCenter, outerR);
-            float maxDist = max(0.0, max(tOuter.x, tOuter.y));
-            maxDist = min(maxDist, clouds.CloudLayerMax - clouds.CloudLayerMin);
+            float tEnter, tExit;
+            if (!IntersectCloudLayer(pos, sunDir, planetCenter, innerR, outerR, tEnter, tExit))
+                return 0.0;
 
-            float lightSteps = clouds.LightStepCount;
-            float stepSize = maxDist / max(lightSteps, 1.0);
-            float totalDensity = 0.0;
+            tExit = min(tExit, clouds.LayerThickness);
 
-            // Exponentially growing steps toward the sun (samples more near the point)
-            float t = 0.0;
-            float stepMul = 1.5;
-            float currentStep = stepSize;
+            float steps = max((float)clouds.LightStepCount, 1.0);
+            float dt = (tExit - tEnter) / steps;
+            float3 startPos = pos + sunDir * tEnter;
+            float d = 0.0;
 
             for (uint i = 0; i < clouds.LightStepCount; i++)
             {
-                t += currentStep;
-                float3 samplePos = worldPos + sunDir * t;
-                float d = SampleCloudDensity(samplePos, clouds, atmosphere,
+                float3 samplePos = startPos + sunDir * dt * (float)i;
+                d += SampleDensity(samplePos, clouds, atmosphere,
                     basicNoiseTexture, detailNoiseTexture, weatherMapTexture, time, true);
-                totalDensity += d * currentStep;
-                currentStep *= stepMul;
             }
+            d *= dt;
 
-            // Hybrid transmittance: softer shadows
-            float beer = exp(-totalDensity * clouds.LightAbsorption);
-            float beerSoft = exp(-totalDensity * clouds.LightAbsorption * 0.25) * 0.7;
-            return max(beer, beerSoft);
+            return MultipleOctaveScattering(d, mu, sigmaT);
         }
 
-        // ── Powder effect for backlit depth scattering ──
-        float PowderEffect(float density, float cosAngle)
-        {
-            float powder = 1.0 - exp(-density * 2.0);
-            powder = lerp(1.0, powder, saturate(-cosAngle * 0.5 + 0.5));
-            return powder;
-        }
-
-        // ── Main volumetric cloud ray march (with jitter) ──
+        // ── Main volumetric cloud ray march ──
         VolumetricCloudResult RayMarchClouds(
             float3 rayOrigin, float3 rayDir,
             float3 sunDir, float3 sunColor,
@@ -204,10 +239,10 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 
             float3 planetCenter = atmosphere.PlanetCenter * SKY_UNIT_TO_M;
             float bottomRadiusM = atmosphere.BottomRadius * SKY_UNIT_TO_M;
-            float innerR = bottomRadiusM + clouds.CloudLayerMin;
-            float outerR = bottomRadiusM + clouds.CloudLayerMax;
+            float innerR = bottomRadiusM + clouds.LayerBottom;
+            float outerR = innerR + clouds.LayerThickness;
 
-            // Ray-sphere intersection with cloud shell
+            // Ray-sphere intersection with the cloud shell (three-case).
             float2 tInner = RaySphereIntersect(rayOrigin, rayDir, planetCenter, innerR);
             float2 tOuter = RaySphereIntersect(rayOrigin, rayDir, planetCenter, outerR);
 
@@ -248,46 +283,32 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             if (tMax <= tMin)
                 return result;
 
-            // Clamp march distance
-            float maxMarchDist = 30000.0;
-            tMax = min(tMax, tMin + maxMarchDist);
+            // Clamp the march to the volumetric render distance.
+            tMax = min(tMax, tMin + clouds.MaxDistance);
 
-            float marchSteps = clouds.StepCount;
-            float stepSize = (tMax - tMin) / max(marchSteps, 1.0);
+            float marchSteps = max((float)clouds.StepCount, 1.0);
+            float stepSize = (tMax - tMin) / marchSteps;
 
-            // Dual-lobe phase function
-            float cosAngle = dot(rayDir, sunDir);
-            float phaseForward = HgPhase(clouds.PhaseG, cosAngle);
-            float phaseBackward = HgPhase(-clouds.PhaseG * 0.5, cosAngle);
-            float phase = phaseForward * 0.65 + phaseBackward * 0.35;
+            float mu = dot(rayDir, sunDir);
+            float sigmaT = clouds.SigmaS + clouds.SigmaA;
 
-            // Multi-scattering approximation
-            float multiScatterBase = 0.5;
-            float totalPhase = multiScatterBase + (1.0 - multiScatterBase) * phase;
-
-            // Ambient light from sky
-            float3 ambient = skyLuminanceLUT.SampleLevel(SamplerLinearClamp, float2(0.5, 0.5), 0).rgb * 0.2;
+            // Ambient light from the sky. The LUT sample is a RADIANCE; skygl
+            // feeds sky IRRADIANCE (~pi x mean radiance) into the same slot, so
+            // scale by pi — without this the shadowed sides / bases of clouds
+            // come out much darker than the reference.
+            float3 ambient = skyLuminanceLUT.SampleLevel(SamplerLinearClamp, float2(0.5, 0.5), 0).rgb * 3.14159265;
 
             bool firstHit = true;
 
             for (uint step = 0; step < clouds.StepCount; step++)
             {
-                // Jitter the starting position to break stepping artifacts
                 float t = tMin + (step + jitter) * stepSize;
                 float3 pos = rayOrigin + rayDir * t;
 
-                // Cheap density check first (no detail noise)
-                float cheapDensity = SampleCloudDensity(pos, clouds, atmosphere,
-                    basicNoiseTexture, detailNoiseTexture, weatherMapTexture, time, true);
-
-                if (cheapDensity < 0.001)
-                    continue;
-
-                // Full density with detail
-                float density = SampleCloudDensity(pos, clouds, atmosphere,
+                float density = SampleDensity(pos, clouds, atmosphere,
                     basicNoiseTexture, detailNoiseTexture, weatherMapTexture, time, false);
 
-                if (density > 0.001)
+                if (density > 0.0)
                 {
                     if (firstHit)
                     {
@@ -295,28 +316,32 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
                         firstHit = false;
                     }
 
-                    float extinction = density;
-                    float stepTransmittance = exp(-extinction * stepSize);
+                    // The light march uses a reduced extinction: the view ray needs the
+                    // full sigma to be opaque, but applying that same sigma toward the
+                    // sun makes every core pitch black (single-scattering shadowing
+                    // over a 4 km path). Real light penetrates much further via
+                    // multiple scattering, so the sun march is deliberately thinner.
+                    float vis = ComputeLightVisibility(pos, sunDir, mu, clouds, atmosphere,
+                        basicNoiseTexture, detailNoiseTexture, weatherMapTexture, time, sigmaT * 0.2);
 
-                    // Light march for self-shadowing
-                    float lightTransmittance = LightMarch(pos, sunDir, clouds, atmosphere,
-                        basicNoiseTexture, detailNoiseTexture, weatherMapTexture, time);
-
-                    // Atmospheric transmittance to sun
                     float3 atmTransmittance = GetAtmosphericLightTransmittance(atmosphere, pos, sunDir, transmittanceLUT);
+                    float3 sunLight = sunColor * atmTransmittance;
 
-                    // Powder effect for backlit enhancement
-                    float powder = PowderEffect(density, cosAngle);
+                    float sampleSigmaS = clouds.SigmaS * density;
+                    float sampleSigmaT = max(sigmaT * density, 1e-5);
 
-                    // In-scattered light at this sample
-                    float3 lightEnergy = sunColor * atmTransmittance * lightTransmittance * totalPhase * powder + ambient;
+                    // Mild powder darkening in crevices. The literal skygl port
+                    // (per-km sigma, x1000) crushes front-lit clouds by ~12x and
+                    // makes the whole sky read dark — x100 keeps the effect
+                    // subtle (~0.8 at density 0.5).
+                    float powder = exp(-density * sampleSigmaT * 100.0);
+                    float powderEffect = lerp(1.0, powder, smoothstep(0.5, -0.5, mu));
 
-                    // Energy-conserving Frostbite integration
-                    float3 S = lightEnergy * extinction;
-                    float3 Sint = (S - S * stepTransmittance) / max(extinction, 0.0001);
-                    result.scattering += result.transmittance * Sint;
+                    float3 inscatter = (sunLight * vis + ambient) * sampleSigmaS * powderEffect;
 
-                    result.transmittance *= stepTransmittance;
+                    float stepTrans = exp(-sampleSigmaT * stepSize);
+                    result.scattering += result.transmittance * (inscatter - inscatter * stepTrans) / sampleSigmaT;
+                    result.transmittance *= stepTrans;
 
                     if (result.transmittance < 0.01)
                     {
@@ -325,6 +350,15 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
                     }
                 }
             }
+
+            // Distance fade, only to soften the hard cutoff at MaxDistance.
+            // An exponential falloff (skygl's fog hack) made mid-sky clouds
+            // ~25% see-through no matter how dense they were, so clouds stay
+            // fully opaque out to 60% of the render distance and fade only
+            // over the remaining tail.
+            float fade = 1.0 - smoothstep(clouds.MaxDistance * 0.6, clouds.MaxDistance, tMin);
+            result.scattering *= fade;
+            result.transmittance = lerp(1.0, result.transmittance, fade);
 
             return result;
         }

@@ -70,7 +70,7 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 
             float3 planetCenter = Atmosphere.PlanetCenter * SKY_UNIT_TO_M;
             float bottomRadiusM = Atmosphere.BottomRadius * SKY_UNIT_TO_M;
-            float midLayerHeight = (Clouds.CloudLayerMin + Clouds.CloudLayerMax) * 0.5;
+            float midLayerHeight = Clouds.LayerBottom + Clouds.LayerThickness * 0.5;
             float midRadius = bottomRadiusM + midLayerHeight;
 
             float2 tMid = RaySphereIntersect(CameraPosition, rayDir, planetCenter, midRadius);
@@ -80,11 +80,41 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 
             float3 cloudWorldPos = CameraPosition + rayDir * reprojectDist;
             float4 prevClip = mul(float4(cloudWorldPos, 1.0), PrevViewProjection);
-            float2 prevUV = (prevClip.xy / prevClip.w) * float2(0.5, -0.5) + 0.5;
+            // prevClip.w <= 0 means the point was behind the previous camera —
+            // the projected UV can still land in [0,1] and would sample garbage.
+            bool historyValid = prevClip.w > 0.0 && FrameIndex >= 1;
+            float2 prevUV = (prevClip.xy / max(prevClip.w, 0.0001)) * float2(0.5, -0.5) + 0.5;
+            historyValid = historyValid
+                             && prevUV.x >= 0.0 && prevUV.x <= 1.0
+                             && prevUV.y >= 0.0 && prevUV.y <= 1.0;
 
-            bool historyValid = prevUV.x >= 0.0 && prevUV.x <= 1.0
-                             && prevUV.y >= 0.0 && prevUV.y <= 1.0
-                             && FrameIndex >= 1;
+            // Neighborhood bounds of the fresh quarter-res trace around this pixel.
+            // Used to clamp reprojected history so stale colors (e.g. from a fast
+            // camera rotation) get rectified within a few frames instead of
+            // persisting for hundreds of frames.
+            float4 nMin = TraceTexture[quarterCoord];
+            float4 nMax = nMin;
+            [unroll]
+            for (int dy = -1; dy <= 1; dy++)
+            {
+                [unroll]
+                for (int dx = -1; dx <= 1; dx++)
+                {
+                    int2 nc = clamp(int2(quarterCoord) + int2(dx, dy), int2(0, 0),
+                                    int2(TraceResolution) - int2(1, 1));
+                    float4 n = TraceTexture[nc];
+                    nMin = min(nMin, n);
+                    nMax = max(nMax, n);
+                }
+            }
+
+            // Pad the clamp window by half the local range: a tight clamp forces
+            // the jittered trace noise straight into the output (grain in dense
+            // dark clouds); padding lets temporal averaging smooth it while still
+            // rejecting stale history within a few frames.
+            float4 nPad = (nMax - nMin) * 0.5;
+            nMin -= nPad;
+            nMax += nPad;
 
             float4 result;
 
@@ -97,7 +127,8 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
                 if (historyValid)
                 {
                     float4 historyColor = HistoryTexture.SampleLevel(SamplerLinearClamp, prevUV, 0);
-                    result = lerp(traceResult, historyColor, 0.85);
+                    historyColor = clamp(historyColor, nMin, nMax);
+                    result = lerp(traceResult, historyColor, 0.7);
                 }
                 else
                 {
@@ -106,8 +137,10 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             }
             else if (historyValid)
             {
-                // Not freshly traced — use reprojected history directly (Flower-style).
-                result = HistoryTexture.SampleLevel(SamplerLinearClamp, prevUV, 0);
+                // Not freshly traced — reprojected history, variance-clamped to the
+                // current trace neighborhood (Flower-style + clamp).
+                float4 historyColor = HistoryTexture.SampleLevel(SamplerLinearClamp, prevUV, 0);
+                result = clamp(historyColor, nMin, nMax);
             }
             else
             {

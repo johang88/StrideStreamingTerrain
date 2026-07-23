@@ -1,0 +1,66 @@
+namespace StrideTerrain.Weather.Effects.Atmosphere
+{
+    // Bakes a 512^2 high-altitude cloud texture (one-time compute pass).
+    //   R = cirrus : anisotropic wispy streaks stretched along X (ridged FBM,
+    //                thresholded to thin bright streaks)
+    //   G = alto   : patchy altocumulus fields (Perlin FBM granulation masked
+    //                by low-frequency Worley clumps)
+    //
+    // Both channels are in [0,1]. The texture is wrap-sampled with a world
+    // scale applied by the consumer, so it must tile seamlessly. Tiling is
+    // achieved with integer cell counts as lattice periods; anisotropy comes
+    // from using different x/y cell counts (float2 periods) rather than a
+    // rotation matrix (which would break tiling).
+    shader CloudHighClouds : Noise
+    {
+        stage RWTexture2D<float2> OutputTexture;
+
+        cbuffer HighCloudsParams
+        {
+            uint MapSize; // texture size, e.g. 512
+        }
+
+        override void Compute()
+        {
+            uint2 id = streams.DispatchThreadId.xy;
+            if (id.x >= MapSize || id.y >= MapSize)
+                return;
+
+            float mapSizeF = MapSize;
+            float2 f = float2(id);
+
+            // ── R: cirrus — anisotropic ridged FBM ──
+            // Few cells in X, many in Y => features elongated along X (streaks).
+            // Cells double each octave and stay integer, so every octave tiles.
+            float2 cirrusCells = float2(2.0, 12.0);
+            float cirrus = 0.0;
+            float cAmp = 0.625;
+            float cTotal = 0.0;
+            for (int i = 0; i < 4; i++)
+            {
+                float n = Perlin2D(f * (cirrusCells / mapSizeF), cirrusCells);
+                cirrus += cAmp * (1.0 - abs(n)); // ridged: peaks where n ~ 0
+                cTotal += cAmp;
+                cirrusCells *= 2.0;
+                cAmp *= 0.5;
+            }
+            cirrus /= cTotal;
+            // Keep only bright peaks -> thin wispy streaks. The normalized
+            // ridged FBM lands in ~[0.77, 0.97] (measured offline). At 0.8 the
+            // residual coverage is ~73% of the texture — a permanent grey veil
+            // over the whole sky that also dims the sun; 0.88/pow2 keeps only
+            // distinct streaks (~27% coverage, mean value 0.065).
+            cirrus = pow(saturate((cirrus - 0.88) / 0.12), 2.0);
+
+            // ── G: alto — patchy altocumulus fields ──
+            // Fine perlin granulation masked by large soft worley patches.
+            // Contrast-stretched granulation (normalized FBM has small variance),
+            // masked to sparse patches — tuned offline alongside the cirrus.
+            float altoGranule = saturate(PerlinFbm2D(f * (18.0 / mapSizeF), float2(18.0, 18.0), 3) * 2.5 * 0.5 + 0.5);
+            float altoMask = smoothstep(0.55, 0.9, 1.0 - Worley2D(f * (5.0 / mapSizeF), float2(5.0, 5.0)));
+            float alto = smoothstep(0.55, 0.85, altoGranule) * altoMask;
+
+            OutputTexture[id] = float2(cirrus, alto);
+        }
+    };
+}

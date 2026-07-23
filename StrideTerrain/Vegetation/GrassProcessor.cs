@@ -89,6 +89,17 @@ public class GrassProcessor : EntityProcessor<GrassComponent, GrassProcessor.Run
         if (camera == null)
             return;
 
+        // Debug kill switch: hide all grass (e.g. to get an unobstructed sky view).
+        if (Environment.GetEnvironmentVariable("STRIDETERRAIN_DISABLE_VEGETATION") == "1")
+        {
+            foreach (var componentData in ComponentDatas)
+            {
+                if (componentData.Value.Model != null)
+                    componentData.Value.Model.Enabled = false;
+            }
+            return;
+        }
+
         var terrainProcessor = sceneSystem.SceneInstance.Processors.Get<TerrainProcessor>();
         if (terrainProcessor == null)
             return;

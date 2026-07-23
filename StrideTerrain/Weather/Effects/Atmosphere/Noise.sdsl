@@ -5,7 +5,10 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
         // ── Tileable 3D hash ──
         float3 Hash3D(float3 p, float period)
         {
-            p = fmod(p, period);
+            // Positive modulo so negative neighbour cells (Worley samples cell
+            // -1) wrap to period-1 rather than staying negative — required for
+            // a seamless wrap at the lower boundary of the volume.
+            p = p - floor(p / period) * period;
             p = float3(
                 dot(p, float3(127.1, 311.7, 74.7)),
                 dot(p, float3(269.5, 183.3, 246.1)),
@@ -60,19 +63,23 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
 
         float PerlinFbm(float3 p, float period, int octaves)
         {
-            float G = exp2(-0.85);
+            // Persistence 0.5 (matches skygl simplexFBM). Normalised by the
+            // accumulated amplitude so the result stays in ~[-1,1].
+            float G = 0.5;
             float value = 0.0;
-            float amplitude = 10;
+            float totalAmplitude = 0.0;
+            float amplitude = 1.0;
             float freq = 1.0;
 
             for (int i = 0; i < octaves; i++)
             {
                 value += amplitude * Perlin(p * freq, period * freq);
+                totalAmplitude += amplitude;
                 freq *= 2.0;
                 amplitude *= G;
             }
 
-            return value;
+            return value / totalAmplitude;
         }
 
         // ── Tileable Worley (cellular) noise ──
@@ -116,6 +123,89 @@ namespace StrideTerrain.Weather.Effects.Atmosphere
             }
 
             return value;
+        }
+
+        // ── Tileable 2D noise ──
+        // Period is a float2 so x/y can wrap on independent lattice sizes
+        // (required for anisotropic tiling, e.g. cirrus streaks). A proper
+        // positive modulo is used so negative neighbour cells (Worley) wrap
+        // seamlessly to the top of the domain.
+        float2 Hash2D(float2 p, float2 period)
+        {
+            p = p - floor(p / period) * period; // positive modulo -> seamless wrap
+            p = float2(
+                dot(p, float2(127.1, 311.7)),
+                dot(p, float2(269.5, 183.3)));
+            return frac(sin(p) * 43758.5453123);
+        }
+
+        float2 QuinticInterp2D(float2 t)
+        {
+            return t * t * t * (t * (t * 6.0 - 15.0) + 10.0);
+        }
+
+        float Perlin2D(float2 p, float2 period)
+        {
+            float2 pi = floor(p);
+            float2 pf = p - pi;
+
+            float2 w = QuinticInterp2D(pf);
+
+            float2 g00 = Hash2D(pi + float2(0, 0), period) * 2.0 - 1.0;
+            float2 g10 = Hash2D(pi + float2(1, 0), period) * 2.0 - 1.0;
+            float2 g01 = Hash2D(pi + float2(0, 1), period) * 2.0 - 1.0;
+            float2 g11 = Hash2D(pi + float2(1, 1), period) * 2.0 - 1.0;
+
+            float n00 = dot(g00, pf - float2(0, 0));
+            float n10 = dot(g10, pf - float2(1, 0));
+            float n01 = dot(g01, pf - float2(0, 1));
+            float n11 = dot(g11, pf - float2(1, 1));
+
+            float n = lerp(lerp(n00, n10, w.x), lerp(n01, n11, w.x), w.y);
+            return n;
+        }
+
+        float PerlinFbm2D(float2 p, float2 period, int octaves)
+        {
+            float G = 0.5;
+            float value = 0.0;
+            float totalAmplitude = 0.0;
+            float amplitude = 1.0;
+            float freq = 1.0;
+
+            for (int i = 0; i < octaves; i++)
+            {
+                value += amplitude * Perlin2D(p * freq, period * freq);
+                totalAmplitude += amplitude;
+                freq *= 2.0;
+                amplitude *= G;
+            }
+
+            return value / totalAmplitude;
+        }
+
+        // Tileable 2D Worley (cellular) F1 distance, ~[0,1].
+        float Worley2D(float2 p, float2 period)
+        {
+            float2 id = floor(p);
+            float2 fd = frac(p);
+
+            float minDist = 10000.0;
+
+            for (int x = -1; x <= 1; x++)
+            {
+                for (int y = -1; y <= 1; y++)
+                {
+                    float2 offset = float2(x, y);
+                    float2 neighbor = id + offset;
+                    float2 featurePoint = Hash2D(neighbor, period);
+                    float2 diff = offset + featurePoint - fd;
+                    float dist = dot(diff, diff);
+                    minDist = min(minDist, dist);
+                }
+            }
+
+            return sqrt(minDist);
         }
 
         // ── Utility ──
